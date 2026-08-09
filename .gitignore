@@ -1,0 +1,16 @@
+# dependencies
+node_modules/
+
+# logs
+*.log
+
+# local scratch / agent workspace
+.workbuddy/
+.tools/
+
+# build artifacts
+battlegame-*.zip
+battlegame-*/
+
+# build-time source assets (runtime never loads; .glb/.obj/.zip source material)
+model/

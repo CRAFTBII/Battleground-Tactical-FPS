@@ -1,0 +1,243 @@
+/* ============================================
+ * 战地突击 · main.js（由 index.html 内联脚本拆分）
+ * ============================================ */
+
+function wireMenu() {
+  const $ = id => document.getElementById(id);
+  // URL 规范化：自动补 ws:// 前缀、http(s):// 自动转 ws(s)://（用户常手输 IP 不带协议、或误输 http:// ——
+  // http:// 会变成普通 HTTP 请求被服务器以 426 Upgrade Required 拒绝，这里提前纠正）
+  const normUrl = u => {
+    u = (u || '').trim();
+    if (!u) return '';
+    if (/^http(s?):\/\//i.test(u)) u = u.replace(/^http/i, 'ws'); // http://→ws://，https://→wss://
+    else if (!/^wss?:\/\//i.test(u)) u = 'ws://' + u;             // 无协议 → 补 ws://
+    u = u.replace(/\/+$/, '');                                    // 去尾部斜杠，避免 ws://ip:8080/ 被当路径
+    return u;
+  };
+  const url = () => normUrl($('joinIp').value) || ('ws://' + (location.hostname || 'localhost') + ':8080');
+  $('joinIp').value = 'ws://' + (location.hostname || 'localhost') + ':8080';
+
+  // ---- 账号系统（个人仓库，localStorage） ----
+  if (typeof Accounts !== 'undefined') {
+    Accounts.load();
+    const refreshAcc = () => {
+      const acc = Accounts.current;
+      $('accStatus').textContent = acc ? '已登录：' + acc + '（个人仓库已启用）' : '未登录（游客模式，无个人仓库）';
+      $('btnLogout').style.display = acc ? '' : 'none';
+      $('accMsg').textContent = '';
+    };
+    refreshAcc();
+    $('btnLogin').onclick = () => {
+      const r = Accounts.login($('accName').value, $('accPwd').value);
+      $('accMsg').textContent = r.msg;
+      if (r.ok) { refreshAcc(); $('accName').value = ''; $('accPwd').value = ''; AudioFX.ui(); }
+    };
+    $('btnReg').onclick = () => {
+      const r = Accounts.register($('accName').value, $('accPwd').value);
+      $('accMsg').textContent = r.msg;
+      if (r.ok) { refreshAcc(); $('accName').value = ''; $('accPwd').value = ''; AudioFX.ui(); }
+    };
+    $('btnLogout').onclick = () => { Accounts.logout(); refreshAcc(); AudioFX.ui(); };
+  }
+
+  // ---- 地图选择（T4）：MapRegistry.list() 单选，支持 ?map=<id>，file:// 离线可用 ----
+  const mapRow = $('mapRow');
+  let selMapId = null;
+  if (typeof MapRegistry !== 'undefined' && MapRegistry.count()) {
+    const mm = /[?&]map=([\w-]+)/.exec(location.search || '');
+    if (mm && MapRegistry.has(mm[1])) selMapId = mm[1];
+    const maps = MapRegistry.list();
+    // v2.8 任务绑定地图：按钮显示「图名 · 任务名」（选图即选任务）
+    const mName = mid => { const m = (typeof CFG !== 'undefined' && CFG.MISSIONS) ? CFG.MISSIONS.find(x => x.mapId === mid) : null; return m ? ' · ' + m.name : ''; };
+    mapRow.innerHTML = maps.map(m =>
+      '<button type="button" class="mapbtn' + (m.id === selMapId ? ' on' : '') + '" data-map="' + m.id + '" title="' + (m.desc || '') + '">' + m.name + mName(m.id) + '</button>'
+    ).join('');
+    if (!selMapId) selMapId = maps[0].id;
+    mapRow.querySelectorAll('.mapbtn').forEach(b => {
+      b.onclick = () => {
+        selMapId = b.dataset.map;
+        mapRow.querySelectorAll('.mapbtn').forEach(x => x.classList.toggle('on', x === b));
+        const def = MapRegistry.get(selMapId);
+        if (def) World.load(scene, def); // 菜单背景即时预览（unload 自动回收旧图）
+      };
+    });
+  } else mapRow.style.display = 'none';
+
+  $('btnSingle').onclick = () => {
+    AudioFX.init(); AudioFX.resume(); Net.disconnect();
+    // v2.8 开局过渡页：先选队伍数（2~该图最大队伍数），确认后才进对局
+    if (selMapId && typeof MapRegistry !== 'undefined' && World.mapId !== selMapId) {
+      const def = MapRegistry.get(selMapId);
+      if (def) World.load(scene, def);
+    }
+    const def = MapRegistry.get(selMapId || World.mapId);
+    const maxT = (def && def.maxTeams) || 4;
+    Game.maxTeams = maxT;
+    const ts = $('teamSelect');
+    const tRow = $('teamSelectBtns');
+    if (ts && tRow) {
+      // 队伍数按钮：2 ~ maxTeams（每队人数随任务 teamSize 变化，这里只显示队数）
+      const mission = (typeof CFG !== 'undefined' && CFG.MISSIONS) ? CFG.MISSIONS.find(x => x.mapId === (def && def.id)) : null;
+      $('teamSelectInfo').textContent = (def ? def.name : '') + ' · ' + (mission ? mission.name : '') + ' · 每队 ' + (mission ? mission.teamSize : 10) + ' 人';
+      tRow.innerHTML = '';
+      for (let n = 2; n <= maxT; n++) {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'btn'; b.textContent = n + ' 队' + (n === 2 ? '（推荐）' : '');
+        b.onclick = () => { Game.teamCount = n; ts.style.display = 'none'; Game.startSingle(); };
+        tRow.appendChild(b);
+      }
+      ts.style.display = 'flex';
+    } else {
+      Game.teamCount = 2; Game.startSingle(); // 过渡页缺失兜底
+    }
+  };
+  $('btnCreate').onclick = () => { AudioFX.init(); AudioFX.resume(); Net.showConnecting('create', url()); Net.connect(url(), 'create'); };
+  $('btnJoin').onclick = () => { AudioFX.init(); AudioFX.resume(); Net.showConnecting('list', url()); Net.connect(url(), 'list'); };
+  $('btnRefresh').onclick = () => { Net.connect(url(), 'list'); };
+  $('btnJoin').title = '先刷新服务器列表，然后点击房间加入';
+  // 联机大厅过渡页：房主开始对战 / 任意人离开房间
+  $('lobbyStart').onclick = () => { AudioFX.ui(); Net.startMatch(); };
+  $('lobbyLeave').onclick = () => { AudioFX.ui(); Net.lobbyLeave(); };
+  // v2.7 任务驱动：objective 文案由 Game.updateObjective() 按本局任务写入（开局调用），此处不再写死旧据点文案
+
+  // 设置面板（灵敏度/音量/按键绑定）：主菜单 + 暂停面板入口；调整即时生效并持久化
+  $('btnSettings').onclick = () => { AudioFX.ui(); Settings.open(); };
+  $('pausedSettingsBtn').onclick = () => { Settings.open(); };
+  $('resumeBtn').onclick = () => { paused = false; requestPointerLockSafe(); };
+  // 暂停菜单「退出对局」：任意模式可见；联机时自动断开连接，单机直接回主菜单（复用 backToMenu）
+  $('pausedQuitBtn').onclick = () => { AudioFX.ui(); UI.toast(Net.connected ? '已断开连接' : '已退出对局'); backToMenu(); };
+  // v2.1：观战/结算共用返回逻辑（死亡观战也可中途退出）
+  const backToMenu = () => {
+    Game.phase = 'menu';
+    Net.disconnect(); Net.connected = false; Net.isHost = false; Net.remoteByPeer.clear(); Net.lobbyOpen = false;
+    // v2.9.2 完整重置对局状态：units/squads/score/caps/投射物/粒子/观战/弹药(单位 dispose 含在内)
+    Game.reset();
+    Game.teamCount = 2; // 退出归默认，下次开局由过渡页重选
+    // 停止对局环境底噪（循环风声）与所有活跃样本（防空警报等长样本未播完也立即停）
+    if (typeof AudioFX !== 'undefined') {
+      if (AudioFX.stopAmbience) AudioFX.stopAmbience();
+      if (AudioFX.stopSamples) AudioFX.stopSamples();
+    }
+    // 清掉落实体（网格直接挂场景根，World.load 清不到）
+    if (typeof Items !== 'undefined' && Items.clear) Items.clear();
+    // 重建当前地图：重置机制状态(探照灯/沙暴/空投)与据点颜色，菜单背景保持当前图干净
+    const def = (typeof MapRegistry !== 'undefined' && MapRegistry.get && World.mapId) ? MapRegistry.get(World.mapId) : null;
+    if (def) World.load(scene, def);
+    $('matchEnd').style.display = 'none';
+    $('deathOverlay').style.display = 'none';
+    $('spectateInfo').style.display = 'none';
+    $('spectateQuit').style.display = 'none';
+    $('paused').style.display = 'none';
+    // 联机大厅过渡页兜底复位
+    const lobby = document.getElementById('lobby');
+    if (lobby) lobby.style.display = 'none';
+    const mcol = document.querySelector('#menu .col');
+    if (mcol) mcol.style.display = '';
+    $('menu').style.display = 'flex';
+    document.exitPointerLock && document.exitPointerLock();
+  };
+  $('backMenuBtn').onclick = backToMenu;
+  $('spectateQuit').onclick = backToMenu;
+  document.addEventListener('pointerlockchange', () => {
+    const locked = document.pointerLockElement === renderer.domElement;
+    // 背包面板/设置面板打开时释放鼠标不弹暂停（v2.8 物品系统 + 设置面板）
+    if (!locked && Game.phase === 'playing' && !Game.dead && !Game.mortarMode
+      && !(UI && UI.inventoryOpen) && !(typeof Settings !== 'undefined' && Settings.isOpen())) {
+      paused = true; $('paused').style.display = 'flex';
+    }
+    if (locked) { paused = false; $('paused').style.display = 'none'; }
+  });
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Escape' && Game.mortarMode) { Game.toggleMortar(); e.preventDefault(); }
+  });
+  setInterval(() => { if (Net.frameN > 0) { UI.fps(Math.round(Net.frameN * 2)); Net.frameN = 0; } }, 500);
+}
+
+/* ---------- 8. 初始化与主循环 ---------- */
+let renderer, scene, camera, clock, paused = false;
+let perfDowngraded = false, fpsAccum = 0, fpsFrames = 0, fpsSampleT = 0;
+function init() {
+  renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5)); // 上限 1.5，集显友好
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 500);
+  scene.add(camera); // 相机必须入场景图，否则其子节点（第一人称枪）不会被渲染遍历
+  clock = new THREE.Clock();
+  FX.init(scene);
+  if (typeof Items !== 'undefined' && Items.init) Items.init(); // 物品模型（弹药箱/医疗包等）
+  // T4：?map=<id> URL 参数（离线可用，MapRegistry 纯 JS 无 fetch）；缺省用默认图（suburb）
+  const mm = /[?&]map=([\w-]+)/.exec(location.search || '');
+  const bootMap = (mm && typeof MapRegistry !== 'undefined' && MapRegistry.has(mm[1])) ? mm[1] : undefined;
+  World.init(scene, bootMap);
+  PC.init();
+  UI.init();
+  if (typeof Settings !== 'undefined' && Settings.applyToGame) Settings.applyToGame(); // 应用持久化的灵敏度/音量
+  if (typeof WeaponAnim !== 'undefined') WeaponAnim.init(camera); // 必须先于 PlayerGun.init：否则 attach 时 this.camera 为空，枪机/弹匣网格不会被创建
+  PlayerGun.init(camera);
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+  wireMenu();
+  window.BATTLEGROUND = { Game, World, Net, PC, PlayerGun, FX, UI, Unit };
+  loop();
+}
+/* 性能自适应：FPS 长期偏低 → 关闭阴影 → 再降像素比 */
+function perfAutoDowngrade(dt) {
+  fpsAccum += dt; fpsFrames++;
+  if (fpsAccum >= 2) {
+    const fps = fpsFrames / fpsAccum;
+    if (!perfDowngraded && fps < 18) {
+      perfDowngraded = true;
+      renderer.shadowMap.enabled = false;
+      console.log('[perf] FPS ' + fps.toFixed(0) + ' 过低，已关闭阴影');
+    } else if (perfDowngraded && fps < 12) {
+      renderer.setPixelRatio(1);
+      console.log('[perf] 继续降级：像素比 1');
+    }
+    fpsAccum = 0; fpsFrames = 0;
+  }
+}
+function loop() {
+  requestAnimationFrame(loop);
+  Net.frameN++;
+  const dt = Math.min(clock.getDelta(), 0.05);
+  if (Game.phase === 'menu') {
+    const t = clock.elapsedTime;
+    camera.position.set(100 + Math.sin(t * 0.08) * 75, 42 + Math.sin(t * 0.06) * 6, 100 + Math.cos(t * 0.08) * 75);
+    camera.lookAt(100, 0, 100);
+  } else if (!paused) {
+    if (typeof AudioFX !== 'undefined' && AudioFX.setListener) AudioFX.setListener(camera.position); // 空间音效以玩家为参考点
+    PC.update(dt);
+    PlayerGun.update(dt, PC.keys, camera);
+    Projectiles.update(dt);
+    if (typeof Items !== 'undefined' && Items.update) Items.update(dt); // 掉落实体：浮动/旋转/自动拾取
+    Game.update(dt);
+    MiniMap.draw();
+    Net.tick(dt);
+    FX.update(dt);
+    if (typeof WeaponAnim !== 'undefined') WeaponAnim.update(dt); // 拉栓/抛壳逐帧推进
+    perfAutoDowngrade(dt);
+  }
+  renderer.render(scene, camera);
+}
+window.addEventListener('error', function (e) {
+  const el = document.getElementById('fatalErr');
+  if (el) { el.style.display = 'block'; el.textContent = '⚠ 运行错误: ' + (e.message || e); }
+});
+/* 启动即初始化（脚本在 body 尾部，DOM 已就绪）；任何异常显式显示而非静默失效 */
+(function () {
+  if (typeof THREE === 'undefined') {
+    const el = document.getElementById('fatalErr');
+    if (el) { el.style.display = 'block'; el.textContent = '⚠ 缺少 libs/three.min.js —— 请确认该文件存在（游戏已本地化，不再依赖 CDN）'; }
+    return;
+  }
+  try { init(); } catch (err) {
+    const el = document.getElementById('fatalErr');
+    if (el) { el.style.display = 'block'; el.textContent = '⚠ 初始化失败: ' + (err && err.message || err); }
+  }
+})();
