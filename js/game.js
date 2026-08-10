@@ -202,8 +202,8 @@ const Game = {
     PlayerGun.armor = 100;
     PlayerGun.medkits = CFG.PLAYER_START_MEDKITS; PlayerGun.armorkits = 0; PlayerGun.grenades = 3; PlayerGun.smokes = 2; // 每局开始补给（v2.4 医疗包按分配常量）
     PlayerGun.reloading = false;
-    // 账号仓库：开局从仓库补弹药（未登录 → 默认满配）
-    if (typeof Backpack !== 'undefined' && Backpack.initFromStorage) Backpack.initFromStorage();
+    // v3.0：无账号系统，开局统一初始物资
+    if (typeof Backpack !== 'undefined' && Backpack.resetToDefault) Backpack.resetToDefault();
     this.dead = false; Game._hpPrev = 100;
     camera.position.set(this.player.pos.x, this.player.pos.y + CFG.EYE, this.player.pos.z);
     this.player.mesh.grp.visible = false; // 第一人称隐藏自网格，迫击炮视角恢复
@@ -269,6 +269,8 @@ const Game = {
     // （NaN 常见来源：射线/位置异常导致 resolveShot 的 dist=NaN、areaDamage 的 radius 异常等）
     dmg = Number(dmg);
     if (!Number.isFinite(dmg) || dmg < 0) dmg = 0;
+    // 调试指令 /setinvincible：完全免疫伤害（无敌）
+    if (u.invincible) return;
     // §4.5 出生无敌帧守卫：仅免疫敌方武器伤害；环境伤害（attacker=null）不免疫
     if (u.spawnProtT > 0 && attacker && attacker.team !== u.team) return;
     // 倒地态（T2/T4）：敌方武器/环境伤害 → 扣执行池 downHp；归零 → 处决/环境致死
@@ -423,7 +425,35 @@ const Game = {
     }
     return best;
   },
-  // 玩家倒地 UI/视角/输入开关（T1 进入 / T5 被救起）
+  // 玩家处决目标：±30°、REVIVE_RANGE 内的倒地敌人（T2 补刀；与 revive 同口径判定）
+  findExecTargetForPlayer() {
+    const p = this.player;
+    if (!p || p.dead || p.down) return null;
+    const R2 = CFG.REVIVE_RANGE * CFG.REVIVE_RANGE;
+    const dirX = Math.sin(p.yaw), dirZ = Math.cos(p.yaw);
+    let best = null, bestD = R2;
+    for (const u of this.units) {
+      if (!u || u === p || u.team === p.team) continue;
+      if (!u.down || u.life !== 'down') continue;
+      const d2 = U.dist2(p.pos.x, p.pos.z, u.pos.x, u.pos.z);
+      if (d2 > R2) continue;
+      const dx = u.pos.x - p.pos.x, dz = u.pos.z - p.pos.z;
+      const dd = Math.sqrt(dx * dx + dz * dz) || 0.01;
+      if (((dx / dd) * dirX + (dz / dd) * dirZ) < Math.cos(Math.PI / 6)) continue;
+      if (d2 < bestD) { bestD = d2; best = u; }
+    }
+    return best;
+  },
+  // 处决执行（T2 倒地 → 最终死亡，击杀计分；不耗弹药/医疗包，与 AI 处决口径一致）
+  // executor 通常是玩家；联机远端玩家处决由房主流入此入口（net exec_req），避免客户端越权
+  execUnit(executor, t) {
+    if (!executor || !t || t.team === executor.team || t === executor) return false;
+    if (!t.down || t.life !== 'down') return false;
+    if (Math.sqrt(U.dist2(executor.pos.x, executor.pos.z, t.pos.x, t.pos.z)) > CFG.REVIVE_RANGE + 0.5) return false;
+    this.toDead(t, executor, 'executed', false);
+    if (executor === this.player && typeof UI !== 'undefined' && UI.toast) UI.toast('处决 +1');
+    return true;
+  },
   playerDown(on) {
     const p = this.player;
     if (!p) return;
@@ -518,7 +548,20 @@ const Game = {
       const t = document.getElementById('downTimer');
       if (t) t.textContent = '流血 ' + Math.max(0, Math.ceil(p.bleedT)) + 's · 等待队友救援';
       const hint = document.getElementById('downHint');
-      if (hint) hint.textContent = p.reviver ? '队友正在救援…' : '队友 AI 会自动赶来 · 爬向掩体保命';
+      if (hint) {
+        if (p.reviver) hint.textContent = '队友正在救援…';
+        else {
+          // 显示最近存活队友的距离/动向（比固定文案更实时）
+          let rc = null, rd = 1e9;
+          for (const u of this.units) {
+            if (u === p || u.team !== 'blue' || !u.alive || u.down) continue;
+            const d2 = U.dist2(p.pos.x, p.pos.z, u.pos.x, u.pos.z);
+            if (d2 < rd) { rd = d2; rc = u; }
+          }
+          const coming = rc && rc.ai && rc.ai.reviveTarget === p;
+          hint.textContent = rc ? ('队友 ' + rc.name + ' ' + Math.max(1, Math.round(Math.sqrt(rd))) + 'm' + (coming ? ' · 赶来中' : ' · AI 会来救你')) : '无存活队友 · 爬向掩体等流血';
+        }
+      }
     }
     // v2.1 观战信息（死亡后跟随 AI 队友）
     const si = document.getElementById('spectateInfo');
@@ -534,6 +577,12 @@ const Game = {
       const rl = document.getElementById('reviveLabel');
       if (rl) rl.textContent = '正在救援队友（消耗医疗包 ×' + Math.max(0, PlayerGun.medkits) + '）…';
     } else if (wrap) wrap.style.display = 'none';
+    // 处决提示：准星对准倒地敌人时显示（存活状态），复用 downHud 的 10Hz 节流
+    const eh = document.getElementById('execHint');
+    if (eh) {
+      const has = !p.dead && !p.down && typeof this.findExecTargetForPlayer === 'function' && !!this.findExecTargetForPlayer();
+      eh.style.display = has ? 'block' : 'none';
+    }
   },
   /* v2.1 停用（吃鸡制无重生）：respawnAI / respawnPlayer 保留仅为防回归，不再被任何流程调用 */
   respawnAI(u) {
@@ -621,8 +670,16 @@ const Game = {
    * ================================================================ */
   checkElimination() {
     if (this.phase !== 'playing') return;
+    // 存活队伍 = 仍有非死亡成员（含倒地可救，避免误判）
     const aliveTeams = this.teams.filter(t => this.units.some(u => u.team === t && u.life !== 'dead'));
-    if (aliveTeams.length <= 1 && this.teamCount > 1) this.endMatchByElim(aliveTeams[0] || 'blue');
+    if (aliveTeams.length === 0) {
+      // 全员最终死亡（/kill @e 直接处决等）→ 立即收局；败者=最后死亡者的队伍（另一队胜）
+      const lastDead = this.units.filter(u => u.life === 'dead').sort((a, b) => (a.deathAt || 0) - (b.deathAt || 0)).pop();
+      this.endMatchByElim(lastDead ? lastDead.team : (this.teams[1] || 'red'));
+    } else if (aliveTeams.length === 1 && this.teamCount > 1) {
+      // 仅剩一队幸存 → 立即胜（不再等其倒地成员流血倒计时）
+      this.endMatchByElim(aliveTeams[0]);
+    }
   },
   /* v2.7 任务终局判定矩阵（design/maps/missions-v27.md §3）：
    * v2.8 无时间限制 → 只剩 elim 语义：吃鸡制「最后存活队伍胜」（任务只定主题/指标，不定胜负） */
@@ -801,8 +858,7 @@ const Game = {
     for (const u of this.units) {
       // §9.1 边例 2：倒地者（alive=false）也必须吃区域伤害（手雷/迫击炮/炮击可处决倒地者）
       if (u.life === 'dead') continue;
-      if (u === owner) continue;
-      if (owner && owner.ai && u.team === owner.team) continue; // AI 不炸队友
+      // 爆炸物伪友军伤害：可伤害任何人——队友与投掷者自己（游戏设计取舍，文档已注明）
       const d = Math.sqrt(U.dist2(pos.x, pos.z, u.pos.x, u.pos.z));
       if (d > radius) continue;
       // v1.2：炮击可被掩体遮挡（wallBlock=true 专用；默认 false 不影响手雷/迫击炮既有调用）

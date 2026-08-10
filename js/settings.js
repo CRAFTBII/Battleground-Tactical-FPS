@@ -9,6 +9,7 @@ const Settings = (() => {
   const DEFAULT_KEYS = {
     moveF: 'KeyW', moveB: 'KeyS', moveL: 'KeyA', moveR: 'KeyD',
     jump: 'Space', sprint: 'ShiftLeft', prone: 'ControlLeft',
+    leanLeft: 'Comma', leanRight: 'Period', // 侧身：, 向左倾 / . 向右倾
     reload: 'KeyR', interact: 'KeyE', discard: 'KeyQ', melee: 'KeyF',
     grenade: 'KeyG', smoke: 'KeyH', mortar: 'KeyM', inventory: 'KeyB',
     slot1: 'Digit1', slot2: 'Digit2', slot3: 'Digit3', slot4: 'Digit4',
@@ -19,6 +20,7 @@ const Settings = (() => {
   // UI 展示顺序（即绑定列表顺序）
   const ACTIONS = [
     'moveF', 'moveB', 'moveL', 'moveR', 'jump', 'sprint', 'prone',
+    'leanLeft', 'leanRight',
     'reload', 'interact', 'discard', 'melee', 'grenade', 'smoke', 'mortar', 'inventory',
     'slot1', 'slot2', 'slot3', 'slot4', 'slot5', 'slot6', 'slot7', 'slot8',
     'cmdGroup', 'cmdFree', 'cmdAttack', 'cmdDefend', 'scoreboard'
@@ -26,6 +28,7 @@ const Settings = (() => {
   const ACTION_NAMES = {
     moveF: '前进', moveB: '后退', moveL: '左移', moveR: '右移',
     jump: '跳跃', sprint: '疾跑', prone: '潜伏',
+    leanLeft: '向左侧身', leanRight: '向右侧身',
     reload: '换弹', interact: '交互 / 救援', discard: '丢弃武器', melee: '近战 / 刺刀',
     grenade: '投掷手雷', smoke: '投掷烟雾', mortar: '迫击炮', inventory: '背包（仓库）',
     slot1: '槽位1 · 手枪', slot2: '槽位2 · 步枪', slot3: '槽位3 · 狙击', slot4: '槽位4 · 霰弹',

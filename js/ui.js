@@ -352,6 +352,7 @@ const UI = {
     this.els.radioState = document.getElementById('radioState');
     this.els.radioFeed = document.getElementById('radioFeed');
     this.els.radioHints = document.getElementById('radioHints');
+    this.els.wpnName = document.getElementById('wpnName');
     this.els.armorFill = document.getElementById('armorFill');
     this.els.invPanel = document.getElementById('invPanel');
     this.els.invAcc = document.getElementById('invAcc');
@@ -395,14 +396,13 @@ const UI = {
       if (!PC.locked) requestPointerLockSafe(); // 关闭后重新锁定
     }
   },
-  // 渲染背包面板（Minecraft 式格子：随身背包 ↔ 个人仓库 分离）
+  // 渲染背包面板（v3.0：仅随身背包，无账号/个人仓库）
   inventory() {
     if (!this.els.invPanel) return;
-    const st = (typeof Accounts !== 'undefined' && Accounts.storage) ? Accounts.storage() : null;
-    this.els.invAcc.textContent = st ? '账号：' + Accounts.current : '游客（无仓库）';
+    this.els.invAcc.textContent = '随身物资 · 每局统一初始';
     this.els.invArmor.innerHTML = '🛡 护甲：<b>' + Math.round(PlayerGun.armor) + '</b>/100' +
-      (st ? ' ｜ 仓库护甲包：<b>' + (st.armorkits || 0) + '</b> 个 <button onclick="UI.useArmor()">修复</button>' : '');
-    // 物品槽定义：type 决定背包值来源；'ammo-xxx' 弹药 / 'medkit' / 'armorkit' / 'grenade' / 'smoke'
+      (PlayerGun.armorkits > 0 ? ' ｜ 护甲包：<b>' + PlayerGun.armorkits + '</b> 个 <button onclick="UI.useArmor()">修复</button>' : '');
+    // 物品槽定义：'ammo-xxx' 弹药 / 'medkit' / 'armorkit' / 'grenade' / 'smoke'
     const slots = [
       { k: 'ammo-pistol', ic: Icon.get('ammo-pistol'), nm: '手枪弹' }, { k: 'ammo-rifle', ic: Icon.get('ammo-rifle'), nm: '步枪弹' },
       { k: 'ammo-sniper', ic: Icon.get('ammo-sniper'), nm: '狙击弹' }, { k: 'ammo-shotgun', ic: Icon.get('ammo-shotgun'), nm: '霰弹药' },
@@ -411,16 +411,12 @@ const UI = {
     ];
     const cKey = { medkit: 'medkits', armorkit: 'armorkits', grenade: 'grenades', smoke: 'smokes' };
     const bagVal = k => k.startsWith('ammo-') ? (PlayerGun.reserves[k.slice(5)] || 0) : (PlayerGun[cKey[k]] || 0);
-    const storeVal = k => {
-      if (!st) return 0;
-      return k.startsWith('ammo-') ? (st.ammo[k.slice(5)] || 0) : (k === 'armorkit' ? (st.armorkits || 0) : (st[cKey[k]] || 0));
-    };
     const cell = (k, ic, nm, v) =>
-      '<div class="invCell' + (v > 0 ? '' : ' empty') + '" onclick="UI.transfer(\'' + k + '\')" title="' + nm + (v > 0 ? '（点击转移）' : '') + '">' +
+      '<div class="invCell' + (v > 0 ? '' : ' empty') + '" title="' + nm + (v > 0 ? '（数量 ' + v + '）' : '') + '">' +
       (ic ? '<img class="tic" src="' + ic + '" alt="">' : '<span class="ic">?</span>') +
       '<span class="nm">' + nm + '</span>' +
       (v > 0 ? '<span class="st">' + v + '</span>' : '') + '</div>';
-    // 背包格（局内携带，3×4=12 格：8 物品 + 4 空位）
+    // 随身背包格（局内携带，3×4=12 格：8 物品 + 4 空位）
     this.els.invBag = document.getElementById('invBag');
     if (this.els.invBag) {
       const bagSlots = slots.concat(
@@ -429,86 +425,20 @@ const UI = {
         s.k ? cell(s.k, s.ic, s.nm, bagVal(s.k)) :
           '<div class="invCell empty"><span class="nm">空</span></div>').join('');
     }
-    // 仓库格（账号存储，3×4=12 格：8 物品 + 4 空位）
+    // 仓库列已移除：隐藏仓库格与转移按钮
     this.els.invStore = document.getElementById('invStore');
-    if (this.els.invStore) {
-      const storeSlots = slots.concat(
-        [{ k: '', ic: '', nm: '' }, { k: '', ic: '', nm: '' }, { k: '', ic: '', nm: '' }, { k: '', ic: '', nm: '' }]);
-      this.els.invStore.innerHTML = storeSlots.map(s =>
-        s.k ? cell(s.k, s.ic, s.nm, storeVal(s.k)) :
-          '<div class="invCell empty"><span class="nm">空</span></div>').join('');
-    }
-    // 游客无仓库：禁用转移按钮
+    if (this.els.invStore) this.els.invStore.style.display = 'none';
+    const storeTitle = document.querySelector('#invPanel .invSec:nth-child(2) .invSecTitle');
+    if (storeTitle) storeTitle.style.display = 'none';
     const btns = document.querySelectorAll('.invStoreBtns button');
-    btns.forEach(b => b.style.display = st ? '' : 'none');
-  },
-  // 背包↔仓库 转移（Minecraft 箱子手感）：ammo 全部转移；消耗品逐格
-  transfer(k) {
-    if (k.startsWith('ammo-')) {
-      const w = k.slice(5);
-      const st = (typeof Accounts !== 'undefined' && Accounts.storage) ? Accounts.storage() : null;
-      if (!st) return;
-      const bag = PlayerGun.reserves[w] || 0, store = st.ammo[w] || 0;
-      if (bag > 0) { PlayerGun.reserves[w] = 0; st.ammo[w] = store + bag; } // 背包→仓库
-      else if (store > 0) { const take = Math.min(store, 120); st.ammo[w] = store - take; PlayerGun.reserves[w] = take; } // 120 发/组（MC 堆叠）
-      Accounts.save(); this.inventory(); UI.slots(PlayerGun.cur);
-      return;
-    }
-    // 消耗品/护甲
-    const st = (typeof Accounts !== 'undefined' && Accounts.storage) ? Accounts.storage() : null;
-    if (!st) return;
-    if (k === 'medkit') {
-      if (PlayerGun.medkits > 0) { st.medkits = (st.medkits || 0) + PlayerGun.medkits; PlayerGun.medkits = 0; }
-      else if ((st.medkits || 0) > 0) { const t = Math.min(st.medkits, 5); st.medkits -= t; PlayerGun.medkits = t; }
-    } else if (k === 'armorkit') {
-      // 护甲包统一按"个"（修复：v2.8 点数↔个 单位混乱导致点击消失）
-      if (PlayerGun.armorkits > 0) { st.armorkits = (st.armorkits || 0) + PlayerGun.armorkits; PlayerGun.armorkits = 0; }
-      else if ((st.armorkits || 0) > 0) { const t = Math.min(st.armorkits, 5); st.armorkits -= t; PlayerGun.armorkits = t; }
-    } else if (k === 'grenade') {
-      if (PlayerGun.grenades > 0) { st.grenades = (st.grenades || 0) + PlayerGun.grenades; PlayerGun.grenades = 0; }
-      else if ((st.grenades || 0) > 0) { const t = Math.min(st.grenades, 5); st.grenades -= t; PlayerGun.grenades = t; }
-    } else if (k === 'smoke') {
-      if (PlayerGun.smokes > 0) { st.smokes = (st.smokes || 0) + PlayerGun.smokes; PlayerGun.smokes = 0; }
-      else if ((st.smokes || 0) > 0) { const t = Math.min(st.smokes, 5); st.smokes -= t; PlayerGun.smokes = t; }
-    }
-    Accounts.save(); this.inventory(); UI.slots(PlayerGun.cur);
-  },
-  // 全部取出/存入（仓库↔背包 弹药与消耗品）
-  storeTakeAll(toBag) {
-    const st = (typeof Accounts !== 'undefined' && Accounts.storage) ? Accounts.storage() : null;
-    if (!st) return;
-    if (toBag) {
-      for (const w in WEAPONS) {
-        const t = st.ammo[w] || 0;
-        if (t > 0) {
-          const room = Math.max(0, 120 - (PlayerGun.reserves[w] || 0)); // 120 发/组堆叠上限
-          const take = Math.min(t, room);
-          st.ammo[w] = t - take;
-          PlayerGun.reserves[w] += take;
-        }
-      }
-      if ((st.medkits || 0) > 0) { PlayerGun.medkits += st.medkits; st.medkits = 0; }
-      if ((st.grenades || 0) > 0) { PlayerGun.grenades += st.grenades; st.grenades = 0; }
-      if ((st.smokes || 0) > 0) { PlayerGun.smokes += st.smokes; st.smokes = 0; }
-      if ((st.armorkits || 0) > 0) { PlayerGun.armorkits += st.armorkits; st.armorkits = 0; } // 护甲包（个）
-      UI.toast('仓库 → 背包：全部取出');
-    } else {
-      for (const w in WEAPONS) { const t = PlayerGun.reserves[w] || 0; if (t > 0) { PlayerGun.reserves[w] = 0; st.ammo[w] = (st.ammo[w] || 0) + t; } }
-      if (PlayerGun.medkits > 0) { st.medkits = (st.medkits || 0) + PlayerGun.medkits; PlayerGun.medkits = 0; }
-      if (PlayerGun.grenades > 0) { st.grenades = (st.grenades || 0) + PlayerGun.grenades; PlayerGun.grenades = 0; }
-      if (PlayerGun.smokes > 0) { st.smokes = (st.smokes || 0) + PlayerGun.smokes; PlayerGun.smokes = 0; }
-      if (PlayerGun.armorkits > 0) { st.armorkits = (st.armorkits || 0) + PlayerGun.armorkits; PlayerGun.armorkits = 0; } // 护甲包（个）
-      UI.toast('背包 → 仓库：全部存入');
-    }
-    Accounts.save(); this.inventory(); UI.slots(PlayerGun.cur);
+    btns.forEach(b => b.style.display = 'none');
   },
   useArmor() { Backpack.useArmorPack(); },
   aim(on) {
-    // 开镜反馈：准星缩小变细（模拟瞄具视野收紧），收镜恢复
+    // 开镜反馈：准星缩放收紧（COD 风），收镜恢复；缩放优于改 width/height（平滑且不破坏结构）
     if (!this.els.crosshair) return;
-    this.els.crosshair.style.width = on ? '12px' : '22px';
-    this.els.crosshair.style.height = on ? '12px' : '22px';
-    this.els.crosshair.style.opacity = on ? '1' : '0.9';
+    this.els.crosshair.style.transform = 'translate(-50%,-50%) scale(' + (on ? 0.55 : 1) + ')';
+    this.els.crosshair.style.opacity = on ? '1' : '0.92';
   },
   scope(on) {
     // 狙击镜：显示镜筒边框+mil-dot 分划（镜内自带准星，隐藏普通准星防双星）
@@ -529,11 +459,26 @@ const UI = {
     if (!this.els.zoneVignette) return;
     this.els.zoneVignette.style.opacity = Math.max(0, Math.min(0.45, opacity || 0));
   },
-  lowhp(on) { this.els.lowhp.style.opacity = on ? 0.65 : 0; },
   updateAmmo() {
     const g = PlayerGun, w = WEAPONS[g.cur];
     this.els.ammoCur.textContent = g.mags[g.cur];
     this.els.ammoRes.textContent = '/ ' + g.reserves[g.cur];
+    if (this.els.wpnName) {
+      const wpnEl = this.els.wpnName;
+      const WEAPON_NAMES = {
+        pistol: { name: 'P-9 手枪', ico: '🔫' },
+        rifle: { name: 'AR-15 步枪', ico: '🔫' },
+        sniper: { name: 'SR-98 狙击', ico: '🎯' },
+        shotgun: { name: 'SG-12 霰弹', ico: '💥' },
+        medkit: { name: '医疗包', ico: '⛑' },
+        armorkit: { name: '护甲包', ico: '🛡' },
+        grenade: { name: '手雷', ico: '💣' },
+        smoke: { name: '烟雾弹', ico: '🌫' },
+        mortar: { name: '迫击炮', ico: '💣' }
+      };
+      const meta = WEAPON_NAMES[g.cur] || (w && w.name ? { name: w.name, ico: '🔫' } : { name: g.cur, ico: '🔫' });
+      wpnEl.textContent = meta.ico + ' ' + meta.name;
+    }
     if (g.reloading) {
       const left = Math.max(0, g.reloadEnd - performance.now() / 1000);
       this.els.reloadTag.textContent = '换弹中... ' + left.toFixed(1) + 's';
@@ -541,6 +486,7 @@ const UI = {
       this.els.reloadTag.textContent = (g.mags[g.cur] === 0 && g.reserves[g.cur] > 0) ? '按 R 换弹' : '';
     }
   },
+  lowhp(on) { this.els.lowhp.style.opacity = on ? 0.65 : 0; this.els.lowhp.classList.toggle('pulse', !!on); },
   slots(cur) {
     // 首次渲染：.ic emoji → MC 像素贴图（武器用 Icon 弹药图标，消耗品用对应图标）
     if (!this._slotIcons) {
@@ -598,6 +544,8 @@ const UI = {
     f.className = 'show';
     clearTimeout(this._radioT);
     this._radioT = setTimeout(() => { f.className = ''; }, 2600);
+    // 联动推入信息瀑布（队长命令高亮）
+    if (typeof Ticker !== 'undefined' && Ticker.radio) Ticker.radio(msg);
   },
   teams() {
     // v2.8 多队：左侧蓝队（你）存活/击杀；右侧"敌方"= 非蓝队合计（多队下不逐队占 HUD）
@@ -627,6 +575,8 @@ const UI = {
     d.innerHTML = '<span class="p">' + esc(a) + '</span> ' + w + '击杀了 <span class="e">' + esc(t) + '</span>' + c;
     this.els.killfeed.prepend(d);
     setTimeout(() => d.remove(), 4200);
+    // 联动推入信息瀑布
+    if (typeof Ticker !== 'undefined' && Ticker.kill) Ticker.kill(a, t, head);
   },
   // R6：击倒 killfeed（与"击杀"两级信息）
   downfeed(a, t) {
@@ -686,6 +636,318 @@ const UI = {
   fps(v) { this.els.fps.textContent = v + ' FPS'; }
 };
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+/* ---------- Minecraft 风信息瀑布（屏幕左侧中部 · 自上而下滚动） ----------
+ * 功能：启动一次性播完帮助；实时显示击杀/对讲机/聊天/系统消息；
+ *       内置输入框可发聊天，/ 开头为调试指令（单机或房主有权限）。
+ * ============================================================== */
+const Ticker = {
+  el: null, input: null,
+  helpList: [],     // 帮助消息（播放一次）
+  helpIdx: 0,
+  timer: null,      // 帮助播放计时器
+  delay: 3600,      // 每条消息停留时长
+  maxMsgs: 7,       // 同屏最多消息数
+  // 权限判定：单机 or 房主
+  canCmd() {
+    if (typeof Net !== 'undefined' && Net.connected) return !!(Net.isHost);
+    return true; // 未联网=单机
+  },
+  init() {
+    this.el = document.getElementById('ticker');
+    this.input = document.getElementById('chatInput');
+    if (!this.el) return;
+    // 点击输入框自动释放指针锁定；失焦恢复（仅对局中）
+    if (this.input) {
+      this.input.addEventListener('focus', () => {
+        window.__chatOpen = true; // 抑制 pointerlockchange 误弹暂停
+        if (typeof PC !== 'undefined' && PC.locked && document.exitPointerLock) document.exitPointerLock();
+      });
+      this.input.addEventListener('blur', () => {
+        window.__chatOpen = false;
+        // 清空聊天期间误入的按键残留（W/A/S/D/空格等会被 PC 的 document keydown 收集）
+        if (typeof PC !== 'undefined' && PC.keys && PC.keys.clear) PC.keys.clear();
+        // 发送/关闭后恢复鼠标锁定（对局中）
+        if (typeof Game !== 'undefined' && Game.phase === 'playing' && !PC.locked && typeof requestPointerLockSafe === 'function') requestPointerLockSafe();
+      });
+    }
+    // T 键快捷打开聊天（鼠标锁定时无法点击输入框，需按键唤起）
+    document.addEventListener('keydown', e => {
+      if ((e.key === 't' || e.key === 'T') && !e.ctrlKey && !e.metaKey &&
+          typeof Game !== 'undefined' && Game.phase === 'playing' &&
+          this.input && document.activeElement !== this.input) {
+        e.preventDefault();
+        e.stopPropagation();
+        // 解锁鼠标并聚焦输入框
+        if (typeof PC !== 'undefined' && PC.locked && document.exitPointerLock) document.exitPointerLock();
+        this.input.focus();
+      }
+    });
+    // 帮助信息：启动播放一次即止
+    this.helpList = [
+      '<b>战地突击</b> 战术FPS · 在这里展现你的枪法',
+      '<b>WASD</b>移动 <b>Shift</b>疾跑 <b>空格</b>跳跃 <b>Ctrl</b>潜伏',
+      '<b>,</b>向左侧身 <b>.</b>向右侧身（人物随之侧倾）',
+      '<b>1-8</b>切槽 <b>R</b>换弹 <b>F</b>近战 <b>G</b>手雷 <b>H</b>烟雾',
+      '<b>E</b>搜刮尸体/交互 · <b>B</b>背包 · <b>Tab</b>记分板 · <b>Esc</b>暂停',
+      '对讲机 <b>Z</b>集合 <b>X</b>自由 <b>C</b>进攻 <b>V</b>防守',
+      '聊天:按 <b>T</b> 打开输入框，回车发送；<b>/help</b> 查看调试指令',
+      '击倒可按 <b>E</b> 处决 · 队友倒地按 <b>E</b> 救援',
+    ];
+    this.playHelp();
+    // 回车发送聊天 / 执行指令 + Tab 命令补全
+    if (this.input) {
+      this.input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { this.send(this.input.value); return; }
+        if (e.key === 'Tab') { e.preventDefault(); this.complete(); return; }
+      });
+      // 输入时避免触发游戏键位
+      this.input.addEventListener('keyup', e => e.stopPropagation());
+      this.el.style.pointerEvents = 'auto';
+    }
+  },
+  // Tab 补全：/ 开头补全指令/选择器/人名；否则补全玩家/AI 人名
+  complete() {
+    if (!this.input) return;
+    const v = this.input.value;
+    const at = this.input.selectionStart || v.length;
+    const line = v.slice(0, at);
+    const space = line.lastIndexOf(' ');
+    const frag = line.slice(space + 1);
+    if (!frag) return;
+    const candidates = [];
+    const G = (typeof Game !== 'undefined' && Game) ? Game : null;
+    const isCmd = frag.charAt(0) === '/';
+    if (isCmd) {
+      const cmds = ['/kill','/tp','/enablefly','/setinvincible','/give','/win','/speed','/help'];
+      candidates.push(...cmds.filter(c => c.startsWith(frag)));
+    }
+    // 选择器/人名补全（/kill|/tp|/give|/setinvincible 第二参数起）
+    const head = line.split(/\s+/)[0] || '';
+    if (['/kill','/tp','/give','/setinvincible'].includes(head) && frag && !frag.startsWith('/')) {
+      candidates.push('@s','@e','@a','@p');
+      if (G && G.units) {
+        G.units.forEach(u => { const n = (u.name || '').replace(/^★\s*/, ''); if (n && n.toLowerCase().startsWith(frag.toLowerCase())) candidates.push(n); });
+      }
+    }
+    if (candidates.length === 1) {
+      this.input.value = v.slice(0, space + 1) + candidates[0] + ' ';
+    } else if (candidates.length > 1 && frag) {
+      let c = candidates[0];
+      for (let i = 1; i < candidates.length; i++) {
+        let j = 0;
+        while (j < c.length && j < candidates[i].length && c[j] === candidates[i][j]) j++;
+        c = c.slice(0, j);
+      }
+      if (c.length > frag.length) this.input.value = v.slice(0, space + 1) + c;
+      this.add('候选: ' + candidates.slice(0, 8).join('  ') + (candidates.length > 8 ? ' …' : ''), 'sys');
+    }
+  },
+  // 帮助消息：依次掉落，播完即停
+  playHelp() {
+    if (this.helpIdx >= this.helpList.length) { this.helpIdx = 0; return; }
+    this.push(this.helpList[this.helpIdx], 'help');
+    this.helpIdx++;
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => this.playHelp(), this.delay);
+  },
+  // 通用推送：type → sys/system | kill | radio | chat | help
+  push(html, type) { this.add(html, type); },
+  add(html, type) {
+    if (!this.el) return;
+    while (this.el.querySelectorAll('.tickMsg').length >= this.maxMsgs) {
+      const first = this.el.querySelector('.tickMsg');
+      if (first) { first.classList.add('old'); setTimeout(() => first.remove(), 600); }
+    }
+    const d = document.createElement('div');
+    d.className = 'tickMsg' + (type && type !== 'sys' ? ' ' + type : ' sys');
+    d.innerHTML = html;
+    this.el.insertBefore(d, this.input || null);
+    requestAnimationFrame(() => { d.classList.add('new'); });
+    setTimeout(() => {
+      if (d && d.parentNode) {
+        d.classList.remove('new'); d.classList.add('old');
+        setTimeout(() => { if (d && d.parentNode) d.remove(); }, 600);
+      }
+    }, this.delay + 600);
+    // 帮助播放被打断后不再自动续播
+    if (type === 'help') clearTimeout(this.timer);
+  },
+  // 击杀消息（由 UI.killfeed 联动调用）
+  kill(a, t, head) {
+    this.add((head ? '💀 <b>爆头</b> ' : '⚔ ') + '<b>' + esc(a) + '</b> 击杀了 <b>' + esc(t) + '</b>', 'kill');
+  },
+  // 对讲机/队长命令消息
+  radio(msg) {
+    this.add('📻 ' + msg, 'radio');
+  },
+  // 玩家聊天消息
+  chat(who, msg) {
+    this.add('<span class="who">' + esc(who) + '</span>：' + esc(msg), 'chat');
+  },
+  // 输入框发送：/ 开头=调试指令（需权限）；否则广播聊天
+  send(raw) {
+    const v = (raw || '').trim();
+    if (!v) return;
+    if (this.input) this.input.value = '';
+    // 发送后立即失焦：清空聊天期间的按键残留、恢复鼠标锁定与游戏操控
+    if (this.input) { window.__chatOpen = false; this.input.blur(); }
+    if (typeof PC !== 'undefined' && PC.keys && PC.keys.clear) PC.keys.clear();
+    if (v.charAt(0) === '/') { this.cmd(v); return; }
+    if (!Game.player) { this.add('系统：对局中才能发言', 'sys'); return; }
+    if (typeof Net !== 'undefined' && Net.connected && Net.send) {
+      Net.send({ t: 'chat', msg: v, who: Game.player.name || '我' });
+    }
+    this.chat(Game.player.name || '我', v);
+  },
+  /* ---------- 调试指令（Minecraft 实体选择器语法，单机/房主可用） ----------
+   * /kill <选择器>        @s 自己 / @e 全部 / @a 玩家 / 人名
+   * /tp  <选择器> x y z   传送（留空坐标 → 传送到玩家自己处）
+   * /enablefly <bool>     飞行开关（@s 玩家自身）
+   * /win <队伍>           直接结束对局并指定胜者（blue/red/队伍名/id）
+   * /speed <int>          玩家移动速度倍率（1 恢复）
+   * /help                 查看所有指令
+   * ================================================================ */
+  // 实体选择器 → 单位数组；未命中返回 null
+  resolve(target) {
+    const G = (typeof Game !== 'undefined' && Game) ? Game : null;
+    if (!G || !G.units) return null;
+    const t = (target || '').trim();
+    if (!t) return null;
+    if (t === '@s') return [G.player].filter(Boolean);
+    if (t === '@p') return [G.player].filter(Boolean);
+    if (t === '@e') return G.units.filter(u => u.life !== 'dead');
+    if (t === '@a') return G.units.filter(u => !u.ai && u.life !== 'dead');
+    // 人名匹配（★ x 前缀人名也支持输入时省略 ★）
+    const name = t.replace(/^★\s*/, '').toLowerCase();
+    const hit = G.units.filter(u => (u.life !== 'dead') && (u.name || '').toLowerCase().replace(/^★\s*/, '') === name);
+    return hit.length ? hit : null;
+  },
+  cmd(line) {
+    const G = (typeof Game !== 'undefined' && Game) ? Game : null;
+    const PC2 = (typeof PC !== 'undefined' && PC) ? PC : null;
+    if (!this.canCmd()) { this.add('系统：<b>无权限</b>（需单机或房主）', 'sys'); return; }
+    const p = line.slice(1).trim().split(/\s+/);
+    const c = (p[0] || '').toLowerCase();
+    switch (c) {
+      case 'help':
+        this.add('指令：<b>/kill</b> [选择器] · <b>/tp</b> [选择器] [x y z] · <b>/enablefly</b> [bool] · <b>/win</b> [队伍] · <b>/speed</b> [倍率] · <b>/setinvincible</b> [选择器] · <b>/give</b> [选择器] [物资id]', 'sys');
+        break;
+      case 'kill': {
+        if (!G || !G.player) { this.add('系统：对局中才可用', 'sys'); break; }
+        const sel = this.resolve(p[1]);
+        if (!sel || sel.length === 0) { this.add('系统：选择器无目标（/kill @s 自己 · @e 全部 · @a 玩家 · 人名）', 'sys'); break; }
+        const names = sel.map(u => u.name || '目标');
+        // 走完整死亡事件链：hp=0 → downOrKill（击倒→处决/直接死亡）→ killUnit（计分/击杀UI/战利品/观战/全灭判定）
+        sel.forEach(u => { if (u.life === 'dead') return; u.hp = 0; G.downOrKill(u, G.player, false); });
+        if (typeof MiniMap !== 'undefined' && MiniMap.draw) MiniMap.draw();
+        this.add('系统：已击杀 <b>' + esc(names.join('、')) + '</b>', 'sys');
+        break;
+      }
+      case 'tp': {
+        if (!G || !G.units) { this.add('系统：对局中才可用', 'sys'); break; }
+        const sel = this.resolve(p[1]);
+        if (!sel || sel.length === 0) { this.add('用法: /tp [@s|@e|@a|人名] x y z（留空坐标=传送到玩家）', 'sys'); break; }
+        let X, Y, Z;
+        if (p[2] !== undefined && !isNaN(parseFloat(p[2]))) {
+          X = parseFloat(p[2]); Y = parseFloat(p[3]) !== undefined ? parseFloat(p[3]) : World.heightAt(X, sel[0].pos.z); Z = parseFloat(p[4]) !== undefined ? parseFloat(p[4]) : sel[0].pos.z;
+        } else {
+          X = G.player.pos.x; Y = G.player.pos.y; Z = G.player.pos.z; // 无坐标 → 传送到玩家处
+        }
+        X = U.clamp(X, 1, CFG.WORLD - 1); Z = U.clamp(Z, 1, CFG.WORLD - 1);
+        if (Y === undefined || isNaN(Y)) Y = World.heightAt(X, Z);
+        sel.forEach(u => { u.pos.set(X, Y, Z); if (typeof MiniMap !== 'undefined' && MiniMap.draw) MiniMap.draw(); });
+        this.add('系统：已传送 <b>' + esc(sel.length) + '</b> 个目标 → ' + Math.round(X) + ',' + Math.round(Y) + ',' + Math.round(Z), 'sys');
+        break;
+      }
+      case 'enablefly': {
+        if (!PC2) { this.add('系统：控制器未就绪', 'sys'); break; }
+        const arg = (p[1] || '').toLowerCase();
+        const want = arg === 'true' || arg === '1' || arg === 'on' ? true
+          : arg === 'false' || arg === '0' || arg === 'off' ? false : !PC2.fly;
+        PC2.fly = want;
+        this.add('系统：飞行已' + (want ? '<b>开启</b>（空格上浮 · Shift下潜）' : '<b>关闭</b>'), 'sys');
+        break;
+      }
+      case 'speed': {
+        if (!PC2) { this.add('系统：控制器未就绪', 'sys'); break; }
+        const n = parseInt(p[1], 10);
+        if (isNaN(n) || n <= 0) { this.add('用法: /speed [倍率]（如 1 恢复 · 2 两倍速）', 'sys'); break; }
+        PC2.speedMul = n;
+        // 同步 Game.player.moveMul 兼容旧读法（若有）
+        if (G && G.player) G.player.moveMul = n;
+        this.add('系统：移动速度 x<b>' + n + '</b>', 'sys');
+        break;
+      }
+      case 'setinvincible':
+      case 'invincible': {
+        if (!G || !G.units) { this.add('系统：对局中才可用', 'sys'); break; }
+        const sel = this.resolve(p[1]);
+        if (!sel || sel.length === 0) { this.add('用法: /setinvincible [@s|@e|@a|人名]', 'sys'); break; }
+        // 无参数二值时切换；显式 true/false 设定
+        const arg = (p[2] || '').toLowerCase();
+        const want = arg === 'true' || arg === '1' || arg === 'on' ? true
+          : arg === 'false' || arg === '0' || arg === 'off' ? false
+          : !(sel[0].invincible); // 默认切换
+        sel.forEach(u => { u.invincible = want; });
+        this.add('系统：<b>' + esc(sel.length) + '</b> 个目标无敌' + (want ? '开启' : '关闭'), 'sys');
+        break;
+      }
+      case 'give': {
+        if (!G || !G.units) { this.add('系统：对局中才可用', 'sys'); break; }
+        const sel = this.resolve(p[1]);
+        if (!sel || sel.length === 0) { this.add('用法: /give [@s|@e|@a|人名] [物资id]', 'sys'); break; }
+        const id = (p[2] || '').toLowerCase();
+        // 物资表：ammo-pistol/rifle/sniper/shotgun / medkit / armorkit / grenade / smoke
+        if (!['ammo-pistol','ammo-rifle','ammo-sniper','ammo-shotgun','medkit','armorkit','grenade','smoke'].includes(id)) {
+          this.add('物资id: ammo-pistol/ammo-rifle/ammo-sniper/ammo-shotgun · medkit · armorkit · grenade · smoke', 'sys');
+          break;
+        }
+        sel.forEach(u => {
+          if (u === G.player) { // 玩家走 PlayerGun 背包
+            if (id.startsWith('ammo-')) { const w = id.slice(5); if (PlayerGun.reserves[w] !== undefined) PlayerGun.reserves[w] += 60; }
+            else if (id === 'medkit') PlayerGun.medkits += 5;
+            else if (id === 'armorkit') PlayerGun.armorkits += 2;
+            else if (id === 'grenade') PlayerGun.grenades += 3;
+            else if (id === 'smoke') PlayerGun.smokes += 2;
+            if (typeof UI !== 'undefined' && UI.slots) UI.slots(PlayerGun.cur);
+          } else if (u.ai) { // AI 走 ai 资源
+            if (id.startsWith('ammo-')) { const w = id.slice(5); if (!u.ai.reserveMap) u.ai.reserveMap = {}; u.ai.reserveMap[w] = (u.ai.reserveMap[w] || 0) + 60; }
+            else if (id === 'medkit') u.ai.medkits = (u.ai.medkits || 0) + 3;
+            else if (id === 'armorkit') u.armor = Math.min(100, u.armor + 50);
+            else if (id === 'grenade') u.grenades = (u.grenades || 0) + 3;
+            else if (id === 'smoke') u.smokes = (u.smokes || 0) + 2;
+          }
+        });
+        if (typeof UI !== 'undefined' && UI.updateAmmo) UI.updateAmmo();
+        this.add('系统：已给 <b>' + esc(sel.length) + '</b> 个目标发放 <b>' + esc(id) + '</b>', 'sys');
+        break;
+      }
+      case 'win': {
+        if (!G) { this.add('系统：对局未开始', 'sys'); break; }
+        const target = (p[1] || '').toLowerCase();
+        let team = null;
+        if (!target) team = 'blue';
+        else {
+          for (const t of G.teams) {
+            if (t === target || ((CFG.TEAM_NAMES && CFG.TEAM_NAMES[t] || '').toLowerCase() === target)) { team = t; break; }
+          }
+          if (!team) team = G.teams.includes(target) ? target : ('red' === target ? 'red' : null); // 红/蓝直配
+          if (!team) { this.add('可用队伍：' + G.teams.join('/'), 'sys'); break; }
+        }
+        // 按吃鸡语义：指定队之外全员淘汰 → 该队获胜（endMatchByElim 参数=败者）
+        const loser = G.teams.find(t => t !== team) || (team === 'blue' ? 'red' : 'blue');
+        G.units.forEach(u => { if (u.life !== 'dead' && u.team !== team) { u.hp = 0; u.alive = false; u.life = 'dead'; u.dead = true; } });
+        if (typeof MiniMap !== 'undefined' && MiniMap.draw) MiniMap.draw();
+        this.add('系统：队伍 <b>' + esc(team) + '</b> 获胜！', 'sys');
+        G.endMatchByElim(loser); // 决赛终局（吃鸡胜负）
+        break;
+      }
+      default:
+        this.add('未知指令 <b>' + esc(c) + '</b>，输入 /help 查看：<b>/kill /tp /enablefly /win /speed</b>', 'sys');
+    }
+  }
+};
 
 /* ---------- 小地图（动态层） ---------- */
 const MiniMap = {

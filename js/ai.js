@@ -251,6 +251,17 @@ class AIBrain {
   /* §2.5 倒地专用：向最近掩体/最近存活队友方向爬行（CRAWL_SPEED），不射击不感知 */
   downUpdate(dt, squad) {
     const u = this.unit;
+    // 正在被救援：只贴着救援者爬（防读条因距离 >REVIVE_RANGE 断开）；救援者在身边 → 停住等待
+    if (u.reviver) {
+      const rv = u.reviver;
+      const d = Math.sqrt(U.dist2(u.pos.x, u.pos.z, rv.pos.x, rv.pos.z));
+      if (d > CFG.REVIVE_RANGE - 0.5) {
+        u.yaw = U.angTo(u.pos.x, u.pos.z, rv.pos.x, rv.pos.z);
+        this.moveTo(rv.pos.x, rv.pos.z, dt, CFG.CRAWL_SPEED);
+        this.moving = true;
+      } else this.moving = false;
+      return;
+    }
     let target = null, bestD = 1e9;
     // 最近存活队友（优先投奔队友，可能被救）
     if (squad && squad.members) {
@@ -266,13 +277,18 @@ class AIBrain {
       const d2 = U.dist2(u.pos.x, u.pos.z, cp.x, cp.z);
       if (d2 < bestD) { bestD = d2; target = cp; }
     }
-    if (!target) return;
-    const d = Math.sqrt(bestD);
-    if (d > 1) {
+    // 兜底：无队友/掩体可投 → 圈外则向圈内最近可达点爬（避免在伤害区干等流血，防流圈外留尸）
+    if (!target) {
+      const zd = this.zoneDest();
+      if (zd) target = { x: zd.x, z: zd.z };
+    }
+    if (!target) { this.moving = false; return; }
+    const d = Math.sqrt(bestD === 1e9 ? U.dist2(u.pos.x, u.pos.z, target.x, target.z) : bestD);
+    if (d > 1.2) {
       u.yaw = U.angTo(u.pos.x, u.pos.z, target.x, target.z);
       this.moveTo(target.x, target.z, dt, CFG.CRAWL_SPEED);
       this.moving = true;
-    }
+    } else this.moving = false;
   }
 
   /* §2.3 搜索倒地队友：医疗兵 80m×mapScale / 红队全兵种 40m×mapScale（v2.2 救援优先）/ 蓝队非医疗 12m（固定） */
@@ -718,7 +734,8 @@ class AIBrain {
     if (d < 0.2) return;
     const vx = dx / d * speed, vz = dz / d * speed;
     // 翻越矮掩体：前方 0.9m 处有 0.8~1.8m 高障碍 → 触发跳跃弧线（jumpAnim 驱动 y，碰撞临时忽略该障碍）
-    if (!u.jumpAnim) {
+    // 倒地爬行者不翻越（低姿态贴身蹭走，防倒地 AI 蹦过 1.8m 墙的违和）
+    if (!u.jumpAnim && !u.down) {
       const px = u.pos.x + dx / d * 0.9, pz = u.pos.z + dz / d * 0.9;
       const uf = u.pos.y || 0;   // v1.5：翻越判定同样相对脚底（上了楼才不会去翻楼下的箱子）
       for (const c of World.colliders) {
@@ -730,14 +747,16 @@ class AIBrain {
       }
     }
     u.pos.x += vx * dt; u.pos.z += vz * dt;
-    // 音效：AI 脚步（近无声沙沙，14m 内玩家可闻，空间定位；步频随速度，阈值 0.8 → 更连续）
-    this._stepT = (this._stepT || 0) + dt * (speed >= 5 ? 2.6 : speed >= 2.5 ? 2.0 : 1.4);
-    if (this._stepT > 0.8) {
-      this._stepT = 0;
-      const P = (typeof Game !== 'undefined' && Game.player) ? Game.player.pos : null;
-      if (P && typeof AudioFX !== 'undefined' && AudioFX.foot) {
-        const d2 = (u.pos.x - P.x) * (u.pos.x - P.x) + (u.pos.z - P.z) * (u.pos.z - P.z);
-        if (d2 < 14 * 14) AudioFX.foot({ x: u.pos.x, y: u.pos.y || 0, z: u.pos.z });
+    // 音效：AI 脚步（近无声沙沙，14m 内玩家可闻，空间定位；步频随速度，阈值 0.8 → 更连续）；倒地爬行不算脚步
+    if (!u.down) {
+      this._stepT = (this._stepT || 0) + dt * (speed >= 5 ? 2.6 : speed >= 2.5 ? 2.0 : 1.4);
+      if (this._stepT > 0.8) {
+        this._stepT = 0;
+        const P = (typeof Game !== 'undefined' && Game.player) ? Game.player.pos : null;
+        if (P && typeof AudioFX !== 'undefined' && AudioFX.foot) {
+          const d2 = (u.pos.x - P.x) * (u.pos.x - P.x) + (u.pos.z - P.z) * (u.pos.z - P.z);
+          if (d2 < 14 * 14) AudioFX.foot({ x: u.pos.x, y: u.pos.y || 0, z: u.pos.z });
+        }
       }
     }
     // 碰撞（跳跃中忽略目标障碍）
@@ -768,7 +787,11 @@ class AIBrain {
       if ((this.reserveMap[u.weapon] || 0) > 0) this.reloading = 5;
       return;
     }
-    if (this.burst <= 0) { this.burst = u.weapon === 'rifle' ? U.randi(3, 6) : 1; this.burstT = U.rand(0.35, 0.8); }
+    if (this.burst <= 0) {
+      // 步枪短点射（3~6 发）+ 扳机停顿；手枪/霰弹/狙击为单发，无点射前停顿 → 射速直接对齐玩家（60/rpm）
+      this.burst = u.weapon === 'rifle' ? U.randi(3, 6) : 1;
+      this.burstT = u.weapon === 'rifle' ? U.rand(0.28, 0.5) : 0;
+    }
     if (this.burstT > 0) { this.burstT -= dt; return; }
     this.burst--;
     // 命中率模型（v2.2 下调：给玩家近身生存窗口；中距离 ~0.45，近距离 ~0.5）
@@ -805,8 +828,9 @@ class AIBrain {
       if ((this.reserveMap[u.weapon] || 0) > 0) this.reloading = 5;
       return;
     }
-    this.fireT = 60 / W.rpm + U.rand(0.05, 0.25);
-    if (this.burst <= 0) this.fireT += U.rand(0.4, 1.1);
+    // 每发间隔 = 玩家同口径（60/rpm）→ 射速与玩家一致；仅步枪点射间隙补一短扳机停顿
+    this.fireT = 60 / W.rpm;
+    if (this.burst <= 0 && u.weapon === 'rifle') this.fireT += U.rand(0.15, 0.3);
   }
 
   throwGrenadeAt(t) {

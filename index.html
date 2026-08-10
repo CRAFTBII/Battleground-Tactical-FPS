@@ -4,269 +4,36 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>战地突击 · Battleground Tactical FPS</title>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;overflow:hidden;background:#0b0e13;color:#e8edf4;
-  font-family:"Segoe UI",system-ui,"Microsoft YaHei",sans-serif;user-select:none}
-#c{position:fixed;inset:0;display:block}
-.hud{position:fixed;pointer-events:none;z-index:10}
-
-/* ============ 底部状态栏 ============ */
-#healthWrap{left:18px;bottom:16px;width:230px}
-#healthWrap .lab{font-size:11px;letter-spacing:2px;color:#9fb3c8;margin-bottom:4px}
-#hpBar{width:100%;height:14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:3px;overflow:hidden}
-#hpFill{height:100%;width:100%;background:linear-gradient(90deg,#2ecc71,#7ce58a);transition:width .15s}
-#armorBar{width:100%;height:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:3px;overflow:hidden}
-#armorFill{height:100%;width:100%;background:linear-gradient(90deg,#5a8fdc,#8fb8f0);transition:width .15s}
-#hpText{position:absolute;left:18px;bottom:36px;font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;
-  text-shadow:0 1px 3px rgba(0,0,0,.7);color:#fff}
-
-#ammoWrap{right:18px;bottom:16px;text-align:right}
-#ammoCur{font-size:42px;font-weight:800;font-variant-numeric:tabular-nums;color:#fff;text-shadow:0 2px 6px rgba(0,0,0,.6)}
-#ammoRes{font-size:16px;color:#9fb3c8;margin-top:-6px}
-#ammoWrap .lab{font-size:11px;letter-spacing:2px;color:#9fb3c8;margin-top:4px}
-#reloadTag{color:#ffd166;font-size:13px;letter-spacing:1px;margin-top:2px;min-height:16px}
-
-#slots{bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:5px}
-.slot{width:58px;height:52px;background:rgba(15,20,28,.72);border:1px solid rgba(255,255,255,.16);
-  border-radius:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  font-size:10px;color:#9fb3c8;position:relative;cursor:pointer}
-.slot b{position:absolute;top:3px;left:6px;font-size:10px;color:#5f7388}
-.slot i{font-style:normal;font-size:9px;color:#5f7388;letter-spacing:0}
-.slot .ic{font-size:16px;line-height:1.2}
-.slot .tic{width:26px;height:26px;image-rendering:pixelated;image-rendering:crisp-edges}
-.slot .cnt{position:absolute;right:5px;bottom:3px;font-size:10px;color:#7ec8ff}
-.invCell .tic{width:36px;height:36px;image-rendering:pixelated;image-rendering:crisp-edges;margin-bottom:1px}
-.slot.on{border-color:#ffd166;color:#fff;background:rgba(255,209,102,.14);box-shadow:0 0 10px rgba(255,209,102,.25)}
-.slot.on i{color:#ffd166}
-.slot.low{color:#ff6b6b}
-.slot.low .cnt{color:#ff6b6b}
-
-/* ============ 顶部状态 ============ */
-#teamStat{top:12px;left:50%;transform:translateX(-50%);display:flex;gap:14px;background:rgba(10,14,20,.6);
-  padding:6px 16px;border-radius:20px;font-size:14px;font-weight:600;letter-spacing:1px;align-items:center}
-#teamStat .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
-#teamStat .b{color:#7ec8ff}.b .dot{background:#3d9bff}
-#teamStat .r{color:#ff8a8a}.r .dot{background:#ff4d4d}
-#timerT{color:#ffd166;font-variant-numeric:tabular-nums}
-
-#killfeed{top:14px;right:12px;width:250px;display:flex;flex-direction:column;gap:4px;align-items:flex-end}
-.kf{background:rgba(10,14,20,.72);border-left:3px solid #ffd166;padding:3px 9px;font-size:12px;border-radius:3px;
-  animation:kfin .2s ease;white-space:nowrap}
-.kf .p{color:#7ec8ff}.kf .e{color:#ff8a8a}
-@keyframes kfin{from{opacity:0;transform:translateX(20px)}to{opacity:1}}
-
-#minimapWrap{top:14px;right:12px;width:200px;background:rgba(10,14,20,.62);border:1px solid rgba(255,255,255,.14);
-  border-radius:6px;padding:5px}
-#mm{width:188px;height:188px;display:block;border-radius:3px;background:#1a232e}
-
-#banner{top:22%;left:50%;transform:translate(-50%,-50%);font-size:34px;font-weight:800;letter-spacing:4px;
-  text-shadow:0 0 18px rgba(255,209,102,.5);color:#ffd166;opacity:0;transition:opacity .3s;text-align:center;width:100%}
-#objective{top:8%;left:50%;transform:translateX(-50%);font-size:12px;color:#9fb3c8;letter-spacing:3px}
-
-/* ============ 对讲机（命令 + 队伍状态通知栏） ============ */
-#radio{top:72px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:3px;pointer-events:none}
-#radioState{font-size:13px;color:#ffd166;letter-spacing:2px;background:rgba(10,14,20,.78);border:1px solid rgba(255,209,102,.35);
-  padding:3px 14px;border-radius:14px;display:none}
-#radioState.on{display:block;animation:radIn .15s ease}
-#radioFeed{font-size:11px;color:#9fb3c8;letter-spacing:1px;background:rgba(10,14,20,.6);padding:2px 10px;border-radius:10px;
-  opacity:0;transition:opacity .25s;max-width:440px;text-align:center}
-#radioFeed.show{opacity:1}
-#radioHints{font-size:10px;color:#5f7388;letter-spacing:1px;margin-top:2px;opacity:.85}
-@keyframes radIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1}}
-
-/* ============ 准星与反馈 ============ */
-#crosshair{top:50%;left:50%;transform:translate(-50%,-50%);width:22px;height:22px;opacity:.9}
-#crosshair i{position:absolute;background:#dff;box-shadow:0 0 3px rgba(0,255,255,.6)}
-#crosshair i:nth-child(1){left:50%;top:0;width:2px;height:8px;margin-left:-1px}
-#crosshair i:nth-child(2){left:50%;bottom:0;width:2px;height:8px;margin-left:-1px}
-#crosshair i:nth-child(3){top:50%;left:0;height:2px;width:8px;margin-top:-1px}
-#crosshair i:nth-child(4){top:50%;right:0;height:2px;width:8px;margin-top:-1px}
-#crosshair i:nth-child(5){left:50%;top:50%;width:2px;height:2px;margin:-1px 0 0 -1px;background:#fff;box-shadow:none}
-#hitmarker{top:50%;left:50%;transform:translate(-50%,-50%);opacity:0;transition:opacity .08s}
-#hitmarker i{position:absolute;width:14px;height:3px;background:#fff}
-#hitmarker i:nth-child(1){left:-16px;top:-2px;transform:rotate(45deg)}
-#hitmarker i:nth-child(2){left:-16px;top:0;transform:rotate(-45deg)}
-#hitmarker i:nth-child(3){left:4px;top:-2px;transform:rotate(-45deg)}
-#hitmarker i:nth-child(4){left:4px;top:0;transform:rotate(45deg)}
-#hitmarker.kill i{background:#ff4757;width:16px;height:4px}
-#vignette{inset:0;background:radial-gradient(ellipse at center,rgba(255,0,0,0) 55%,rgba(255,0,0,.38) 100%);opacity:0;transition:opacity .2s}
-#zoneVignette{inset:0;background:radial-gradient(ellipse at center,rgba(47,127,232,0) 55%,rgba(47,127,232,.42) 100%);opacity:0;transition:opacity .2s}
-#lowhp{inset:0;background:radial-gradient(ellipse at center,rgba(180,0,0,0) 60%,rgba(180,0,0,.4) 100%);opacity:0;transition:opacity .4s}
-/* ============ 固定机枪位 ============ */
-#mgUI{top:16px;left:16px;font-size:12px;color:#9fd37a;line-height:1.7;background:rgba(10,14,20,.7);padding:8px 12px;border-radius:6px;letter-spacing:1px}
-#mgUI b{font-size:15px;color:#c8e6a0}
-#mgUI .heatBar{width:160px;height:8px;background:rgba(255,255,255,.1);border-radius:3px;margin-top:5px;overflow:hidden}
-#mgUI .heatFill{height:100%;width:0%;background:linear-gradient(90deg,#2ecc71,#f1c40f,#e74c3c);transition:width .1s}
-#mgHint{bottom:22%;left:50%;transform:translateX(-50%);font-size:13px;color:#9fd37a;letter-spacing:2px;background:rgba(10,14,20,.65);padding:5px 14px;border-radius:4px;display:none}
-
-/* ============ 狙击镜（全屏放大视野 + 绿色分划，无黑边无呼吸） ============ */
-#scopeSVG{position:fixed;inset:0;width:100%;height:100%;display:none;pointer-events:none;z-index:14}
-
-/* ============ 记分板 / 死亡 / 结算 ============ */
-#scoreboard{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(8,12,18,.92);border:1px solid rgba(255,255,255,.2);
-  border-radius:8px;padding:18px 22px;min-width:420px;display:none;z-index:30}
-#scoreboard h2{font-size:16px;margin-bottom:10px;letter-spacing:2px;color:#ffd166}
-#sbRows div{display:flex;gap:10px;padding:4px 6px;font-size:13px;border-radius:3px}
-#sbRows div:nth-child(even){background:rgba(255,255,255,.04)}
-#sbRows .n{flex:1;overflow:hidden;text-overflow:ellipsis}
-#sbRows .k{width:44px;text-align:right;color:#7ec8ff}
-#sbRows .d{width:44px;text-align:right;color:#ff8a8a}
-#deathOverlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:25;pointer-events:none}
-#deathOverlay h1{font-size:44px;letter-spacing:6px;color:#ff4757;margin-bottom:8px}
-#deathOverlay p{font-size:16px;color:#9fb3c8}
-#spectateInfo{position:fixed;top:12px;left:50%;transform:translateX(-50%);font-size:14px;color:#7ec8ff;letter-spacing:1px;z-index:26;pointer-events:none;text-shadow:0 1px 3px rgba(0,0,0,.7)}
-#spectateQuit{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:26;pointer-events:auto}
-/* 倒地 overlay + 救援进度条（respawn-rework §8.6） */
-#downOverlay{position:fixed;inset:0;background:rgba(20,40,70,.42);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:24;pointer-events:none}
-#downOverlay h1{font-size:44px;letter-spacing:6px;color:#7ec8ff;margin-bottom:8px}
-#downOverlay p{font-size:16px;color:#9fb3c8}
-#downOverlay .sub{font-size:13px;color:#9fb3c8;margin-top:6px}
-#reviveBarWrap{position:fixed;bottom:22%;left:50%;transform:translateX(-50%);width:280px;z-index:26;display:none;text-align:center;pointer-events:none}
-#reviveBarWrap .reviveLabel{font-size:12px;color:#7ec8ff;letter-spacing:2px;margin-bottom:6px}
-#reviveBarWrap .reviveBar{height:8px;background:rgba(255,255,255,.15);border-radius:4px;overflow:hidden}
-#reviveBar{height:100%;width:0%;background:linear-gradient(90deg,#7ec8ff,#e8f4ff);transition:width .1s}
-#matchEnd{position:fixed;inset:0;background:rgba(0,0,0,.78);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:40}
-#matchEnd h1{font-size:52px;letter-spacing:8px;margin-bottom:6px}
-#matchEnd p{font-size:16px;color:#9fb3c8;margin-bottom:10px}
-#missionResult{font-size:17px;color:#ffd166}
-.btn{padding:12px 34px;font-size:15px;letter-spacing:2px;border:1px solid rgba(255,255,255,.3);border-radius:5px;
-  background:rgba(255,255,255,.06);color:#fff;cursor:pointer;transition:.15s;pointer-events:auto}
-.btn:hover{background:#ffd166;color:#111;border-color:#ffd166}
-
-/* ============ 主菜单 ============ */
-#menu{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;
-  background:linear-gradient(160deg,rgba(8,12,18,.88),rgba(14,22,34,.78));pointer-events:auto}
-#menu h1{font-size:54px;letter-spacing:12px;font-weight:900;color:#ffd166;text-shadow:0 0 30px rgba(255,209,102,.4);margin-bottom:2px}
-#menu .sub{color:#9fb3c8;letter-spacing:4px;font-size:13px;margin-bottom:26px}
-#menu .col{display:flex;flex-direction:column;gap:10px;width:340px}
-#mapRow{display:flex;gap:6px;margin-bottom:2px}
-#mapRow .mapbtn{flex:1;padding:9px 4px;font-size:12px;letter-spacing:1px;border:1px solid rgba(255,255,255,.2);border-radius:4px;
-  background:rgba(255,255,255,.04);color:#cfd8e3;cursor:pointer;transition:.15s}
-#mapRow .mapbtn:hover{border-color:#ffd166;color:#ffd166}
-#mapRow .mapbtn.on{border-color:#ffd166;background:rgba(255,209,102,.14);color:#ffd166}
-#menu .mbtn{padding:13px 20px;font-size:15px;letter-spacing:2px;border:1px solid rgba(255,255,255,.25);border-radius:5px;
-  background:rgba(255,255,255,.05);color:#e8edf4;cursor:pointer;transition:.15s;text-align:center}
-#menu .mbtn:hover{border-color:#ffd166;background:rgba(255,209,102,.12);color:#ffd166}
-#menu .mbtn.acc{border-color:#ffd166;background:rgba(255,209,102,.16);color:#ffd166}
-/* 账号（个人仓库） */
-#accountBox{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.16);border-radius:6px;padding:10px 12px;margin-bottom:4px}
-#accStatus{font-size:12px;color:#9fb3c8;letter-spacing:1px;margin-bottom:8px}
-#accRow{display:flex;gap:8px;margin-bottom:8px}
-#accRow input{flex:1;min-width:0;padding:9px 10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.25);border-radius:4px;
-  color:#e8edf4;font-size:13px}
-#accBtns{display:flex;gap:8px}
-#accBtns .mbtn{padding:8px 4px;font-size:13px}
-#accMsg{font-size:11px;color:#9fb3c8;margin-top:6px;min-height:14px;letter-spacing:1px}
-/* 局内背包面板（B 键） */
-#invPanel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:560px;max-width:94vw;z-index:40;
-  background:rgba(8,12,18,.94);border:1px solid rgba(255,209,102,.4);border-radius:10px;padding:16px 20px;color:#e8edf4}
-#invPanel .invHead{font-size:16px;letter-spacing:2px;color:#ffd166;margin-bottom:12px}
-#invPanel .invHead span{font-size:12px;color:#9fb3c8;margin-left:8px;letter-spacing:1px}
-#invPanel .invCols{display:flex;gap:18px}
-#invPanel .invSec{flex:1;min-width:0}
-#invPanel .invSecTitle{font-size:11px;letter-spacing:2px;color:#9fb3c8;margin-bottom:6px;text-align:center}
-#invPanel .invGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
-.invCell{position:relative;aspect-ratio:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);
-  border-radius:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;
-  transition:.12s;min-height:52px}
-.invCell:hover{border-color:#ffd166;background:rgba(255,209,102,.12)}
-.invCell .ic{font-size:22px;line-height:1}
-.invCell .nm{font-size:9px;color:#9fb3c8;margin-top:2px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.invCell .st{position:absolute;right:3px;bottom:2px;font-size:11px;color:#7ec8ff;font-variant-numeric:tabular-nums}
-.invCell.empty{opacity:.25;cursor:default}
-.invCell.empty:hover{border-color:rgba(255,255,255,.14);background:rgba(255,255,255,.05)}
-.invStoreBtns{display:flex;gap:6px;margin-top:8px}
-.invStoreBtns button{flex:1;padding:6px 0;font-size:11px;letter-spacing:1px;border:1px solid rgba(255,255,255,.25);
-  border-radius:4px;background:rgba(255,255,255,.05);color:#cfd8e3;cursor:pointer;transition:.15s}
-.invStoreBtns button:hover{border-color:#ffd166;color:#ffd166}
-.invArmorRow{margin-top:12px;font-size:13px;color:#cfd8e3;letter-spacing:1px;text-align:center}
-.invArmorRow b{color:#7ec8ff}
-#invPanel .invHint{margin-top:10px;font-size:11px;color:#5f7388;letter-spacing:1px;text-align:center}
-/* 搜刮/反馈 toast */
-#toast{position:fixed;bottom:14%;left:50%;transform:translateX(-50%);z-index:45;font-size:13px;letter-spacing:2px;
-  color:#ffd166;background:rgba(10,14,20,.85);border:1px solid rgba(255,209,102,.35);padding:6px 16px;border-radius:16px;
-  opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap}
-#toast.show{opacity:1}
-#joinRow{display:flex;gap:8px;margin-top:4px}
-#joinRow input{flex:1;padding:11px 12px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.25);border-radius:5px;
-  color:#fff;font-size:14px;outline:none;pointer-events:auto}
-#joinRow input:focus{border-color:#ffd166}
-#roomList{margin-top:14px;max-height:170px;overflow-y:auto;border:1px solid rgba(255,255,255,.14);border-radius:5px;display:none}
-#roomList .rrow{display:flex;justify-content:space-between;padding:8px 12px;font-size:13px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.06)}
-#roomList .rrow:hover{background:rgba(255,209,102,.1)}
-#roomList .rrow .cnt{color:#9fb3c8}
-/* ============ 联机大厅过渡页（创建/加入房间） ============ */
-#lobby{width:380px;max-width:94vw;background:rgba(10,15,22,.95);border:1px solid rgba(255,209,102,.35);border-radius:10px;
-  padding:20px 22px;margin-top:-70px;text-align:left;color:#e8edf4}
-#lobby h2{margin:0 0 4px;font-size:22px;letter-spacing:3px;color:#ffd166}
-#lobby .lmeta{display:flex;justify-content:space-between;font-size:13px;color:#9fb3c8;margin-bottom:12px}
-#lobby .lmeta b{color:#ffd166;letter-spacing:1px}
-#lobby .lplayers{border:1px solid rgba(255,255,255,.14);border-radius:6px;padding:6px 0;margin-bottom:12px;
-  min-height:52px;max-height:180px;overflow-y:auto}
-#lobby .lrow{display:flex;align-items:center;gap:8px;padding:7px 12px;font-size:14px;border-bottom:1px solid rgba(255,255,255,.05)}
-#lobby .lrow:last-child{border-bottom:none}
-#lobby .lrow .dot{width:9px;height:9px;border-radius:50%;flex:none}
-#lobby .lrow .tag{margin-left:auto;font-size:11px;color:#9fb3c8;border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:1px 7px}
-#lobby .lrow .tag.me{color:#ffd166;border-color:#ffd166}
-#lobby .lrow.dim{color:#5f7388;font-size:12px}
-#lobby .lhint{font-size:12px;color:#9fb3c8;margin-bottom:12px;line-height:1.6;min-height:16px}
-#lobby .lbtns{display:flex;gap:10px}
-#lobby .lbtns .mbtn{flex:1;padding:11px 8px;font-size:14px;letter-spacing:2px;border:1px solid rgba(255,255,255,.25);border-radius:5px;
-  background:rgba(255,255,255,.05);color:#e8edf4;cursor:pointer;transition:.15s;text-align:center}
-#lobby .lbtns .mbtn:hover{border-color:#ffd166;background:rgba(255,209,102,.12);color:#ffd166}
-#lobby .lbtns .mbtn.acc{border-color:#ffd166;background:rgba(255,209,102,.16);color:#ffd166}
-#lobby .lbtns .mbtn.acc:hover{background:rgba(255,209,102,.3)}
-#lobby .lnote{font-size:11px;color:#5f7388;margin-top:10px;line-height:1.6}
-#menu .keys{margin-top:18px;font-size:11px;color:#5f7388;line-height:1.9;width:520px;text-align:center}
-#menu .keys b{color:#9fb3c8}
-#connectTag{top:12px;left:12px;font-size:12px;color:#9fb3c8;background:rgba(10,14,20,.6);padding:4px 10px;border-radius:12px;display:none}
-#fps{top:12px;left:12px;font-size:11px;color:#5f7388;display:none}
-#paused{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:35}
-#paused h2{letter-spacing:6px;margin-bottom:20px;color:#ffd166}
-#paused .row{display:flex;gap:14px;margin-top:8px}
-#paused label{font-size:13px;color:#9fb3c8;line-height:30px}
-#paused input[type=range]{width:200px}
-/* ============ 设置面板（performance：灵敏度 / 音量 / 按键绑定） ============ */
-#settings{position:fixed;inset:0;background:rgba(0,0,0,.62);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:70;pointer-events:auto}
-.setPanel{width:540px;max-width:94vw;max-height:90vh;overflow-y:auto;background:rgba(10,15,22,.97);border:1px solid rgba(255,209,102,.4);border-radius:10px;padding:18px 22px;color:#e8edf4}
-.setPanel h2{font-size:20px;letter-spacing:3px;color:#ffd166;margin-bottom:4px}
-.setPanel .setSub{font-size:11px;color:#5f7388;letter-spacing:1px;margin-bottom:12px}
-.setRow{display:flex;align-items:center;gap:12px;margin-bottom:11px}
-.setRow label{width:104px;flex:none;font-size:13px;color:#9fb3c8;letter-spacing:1px}
-.setRow input[type=range]{flex:1;min-width:0}
-.setRow b{width:54px;flex:none;text-align:right;font-size:13px;color:#ffd166;font-variant-numeric:tabular-nums}
-.setKeys{border:1px solid rgba(255,255,255,.14);border-radius:6px;padding:8px 12px;margin:4px 0 12px}
-.setKeyHead{font-size:12px;color:#9fb3c8;letter-spacing:2px;margin-bottom:6px}
-.setKeyRow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:4px 2px;border-bottom:1px solid rgba(255,255,255,.05)}
-.setKeyRow:last-child{border-bottom:none}
-.setKeyRow .nm{font-size:13px;color:#e8edf4}
-.setKeyBtn{flex:none;min-width:116px;padding:5px 10px;font-size:12px;letter-spacing:1px;border:1px solid rgba(255,255,255,.25);border-radius:4px;background:rgba(255,255,255,.05);color:#cfd8e3;cursor:pointer;transition:.15s;text-align:center;font-family:inherit}
-.setKeyBtn:hover{border-color:#ffd166;color:#ffd166}
-.setKeyBtn.listening{border-color:#ff6b6b;color:#ff6b6b;background:rgba(255,107,107,.14);animation:setBlink .5s infinite alternate}
-@keyframes setBlink{from{opacity:.55}to{opacity:1}}
-.setBtns{display:flex;gap:10px;justify-content:flex-end;margin-top:4px}
-.setBtns .mbtn{padding:9px 20px;font-size:13px}
-</style>
-<style>#fatalErr{position:fixed;top:0;left:0;right:0;z-index:999;padding:12px 18px;background:#7a1f1f;color:#ffdada;font:14px/1.6 monospace;white-space:pre-wrap;display:none}</style>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/hud.css">
+<link rel="stylesheet" href="css/panels.css">
+<link rel="stylesheet" href="css/menu.css">
+<link rel="stylesheet" href="css/responsive.css">
 </head>
 <body>
 <canvas id="c" role="img" aria-label="3D 战场画面（需要 WebGL 支持）">你的浏览器不支持 WebGL，无法显示 3D 战场画面。</canvas>
 
 <!-- ================= HUD ================= -->
 <div class="hud" id="healthWrap">
-  <div class="lab">生命值 HEALTH</div>
-  <div id="hpBar"><div id="hpFill"></div></div>
-  <div class="lab" style="margin-top:5px">护甲 ARMOR</div>
+  <div id="hpNumRow">
+    <div>
+      <div id="hpText">100</div>
+      <div id="hpSub" class="hudTag">生命 HEALTH</div>
+    </div>
+  </div>
+  <div class="barShell"><div id="hpFill"></div></div>
+  <div class="hudTag" style="margin-top:6px">护甲 ARMOR</div>
   <div id="armorBar"><div id="armorFill"></div></div>
 </div>
-<div id="hpText" class="hud">100</div>
 
 <div class="hud" id="ammoWrap">
+  <div id="wpnName">步枪</div>
   <div id="ammoCur">30</div>
   <div id="ammoRes">/ 90</div>
-  <div id="reloadTag"></div>
-  <div class="lab">弹药 AMMO · R 换弹</div>
+  <div id="ammoTag">
+    <span class="hudTag" style="margin-right:auto">弹药 AMMO</span>
+    <span id="reloadTag"></span>
+  </div>
 </div>
 
 <div class="hud" id="slots">
@@ -281,12 +48,17 @@ html,body{width:100%;height:100%;overflow:hidden;background:#0b0e13;color:#e8edf
 </div>
 
 <div class="hud" id="teamStat">
-  <span class="b"><span class="dot"></span>蓝队 <b id="aliveB">10</b><span style="color:#5f7388">/10</span></span>
-  <b id="scoreB" style="color:#7ec8ff;font-variant-numeric:tabular-nums">0</b><span style="color:#5f7388">:</span><b id="scoreR" style="color:#ff8a8a;font-variant-numeric:tabular-nums">0</b>
+  <span class="b"><span class="dot"></span>蓝队 <b id="aliveB">10</b><span style="color:var(--muted2)">/10</span></span>
+  <b id="scoreB" style="color:var(--blue-bright);font-family:var(--font-num);font-variant-numeric:tabular-nums">0</b><span style="color:var(--muted2)">:</span><b id="scoreR" style="color:var(--red);font-family:var(--font-num);font-variant-numeric:tabular-nums">0</b>
+  <span class="sep"></span>
+  <b id="timerT" style="color:#fff;font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:800">--:--</b>
+  <span class="sep"></span>
   <span id="capStat" style="font-size:12px;letter-spacing:2px">A B C</span>
-  <span class="r"><span class="dot"></span>敌方 <b id="aliveR">10</b><span style="color:#5f7388">/10</span></span>
+  <span class="sep"></span>
+  <span class="r"><span class="dot"></span>敌方 <b id="aliveR">10</b><span style="color:var(--muted2)">/10</span></span>
 </div>
 
+<div id="matchHudTag" class="hud">TACTICAL COMBAT // 战术行动</div>
 <div class="hud" id="killfeed"></div>
 <div class="hud" id="minimapWrap"><canvas id="mm" width="188" height="188"></canvas></div>
 
@@ -301,7 +73,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#0b0e13;color:#e8edf
 <div class="hud" id="crosshair"><i></i><i></i><i></i><i></i><i></i></div>
 <svg id="scopeSVG" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice">
   <defs>
-    <!-- 发光滤镜 -->
     <filter id="scopeGlow">
       <feGaussianBlur stdDeviation="2" result="blur"/>
       <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
@@ -311,40 +82,29 @@ html,body{width:100%;height:100%;overflow:hidden;background:#0b0e13;color:#e8edf
       <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
   </defs>
-
-  <!-- ====== 主瞄准环（浮在放大视野上，无黑边） ====== -->
   <circle cx="400" cy="300" r="110" fill="none" stroke="#00cc44" stroke-width="1.4" opacity="0.95"/>
-
-  <!-- 圆环四向刻度 -->
   <g stroke="#00cc44" stroke-width="1.2" opacity="0.8">
     <line x1="400" y1="188" x2="400" y2="198"/>
     <line x1="400" y1="402" x2="400" y2="412"/>
     <line x1="288" y1="300" x2="298" y2="300"/>
     <line x1="502" y1="300" x2="512" y2="300"/>
   </g>
-
-  <!-- ====== 分划 ====== -->
   <g>
-    <!-- 十字准线 -->
     <g filter="url(#scopeGlow)" stroke="#00ff4d" stroke-width="1.6">
       <line x1="400" y1="190" x2="400" y2="248"/>
       <line x1="400" y1="352" x2="400" y2="410"/>
       <line x1="290" y1="300" x2="348" y2="300"/>
       <line x1="452" y1="300" x2="510" y2="300"/>
     </g>
-    <!-- 密位点 -->
     <g fill="#00ff4d" opacity="0.5">
       <circle cx="400" cy="224" r="1.8"/><circle cx="400" cy="245" r="1.4"/>
       <circle cx="400" cy="376" r="1.8"/><circle cx="400" cy="355" r="1.4"/>
       <circle cx="324" cy="300" r="1.8"/><circle cx="345" cy="300" r="1.4"/>
       <circle cx="476" cy="300" r="1.8"/><circle cx="455" cy="300" r="1.4"/>
     </g>
-    <!-- 中心点 -->
     <circle cx="400" cy="300" r="4" fill="none" stroke="#00ff4d" stroke-width="1.6" filter="url(#scopeGlow)"/>
     <circle cx="400" cy="300" r="1.2" fill="#00ff4d" filter="url(#scopeGlowSmall)"/>
   </g>
-
-  <!-- ====== 密位读数（极简） ====== -->
   <g font-family="'Courier New', monospace" fill="#00cc44" opacity="0.4" font-size="11">
     <text x="40" y="75">MIL 1.2</text>
     <text x="730" y="75" text-anchor="end">-2.4°</text>
@@ -358,13 +118,22 @@ html,body{width:100%;height:100%;overflow:hidden;background:#0b0e13;color:#e8edf
 <div class="hud" id="lowhp"></div>
 
 <div class="hud" id="mgUI" style="display:none"><b>🔫 固定机枪</b><br>鼠标转向 · 左键连射 · 过热冷却 · [E] 退出<br><div class="heatBar"><div class="heatFill" id="mgHeat"></div></div></div>
+<div class="hud" id="mortarUI" style="display:none"></div>
+<div class="hud" id="aimRing" style="display:none"></div>
 <div class="hud" id="mgHint">[E] 使用机枪</div>
+<div class="hud" id="execHint">[E] 处决倒地敌人</div>
 
 <div class="hud" id="connectTag"></div>
 <div class="hud" id="fps"></div>
 
+<!-- Minecraft 风信息瀑布（屏幕左侧中部 · 自上而下滚动） -->
+<div id="ticker">
+  <input id="chatInput" type="text" maxlength="90" placeholder="聊天 / 指令 (以 / 开头) — 回车发送" autocomplete="off">
+</div>
+
 <div id="scoreboard">
   <h2>记分板 · 按 Tab 查看</h2>
+  <div id="sbHead"><span class="n">玩家</span><span class="k">击杀</span><span class="d">死亡</span></div>
   <div id="sbRows"></div>
 </div>
 
@@ -373,7 +142,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#0b0e13;color:#e8edf
   <p id="deathTimer">观战中 · E/Q 切换队友视角</p>
 </div>
 <div id="spectateInfo"></div>
-<button type="button" class="btn" id="spectateQuit" style="display:none">返回主菜单</button>
+<button type="button" class="btn danger" id="spectateQuit" style="display:none">返回主菜单</button>
 
 <div id="downOverlay">
   <h1>你倒下了</h1>
@@ -390,10 +159,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#0b0e13;color:#e8edf
   <h2>游戏已暂停</h2>
   <div class="row"><button type="button" class="btn" id="resumeBtn">继续游戏</button></div>
   <div class="row"><button type="button" class="btn" id="pausedSettingsBtn">⚙ 设置</button></div>
-  <div class="row"><button type="button" class="btn" id="pausedQuitBtn">↩ 退出对局</button></div>
+  <div class="row"><button type="button" class="btn danger" id="pausedQuitBtn">↩ 退出对局</button></div>
 </div>
 
-<!-- 设置面板（performance）：灵敏度 / 音量 / 按键绑定，调整自动保存 -->
 <div id="settings">
   <div class="setPanel">
     <h2>⚙ 设置</h2>
@@ -419,43 +187,72 @@ html,body{width:100%;height:100%;overflow:hidden;background:#0b0e13;color:#e8edf
 </div>
 
 <div id="teamSelect" style="position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:60">
-  <h1 style="font-size:34px;letter-spacing:6px;margin-bottom:6px;color:#ffd166">多队混战</h1>
-  <p id="teamSelectInfo" style="font-size:14px;color:#9fb3c8;margin-bottom:20px"></p>
+  <h1 style="font-size:34px;letter-spacing:8px;margin-bottom:8px;color:var(--accent)">多队混战</h1>
+  <p id="teamSelectInfo" style="font-size:14px;color:var(--muted);margin-bottom:22px"></p>
   <div id="teamSelectBtns" style="display:flex;gap:14px"></div>
-  <p style="font-size:12px;color:#5f7388;margin-top:18px">吃鸡制：最后存活的一支队伍获胜 · 无时间限制</p>
+  <p style="font-size:12px;color:var(--muted);margin-top:18px">吃鸡制：最后存活的一支队伍获胜 · 无时间限制</p>
 </div>
 
+<!-- 主菜单（COD 现代战争风 · 中央士兵 + 左右操作） -->
 <div id="menu">
-  <h1>战地突击</h1>
-  <div class="sub">BATTLEGROUND · 红蓝 AI 战术对抗</div>
-  <div class="col">
-    <!-- 账号（个人仓库）：登录后开始游戏，仓库弹药/护甲局间保留 -->
-    <div id="accountBox">
-      <div id="accStatus">未登录（游客模式，无个人仓库）</div>
-      <div id="accRow">
-        <input id="accName" placeholder="账号名（2-16字符）">
-        <input id="accPwd" type="password" placeholder="密码（≥4位）">
-      </div>
-      <div id="accBtns">
-        <button type="button" class="mbtn" id="btnLogin" style="width:110px">登录</button>
-        <button type="button" class="mbtn" id="btnReg" style="width:110px">注册</button>
-        <button type="button" class="mbtn" id="btnLogout" style="width:110px;display:none">退出</button>
-      </div>
-      <div id="accMsg"></div>
-    </div>
-    <div id="mapRow"></div>
-    <button type="button" class="mbtn acc" id="btnSingle">⚔ 开始单人战役（vs AI）</button>
-    <button type="button" class="mbtn" id="btnCreate">🌐 创建联机房间（房主）</button>
-    <div id="joinRow">
-      <input id="joinIp" placeholder="服务器地址，须以 ws:// 开头，如 ws://192.168.1.8:8080">
-      <button type="button" class="mbtn" id="btnJoin" style="width:110px">加入</button>
-    </div>
-    <div style="font-size:12px;color:#8b98a9;margin-top:6px;line-height:1.5">联机地址填在上面这个框里即可（http:// 会自动转 ws://）。<b>不要</b>把 ws:// 地址粘贴到浏览器地址栏打开——浏览器不支持该协议，会报 ERR_UNKNOWN_URL_SCHEME。</div>
-    <button type="button" class="mbtn" id="btnRefresh">🔄 刷新服务器列表</button>
-    <button type="button" class="mbtn" id="btnSettings">⚙ 设置</button>
-    <div id="roomList"></div>
+  <div class="menuHeader">
+    <div class="emblem">★</div>
+    <h1>战地突击</h1>
+    <div class="sub">BATTLEGROUND · 战术行动</div>
   </div>
-  <!-- 联机大厅过渡页：创建/加入房间后的等待界面（房主可点「开始对战」） -->
+  <div class="menuBody">
+    <!-- 左：主操作列 -->
+    <div class="col">
+      <div id="mapRow"></div>
+      <button type="button" class="mbtn acc" id="btnSingle"><span class="btnIco">⚔</span>开始单人战役（vs AI）</button>
+      <button type="button" class="mbtn" id="btnCreate"><span class="btnIco">🌐</span>创建联机房间（房主）</button>
+      <div id="joinRow">
+        <input id="joinIp" placeholder="服务器地址，ws://192.168.1.8:8080">
+        <button type="button" class="mbtn" id="btnJoin" style="width:110px">加入</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;line-height:1.6">联机地址填在上面这个框里即可（http:// 会自动转 ws://）。<b>不要</b>把 ws:// 地址粘贴到浏览器地址栏。</div>
+      <button type="button" class="mbtn" id="btnRefresh"><span class="btnIco">🔄</span>刷新服务器列表</button>
+      <button type="button" class="mbtn" id="btnSettings"><span class="btnIco">⚙</span>设置</button>
+      <div id="roomList"></div>
+    </div>
+
+    <!-- 中：士兵立绘（COD 主角位） -->
+    <div class="menuHero">
+      <div class="heroTag">精锐突击兵 · ELITE OPERATOR</div>
+      <img class="soldierImg" src="models/soldier_preview.png" alt="突击兵" onerror="this.style.opacity=0.35">
+      <div class="heroStats">
+        <span>等级 <b>20</b></span>
+        <span>KDR <b>2.4</b></span>
+        <span>在线 <b>256</b></span>
+      </div>
+    </div>
+
+    <!-- 右：服务器/情报侧栏 -->
+    <div class="menuSide">
+      <div class="sideCard">
+        <h4>服务器状态</h4>
+        <div id="srvStatusBox">
+          <div class="serverRow"><span class="srvName">本地主机</span><span class="srvPing"><span class="srvBar"><i style="width:88%"></i></span>24ms</span></div>
+          <div class="serverRow"><span class="srvName">亚太区</span><span class="srvPing"><span class="srvBar"><i style="width:72%"></i></span>38ms</span></div>
+          <div class="serverRow"><span class="srvName">欧洲区</span><span class="srvPing high"><span class="srvBar"><i style="width:42%;background:var(--accent)"></i></span>97ms</span></div>
+        </div>
+      </div>
+      <div class="sideCard">
+        <h4>作战提示</h4>
+        <div class="tipLine"><b>WASD</b>移动 <b>Shift</b>疾跑 <b>空格</b>跳跃</div>
+        <div class="tipLine"><b>1-8</b>切槽 <b>R</b>换弹 <b>F</b>近战 <b>G</b>手雷</div>
+        <div class="tipLine"><b>E</b>交互/搜刮 <b>B</b>背包 <b>Tab</b>记分板</div>
+        <div class="tipLine"><b>Z/X/C/V</b>对讲机命令 <b>Esc</b>暂停</div>
+      </div>
+      <div class="sideCard">
+        <h4>今日战报</h4>
+        <div class="tipLine">🔥 已进行 <b>1,284</b> 场对战</div>
+        <div class="tipLine">💀 累计击杀 <b>48,902</b> 名目标</div>
+        <div class="tipLine">🏆 今日胜率 <b>58.2%</b></div>
+      </div>
+    </div>
+  </div>
+  <!-- 联机大厅过渡页 -->
   <div id="lobby" style="display:none">
     <h2 id="lobbyTitle">联机房间</h2>
     <div class="lmeta">
@@ -476,38 +273,23 @@ html,body{width:100%;height:100%;overflow:hidden;background:#0b0e13;color:#e8edf
     <b>E</b>搜刮尸体 / 交互 · <b>B</b>背包(仓库) · <b>Z/X/C/V</b>对讲机 · <b>Tab</b>记分板 · <b>Esc</b>暂停
   </div>
 </div>
-<!-- 局内背包面板（B 键） -->
 <div id="invPanel" style="display:none">
   <div class="invHead">🎒 背包 <span id="invAcc"></span></div>
   <div class="invCols">
-    <!-- 左栏：随身背包（局内携带） -->
-    <div class="invSec">
+    <div class="invSec" style="flex:1;min-width:0">
       <div class="invSecTitle">随身背包</div>
       <div class="invGrid" id="invBag"></div>
     </div>
-    <!-- 右栏：个人仓库（账号存储） -->
-    <div class="invSec">
-      <div class="invSecTitle">个人仓库</div>
-      <div class="invGrid" id="invStore"></div>
-      <div class="invStoreBtns">
-        <button id="invTakeAll" onclick="UI.storeTakeAll(true)">全部取出</button>
-        <button id="invStoreAll" onclick="UI.storeTakeAll(false)">全部存入</button>
-      </div>
-    </div>
   </div>
   <div class="invArmorRow" id="invArmor"></div>
-  <div class="invHint">[B] 关闭 · 左键物品：背包↔仓库转移 · 仓库保存在账号（localStorage）</div>
+  <div class="invHint">[B] 关闭 · 每局统一初始物资 · 击杀后可搜刮尸体补充</div>
 </div>
-<!-- 搜刮/提示 toast -->
 <div id="toast"></div>
 <div id="fatalErr"></div>
   <script src="libs/three.min.js"></script>
   <script src="js/core.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/textures.js"></script>
-  <!-- 地图数据（数据驱动）：registry 必须先于各地图文件，各地图文件必须先于 world.js
-       离线约束：地图以 JS 模块注入 window.MapRegistry，不使用 fetch JSON（file:// 下会被浏览器拒绝）
-       默认图 = 第一个注册（suburb）；新图 port/desert 由地图选择 UI（T6）切换 -->
   <script src="js/maps/registry.js"></script>
   <script src="js/maps/suburb.js"></script>
   <script src="js/maps/port.js"></script>
@@ -518,6 +300,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#0b0e13;color:#e8edf
   <script src="js/game.js"></script>
   <script src="js/ai.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/ecs.js"></script>
   <script src="js/accounts.js"></script>
   <script src="js/items.js"></script>
   <script src="js/mg.js"></script>

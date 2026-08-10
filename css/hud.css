@@ -1,0 +1,172 @@
+/* =====================================================================
+   HUD 层：生命、弹药、武器槽位、比分、地图、击杀播报、提示、狙击镜
+   ===================================================================== */
+
+/* ============ 左下：生命/护甲（PUBG 风大数字） ============ */
+#healthWrap{left:20px;bottom:18px;width:250px}
+#healthWrap::before{content:'';position:absolute;left:0;top:-6px;width:100%;height:1px;
+  background:linear-gradient(90deg,var(--accent),transparent);opacity:.55}
+#hpNumRow{display:flex;align-items:flex-end;gap:10px;margin-bottom:6px}
+#hpText{font-family:var(--font-num);font-size:42px;font-weight:700;line-height:1;color:#fff;
+  font-variant-numeric:tabular-nums;text-shadow:var(--shadow-txt),0 0 18px rgba(61,220,110,.35)}
+#hpSub{font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:3px;font-weight:700}
+.barShell{width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);height:12px;
+  position:relative;overflow:hidden;clip-path:polygon(0 0,100% 0,calc(100% - 6px) 100%,0 100%)}
+.barShell::after{content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(90deg,transparent 0 14px,rgba(0,0,0,.22) 14px 16px);pointer-events:none}
+#hpFill{height:100%;width:100%;background:linear-gradient(90deg,#2ecc71,#7ce58a);
+  box-shadow:0 0 12px rgba(61,220,110,.4);transition:width .18s}
+#armorBar{width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);height:8px;
+  position:relative;overflow:hidden;margin-top:5px;clip-path:polygon(0 0,100% 0,calc(100% - 5px) 100%,0 100%)}
+#armorFill{height:100%;width:100%;background:linear-gradient(90deg,#2f7fe8,#7cb8ff);
+  box-shadow:0 0 10px rgba(47,127,232,.4);transition:width .18s}
+
+/* ============ 右下：武器/弹药（COD 风） ============ */
+#ammoWrap{right:22px;bottom:18px;text-align:right}
+#ammoWrap::before{content:'';position:absolute;right:0;top:-6px;width:100%;height:1px;
+  background:linear-gradient(270deg,var(--accent),transparent);opacity:.55}
+#ammoCur{font-family:var(--font-num);font-size:52px;font-weight:700;line-height:1;color:#fff;
+  font-variant-numeric:tabular-nums;text-shadow:var(--shadow-txt),0 0 22px rgba(255,158,31,.3)}
+#ammoRes{font-family:var(--font-num);font-size:18px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums}
+#wpnName{font-size:14px;font-weight:700;letter-spacing:2px;color:var(--accent2);text-transform:uppercase;
+  margin-top:6px;text-shadow:0 1px 4px rgba(0,0,0,.8)}
+#ammoTag{display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-top:4px}
+#reloadTag{color:var(--accent);font-size:12px;letter-spacing:1px;font-weight:700;min-height:16px;
+  text-shadow:0 1px 4px rgba(0,0,0,.8);animation:reloadBlink .6s infinite alternate}
+@keyframes reloadBlink{from{opacity:.6}to{opacity:1}}
+
+/* ============ 底部中央：武器/道具槽位 ============ */
+#slots{bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:5px;padding:6px 10px;
+  background:linear-gradient(180deg,rgba(10,13,19,.72),rgba(8,10,15,.85));
+  border:1px solid var(--line);border-top:2px solid rgba(255,158,31,.55);
+  clip-path:polygon(14px 0,calc(100% - 14px) 0,100% 14px,100% 100%,0 100%,0 14px);
+  box-shadow:0 6px 22px rgba(0,0,0,.55)}
+#slots::before{content:'';position:absolute;inset:0;pointer-events:none;opacity:.35;
+  background:repeating-linear-gradient(45deg,transparent 0 3px,rgba(255,255,255,.012) 3px 6px)}
+.slot{width:58px;height:54px;background:rgba(16,20,28,.6);border:1px solid rgba(255,255,255,.08);
+  border-bottom:2px solid rgba(255,255,255,.05);color:var(--muted);position:relative;cursor:pointer;
+  transition:.12s;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  clip-path:polygon(4px 0,100% 0,calc(100% - 4px) 100%,0 100%)}
+.slot::after{content:'';position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--accent);
+  transform:scaleX(0);transition:transform .15s;box-shadow:0 0 10px var(--accent)}
+.slot b{position:absolute;top:3px;left:5px;font-size:9px;color:rgba(255,255,255,.32);font-family:var(--font-num)}
+.slot i{font-style:normal;font-size:9px;color:rgba(255,255,255,.42);letter-spacing:0}
+.slot .ic{font-size:16px;line-height:1.2}
+.slot .tic{width:26px;height:26px;image-rendering:pixelated;image-rendering:crisp-edges}
+.slot .cnt{position:absolute;right:4px;bottom:2px;font-size:10px;color:var(--blue-bright);font-family:var(--font-num);font-variant-numeric:tabular-nums}
+.invCell .tic{width:36px;height:36px;image-rendering:pixelated;image-rendering:crisp-edges;margin-bottom:1px}
+.slot.on{border-color:rgba(255,158,31,.65);color:#fff;background:linear-gradient(180deg,rgba(255,158,31,.16),rgba(255,158,31,.05))}
+.slot.on::after{transform:scaleX(1)}
+.slot.on i{color:var(--accent2)}
+.slot.on .cnt{color:var(--accent2)}
+.slot.low{color:var(--danger)}
+.slot.low .cnt{color:var(--danger)}
+.slot.low::after{background:var(--danger);box-shadow:0 0 10px var(--danger)}
+.slot:hover{border-color:rgba(255,158,31,.35);background:rgba(255,158,31,.06)}
+
+/* ============ 顶部中央：比分/计时条 ============ */
+#teamStat{top:14px;left:50%;transform:translateX(-50%);display:flex;gap:14px;align-items:center;
+  background:linear-gradient(180deg,rgba(10,13,19,.85),rgba(8,10,15,.7));
+  padding:7px 20px;font-size:14px;font-weight:700;letter-spacing:1px;color:var(--txt);
+  border:1px solid var(--line);border-bottom:2px solid var(--accent);
+  clip-path:polygon(12px 0,calc(100% - 12px) 0,100% 8px,100% 100%,0 100%,0 8px);
+  box-shadow:0 6px 20px rgba(0,0,0,.5);backdrop-filter:blur(4px)}
+#teamStat .dot{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;
+  transform:rotate(45deg);box-shadow:0 0 8px currentColor}
+#teamStat .b{color:var(--blue-bright)}.b .dot{background:var(--blue-bright)}
+#teamStat .r{color:var(--red)}.r .dot{background:var(--red)}
+#teamStat .sep{width:1px;height:20px;background:var(--line-strong)}
+#timerT{color:#fff;font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:700;
+  text-shadow:0 0 10px rgba(255,158,31,.35)}
+#capStat{font-size:12px;letter-spacing:2px;font-weight:700}
+#capStat span{text-shadow:0 0 6px rgba(0,0,0,.9)}
+
+/* ============ 右上：小地图 ============ */
+#minimapWrap{top:14px;right:14px;width:200px;background:linear-gradient(180deg,rgba(10,13,19,.88),rgba(9,11,16,.8));
+  border:1px solid var(--line-strong);padding:5px;box-shadow:0 8px 26px rgba(0,0,0,.55);
+  position:relative;clip-path:polygon(0 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%)}
+#minimapWrap::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent);opacity:.7}
+#minimapWrap::after{content:'';position:absolute;y:0;right:5px;top:5px;width:14px;height:14px;
+  border-top:1px solid rgba(255,158,31,.9);border-right:1px solid rgba(255,158,31,.9);pointer-events:none}
+#mm{width:188px;height:188px;display:block;background:#141a22}
+
+/* ============ 击杀播报 ============ */
+#killfeed{top:228px;right:14px;width:292px;display:flex;flex-direction:column;gap:5px;align-items:flex-end}
+.kf{background:linear-gradient(270deg,rgba(10,13,19,.92),rgba(10,13,19,.55));
+  border-right:3px solid var(--accent);padding:5px 12px;font-size:12px;color:var(--muted);
+  animation:kfin .18s ease;white-space:nowrap;backdrop-filter:blur(3px);
+  clip-path:polygon(0 0,100% 0,calc(100% - 6px) 100%,0 100%)}
+.kf .p{color:#fff;font-weight:700}.kf .e{color:var(--danger);font-weight:700}
+@keyframes kfin{from{opacity:0;transform:translateX(36px)}to{opacity:1;transform:none}}
+
+/* ============ 中央横幅 / 目标提示 ============ */
+#banner{top:19%;left:50%;transform:translate(-50%,-50%);font-size:clamp(24px,4.5vw,40px);font-weight:900;
+  letter-spacing:5px;color:#fff;opacity:0;transition:opacity .3s;text-align:center;width:100%;
+  text-transform:uppercase;white-space:nowrap;font-family:"Arial Black","Segoe UI",sans-serif;
+  text-shadow:0 0 28px rgba(0,0,0,.95),0 3px 0 rgba(0,0,0,.6),0 0 60px currentColor}
+#objective{top:7.5%;left:50%;transform:translateX(-50%);font-size:11px;color:var(--muted);
+  letter-spacing:4px;text-transform:uppercase;text-shadow:0 1px 6px rgba(0,0,0,.9)}
+
+/* ============ 对讲机 ============ */
+#radio{top:68px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:3px}
+#radioState{font-size:13px;color:var(--accent);letter-spacing:2px;background:rgba(10,14,20,.85);
+  border:1px solid rgba(255,158,31,.45);border-left:3px solid var(--accent);
+  padding:4px 16px;display:none;font-weight:700;clip-path:polygon(0 0,100% 0,calc(100% - 10px) 100%,0 100%)}
+#radioState.on{display:block;animation:radIn .15s ease}
+#radioFeed{font-size:11px;color:var(--muted);letter-spacing:1px;background:rgba(10,14,20,.65);
+  padding:3px 12px;opacity:0;transition:opacity .25s;max-width:460px;text-align:center;font-weight:600}
+#radioFeed.show{opacity:1}
+#radioHints{font-size:10px;color:rgba(255,255,255,.35);letter-spacing:1px;margin-top:2px;opacity:.85}
+@keyframes radIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1}}
+
+/* ============ 准星与反馈 ============ */
+#crosshair{top:50%;left:50%;transform:translate(-50%,-50%);width:24px;height:24px;opacity:.92;transition:transform .1s,opacity .1s}
+#crosshair i{position:absolute;background:#fff;box-shadow:0 0 5px rgba(255,255,255,.9)}
+#crosshair i:nth-child(1){left:50%;top:0;width:2px;height:9px;margin-left:-1px;border-radius:1px}
+#crosshair i:nth-child(2){left:50%;bottom:0;width:2px;height:9px;margin-left:-1px;border-radius:1px}
+#crosshair i:nth-child(3){top:50%;left:0;height:2px;width:9px;margin-top:-1px;border-radius:1px}
+#crosshair i:nth-child(4){top:50%;right:0;height:2px;width:9px;margin-top:-1px;border-radius:1px}
+#crosshair i:nth-child(5){left:50%;top:50%;width:2px;height:2px;margin:-1px 0 0 -1px;box-shadow:0 0 6px rgba(255,255,255,1)}
+#hitmarker{top:50%;left:50%;transform:translate(-50%,-50%);opacity:0;transition:opacity .08s}
+#hitmarker i{position:absolute;width:15px;height:3px;background:#fff;box-shadow:0 0 6px rgba(255,255,255,.95);border-radius:1px}
+#hitmarker i:nth-child(1){left:-17px;top:-2px;transform:rotate(45deg)}
+#hitmarker i:nth-child(2){left:-17px;top:0;transform:rotate(-45deg)}
+#hitmarker i:nth-child(3){left:4px;top:-2px;transform:rotate(-45deg)}
+#hitmarker i:nth-child(4){left:4px;top:0;transform:rotate(45deg)}
+#hitmarker.kill i{background:var(--danger);width:17px;height:4px;box-shadow:0 0 10px var(--danger)}
+#vignette{inset:0;background:radial-gradient(ellipse at center,rgba(255,0,0,0) 55%,rgba(255,70,85,.5) 100%);opacity:0;transition:opacity .2s}
+#zoneVignette{inset:0;background:radial-gradient(ellipse at center,rgba(47,127,232,0) 55%,rgba(47,127,232,.5) 100%);opacity:0;transition:opacity .2s}
+#lowhp{inset:0;background:radial-gradient(ellipse at center,rgba(190,0,0,0) 58%,rgba(190,0,0,.5) 100%);opacity:0;transition:opacity .4s}
+#lowhp.pulse{animation:lowhpPulse .9s infinite}
+@keyframes lowhpPulse{0%,100%{opacity:.55}50%{opacity:.85}}
+
+/* ============ 固定机枪 / 迫击炮 ============ */
+#mgUI{top:16px;left:16px;font-size:12px;color:var(--green-bright);line-height:1.7;background:var(--panel);
+  padding:10px 14px;letter-spacing:1px;border:1px solid var(--line);border-left:3px solid var(--green);
+  clip-path:polygon(0 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%)}
+#mgUI b{font-size:15px;color:var(--green-bright)}
+#mgUI .heatBar{width:170px;height:9px;background:rgba(255,255,255,.1);margin-top:5px;overflow:hidden;clip-path:polygon(0 0,100% 0,calc(100% - 5px) 100%,0 100%)}
+#mgUI .heatFill{height:100%;width:0%;background:linear-gradient(90deg,#3ddc6e,#f1c40f,#e74c3c);transition:width .1s}
+#mortarUI{top:16px;left:16px;font-size:12px;color:var(--accent2);line-height:1.7;background:var(--panel);
+  padding:10px 14px;letter-spacing:1px;border:1px solid rgba(255,158,31,.45);border-left:3px solid var(--accent);
+  font-weight:700;clip-path:polygon(0 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%)}
+#mortarUI b{font-size:15px;color:var(--accent)}
+#aimRing{inset:0;background:radial-gradient(circle at center,transparent 42%,rgba(255,158,31,.12) 46%,transparent 52%)}
+#mgHint{bottom:22%;left:50%;transform:translateX(-50%);font-size:13px;color:var(--green-bright);letter-spacing:2px;
+  background:rgba(10,14,20,.75);padding:6px 16px;display:none;font-weight:700;border-left:3px solid var(--green);
+  clip-path:polygon(0 0,100% 0,calc(100% - 10px) 100%,0 100%)}
+#execHint{bottom:22%;left:50%;transform:translateX(-50%);font-size:13px;color:var(--danger);letter-spacing:2px;
+  background:rgba(30,10,12,.78);padding:6px 16px;display:none;font-weight:700;border-left:3px solid var(--danger);
+  clip-path:polygon(0 0,100% 0,calc(100% - 10px) 100%,0 100%)}
+
+/* ============ 狙击镜 ============ */
+#scopeSVG{position:fixed;inset:0;width:100%;height:100%;display:none;pointer-events:none;z-index:14}
+
+/* ============ 多队选择 ============ */
+#teamSelect{position:fixed;inset:0;background:rgba(0,0,0,.78);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:60;backdrop-filter:blur(4px)}
+#teamSelect h1{font-size:34px;letter-spacing:8px;margin-bottom:8px;color:var(--accent);font-weight:900;
+  text-shadow:0 0 30px rgba(255,158,31,.35);font-family:"Arial Black","Segoe UI",sans-serif}
+#teamSelectInfo{font-size:14px;color:var(--muted);margin-bottom:22px;letter-spacing:1px}
+#teamSelectBtns{display:flex;gap:14px}
+#matchHudTag{position:fixed;top:56px;right:14px;z-index:9;pointer-events:none;text-align:right;
+  font-size:10px;letter-spacing:2px;color:rgba(255,255,255,.32);text-transform:uppercase;font-weight:700}

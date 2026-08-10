@@ -17,29 +17,6 @@ function wireMenu() {
   const url = () => normUrl($('joinIp').value) || ('ws://' + (location.hostname || 'localhost') + ':8080');
   $('joinIp').value = 'ws://' + (location.hostname || 'localhost') + ':8080';
 
-  // ---- 账号系统（个人仓库，localStorage） ----
-  if (typeof Accounts !== 'undefined') {
-    Accounts.load();
-    const refreshAcc = () => {
-      const acc = Accounts.current;
-      $('accStatus').textContent = acc ? '已登录：' + acc + '（个人仓库已启用）' : '未登录（游客模式，无个人仓库）';
-      $('btnLogout').style.display = acc ? '' : 'none';
-      $('accMsg').textContent = '';
-    };
-    refreshAcc();
-    $('btnLogin').onclick = () => {
-      const r = Accounts.login($('accName').value, $('accPwd').value);
-      $('accMsg').textContent = r.msg;
-      if (r.ok) { refreshAcc(); $('accName').value = ''; $('accPwd').value = ''; AudioFX.ui(); }
-    };
-    $('btnReg').onclick = () => {
-      const r = Accounts.register($('accName').value, $('accPwd').value);
-      $('accMsg').textContent = r.msg;
-      if (r.ok) { refreshAcc(); $('accName').value = ''; $('accPwd').value = ''; AudioFX.ui(); }
-    };
-    $('btnLogout').onclick = () => { Accounts.logout(); refreshAcc(); AudioFX.ui(); };
-  }
-
   // ---- 地图选择（T4）：MapRegistry.list() 单选，支持 ?map=<id>，file:// 离线可用 ----
   const mapRow = $('mapRow');
   let selMapId = null;
@@ -140,8 +117,9 @@ function wireMenu() {
   $('spectateQuit').onclick = backToMenu;
   document.addEventListener('pointerlockchange', () => {
     const locked = document.pointerLockElement === renderer.domElement;
-    // 背包面板/设置面板打开时释放鼠标不弹暂停（v2.8 物品系统 + 设置面板）
+    // 背包/设置/聊天输入框打开时释放鼠标不弹暂停（聊天用 window.__chatOpen 标记）
     if (!locked && Game.phase === 'playing' && !Game.dead && !Game.mortarMode
+      && !window.__chatOpen
       && !(UI && UI.inventoryOpen) && !(typeof Settings !== 'undefined' && Settings.isOpen())) {
       paused = true; $('paused').style.display = 'flex';
     }
@@ -183,6 +161,7 @@ function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
   wireMenu();
+  if (typeof Ticker !== 'undefined' && Ticker.init) Ticker.init();
   window.BATTLEGROUND = { Game, World, Net, PC, PlayerGun, FX, UI, Unit };
   loop();
 }
@@ -212,15 +191,22 @@ function loop() {
     camera.lookAt(100, 0, 100);
   } else if (!paused) {
     if (typeof AudioFX !== 'undefined' && AudioFX.setListener) AudioFX.setListener(camera.position); // 空间音效以玩家为参考点
-    PC.update(dt);
-    PlayerGun.update(dt, PC.keys, camera);
-    Projectiles.update(dt);
-    if (typeof Items !== 'undefined' && Items.update) Items.update(dt); // 掉落实体：浮动/旋转/自动拾取
-    Game.update(dt);
-    MiniMap.draw();
-    Net.tick(dt);
-    FX.update(dt);
-    if (typeof WeaponAnim !== 'undefined') WeaponAnim.update(dt); // 拉栓/抛壳逐帧推进
+    // ECS 驱动更新：输入/物理/网络/特效系统分离——聊天空闲时物理照常，仅玩家操控暂停
+    if (typeof Engine !== 'undefined' && Engine.tick) {
+      Engine.playerControl = !window.__chatOpen && !(UI && UI.inventoryOpen);
+      Engine.paused = false;
+      Engine.tick(dt);
+    } else {
+      PC.update(dt);
+      PlayerGun.update(dt, PC.keys, camera);
+      Projectiles.update(dt);
+      if (typeof Items !== 'undefined' && Items.update) Items.update(dt);
+      Game.update(dt);
+      MiniMap.draw();
+      Net.tick(dt);
+      FX.update(dt);
+      if (typeof WeaponAnim !== 'undefined') WeaponAnim.update(dt);
+    }
     perfAutoDowngrade(dt);
   }
   renderer.render(scene, camera);

@@ -1,0 +1,36 @@
+/* =====================================================================
+   响应式与辅助样式
+   ===================================================================== */
+
+/* ============ 小屏适配 ============ */
+@media (max-width:760px){
+  #menu{padding:12px 10px}
+  .menuBody{flex-direction:column;align-items:center;overflow-y:auto}
+  #menu .col{width:min(430px,94vw)}
+  .menuHero{min-height:200px}
+  .menuHero .soldierImg{height:34vh}
+  .menuSide{width:min(430px,94vw);max-height:none}
+  #menu h1{letter-spacing:.12em}
+  #mapRow .mapbtn{flex:1 1 46%;min-width:0;font-size:11px}
+  #accRow{flex-direction:column}
+  #joinRow{flex-direction:column}
+  #joinRow input{width:100%}
+  #joinRow .mbtn{width:100%}
+  #lobby .lmeta{flex-direction:column;gap:4px}
+  #lobby .lbtns{flex-direction:column}
+  #lobby .lbtns .mbtn{width:100%}
+  #healthWrap{width:185px}
+  #hpText{font-size:34px}
+  #ammoCur{font-size:40px}
+  #slots{gap:3px;padding:5px 7px}
+  .slot{width:48px;height:48px}
+  #slots .slot i{display:none}
+  #minimapWrap{width:152px}
+  #mm{width:140px;height:140px}
+  #killfeed{top:184px;width:220px}
+  #teamStat{font-size:12px;gap:8px;padding:6px 12px;letter-spacing:0}
+  #teamStat .sep{display:none}
+  #scoreboard{min-width:0;width:94vw}
+}
+
+#fatalErr{position:fixed;top:0;left:0;right:0;z-index:999;padding:12px 18px;background:#7a1f1f;color:#ffdada;font:14px/1.6 monospace;white-space:pre-wrap;display:none}

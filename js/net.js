@@ -127,6 +127,14 @@ Object.assign(Net, {
           if (reviver && target) Game.cancelRevive(reviver, target);
         }
         break;
+      case 'exec_req':
+        // §8.7 客户端按 E 处决倒地敌人 → 房主校验并执行（防客户端越权，处决计入击杀）
+        if (this.isHost) {
+          const attacker = this.remoteByPeer[m.sid];
+          const target = Game.units.find(x => x.id === m.target);
+          if (attacker && target && attacker.team !== target.team && typeof Game.execUnit === 'function') Game.execUnit(attacker, target);
+        }
+        break;
       case 'states':
         if (!this.isHost) this.applyStates(m);
         break;
@@ -254,9 +262,19 @@ Object.assign(Net, {
           Game.player.hp = e.hp;
           UI.updateHealth();
           UI.lowhp(e.hp <= 30);
-          // 倒地状态：快照 down 字段驱动 overlay（丢包自愈）
-          if (e.down && !Game.player.down) Game.playerDown(true);
-          if (!e.down && Game.player.down && e.alive) Game.playerDown(false);
+          // 倒地状态：快照 down 字段驱动 overlay + 完整状态复位（丢包自愈；revive 事件丢失时兜底）
+          if (e.down && !Game.player.down) {
+            Game.player.down = true; Game.player.alive = false;
+            Game.player.downHp = CFG.DOWN_HP; Game.player.bleedT = CFG.BLEED_OUT;
+            Game.player.downAt = Date.now();
+            Game.playerDown(true);
+          }
+          if (!e.down && Game.player.down && e.alive) {
+            Game.player.down = false; Game.player.alive = true;
+            Game.player.downHp = 0; Game.player.bleedT = 0;
+            Game.player.reviveT = 0; Game.player.reviver = null;
+            Game.playerDown(false);
+          }
           if (!e.alive && !e.down && !Game.dead) {
             Game.dead = true; Game.player.dead = true;
             // v2.1 吃鸡制：客户端死亡直接进观战（不再重生）

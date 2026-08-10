@@ -121,6 +121,9 @@ const FX = {
     this.shake *= Math.max(0, 1 - dt * 6);
   }
 };
+
+// 兼容性保障：有些旧代码或外部脚本误用小写 `fx`，在浏览器环境下提供别名
+if (typeof window !== 'undefined' && typeof FX !== 'undefined' && typeof window.fx === 'undefined') window.fx = FX;
 function makeRadialTex() {
   const c = document.createElement('canvas'); c.width = 64; c.height = 64;
   const g = c.getContext('2d');
@@ -249,8 +252,17 @@ class Unit {
     if (this.usingModel && this.modelParts) {
       const mp = this.modelParts;
       if (!this.alive) {
-        p.rotation.x = Math.PI / 2 * Math.min(1, (Date.now() - this.deathAt) / 400); // 倒地
-        p.position.y = this.pos.y;
+        // 倒地（downAt）/ 尸体（deathAt）各自用对应时刻驱动倒地动画：倒地单位不会因 deathAt=0 瞬间躺平
+        const t0 = this.down ? this.downAt : this.deathAt;
+        p.rotation.x = Math.PI / 2 * Math.min(1, (Date.now() - t0) / 400);
+        // 抬升防埋土：模型以脚底为 pivot，躺平后躯干下半会陷入地面 → 整体上抬贴地（含尸体，斜坡地形也兜底）
+        p.position.y = this.pos.y + 0.2;
+        // 倒地未死且爬行：左右轻摆 + 微幅起伏，尸体保持静止 ⇒ 视觉区分「在爬」与「已死」
+        if (this.down && moving) {
+          this.walkT += 0.12;
+          p.rotation.z = Math.sin(this.walkT * 9) * 0.06;
+          p.position.y += Math.abs(Math.sin(this.walkT * 9)) * 0.04;
+        } else p.rotation.z = 0;
         return;
       }
       if (moving) {
@@ -279,8 +291,30 @@ class Unit {
     this.mesh.ll.rotation.x = sw; this.mesh.rl.rotation.x = -sw;
     this.mesh.la.rotation.x = -sw * 0.7; this.mesh.ra.rotation.x = sw * 0.7;
     if (sprint && moving) p.rotation.x = 0.14; // 冲锋前倾
-    else if (!this.alive) p.rotation.x = Math.PI / 2 * Math.min(1, (Date.now() - this.deathAt) / 300);
+    else if (!this.alive) {
+      const t0 = this.down ? this.downAt : this.deathAt;
+      p.rotation.x = Math.PI / 2 * Math.min(1, (Date.now() - t0) / 300);
+      p.position.y = this.pos.y + 0.2; // 抬升防埋土（方块尸体/倒地同）
+      if (this.down && moving) { this.walkT += 0.12; p.rotation.z = Math.sin(this.walkT * 9) * 0.06; }
+      else p.rotation.z = 0;
+    }
     else p.rotation.x = 0; // 复活复位（方块人）
+  }
+  // 玩家侧身：绕脚底 pivot 侧倾（脚底=组原点下方 MODEL_Y 处；GLTF/方块统一）。
+  // 补偿位置位移使脚底"钉地"，rotation.z 为侧倾角；AI/倒地/尸体不侧倾（保留原动画）
+  _applyLean(p) {
+    if (!this.isPlayer || !this.alive || this.down || typeof PC === 'undefined') return;
+    const l = PC.lean || 0;
+    if (Math.abs(l) < 0.01) { p.rotation.z = 0; return; }
+    const th = l * 0.16;           // 侧倾角（与相机 roll 同步）
+    const d = 0.45;                // MODEL_Y：脚底在组原点正下方
+    const dx = d * Math.sin(th);   // 绕脚底旋转后组原点的水平位移（局部右轴）
+    const dy = d * (1 - Math.cos(th)); // 垂直抬升补偿
+    const cosY = Math.cos(this.yaw), sinY = Math.sin(this.yaw);
+    p.position.x += dx * cosY;
+    p.position.z += -dx * sinY;
+    p.position.y += dy;
+    p.rotation.z = th;
   }
   updateVisual(dt) {
     if (this.jumpAnim) { // AI 翻越跳跃弧线
@@ -293,6 +327,8 @@ class Unit {
       this.pos.y = World.heightAt(this.pos.x, this.pos.z, this.pos.y);
     }
     this.setPose();
+    // 玩家侧身：脚底 pivot 侧倾（setPose 之后叠加，head/脚部朝相对朝向一致倾斜）
+    this._applyLean(this.mesh.grp);
   }
   dispose() { this.disposed = true; World.scene.remove(this.mesh.grp); }
 }
@@ -733,24 +769,51 @@ const PlayerGun = {
 
 /* ---------- 第一人称控制器 ---------- */
 const PC = {
-  yaw: 0, pitch: 0, recoil: 0, locked: false, vy: 0, onGround: true, footT: 0, sens: 0.22,
+  yaw: 0, pitch: 0, recoil: 0, locked: false, vy: 0, onGround: true, footT: 0, sens: 0.22, crawlT: 0,
+  lean: 0, // 侧身：+1 左倾 / 0 中立 / -1 右倾（平滑过渡，相机与人物模型同时侧倾；rotation.z 正=逆时针=左倾）
   keys: new Set(), prone: false, // 潜伏（Ctrl 按住）：相机降低 + 移动变慢 + AI 更难命中
+  fly: false, speedMul: 1, // 调试指令：/enablefly 飞行浮空；/speed 移动速度倍率
+  safeYaw(y = this.yaw) {
+    const v = Number.isFinite(y) ? y : 0;
+    const m = Math.PI * 2;
+    let r = v % m;
+    if (r <= -Math.PI) r += m;
+    else if (r > Math.PI) r -= m;
+    return r;
+  },
+  safePitch(p = this.pitch, recoil = 0) {
+    const v = Number.isFinite(p) ? p : 0;
+    const r = Number.isFinite(recoil) ? recoil : 0;
+    return U.clamp(v + r, -1.45, 1.45);
+  },
+  sanitizeOrientation() {
+    this.yaw = this.safeYaw(this.yaw);
+    this.pitch = U.clamp(Number.isFinite(this.pitch) ? this.pitch : 0, -1.45, 1.45);
+    this.recoil = Number.isFinite(this.recoil) ? this.recoil : 0;
+  },
+  applyCamera(camera, includeRecoil = true) {
+    camera.rotation.order = 'YXZ';
+    camera.rotation.y = this.safeYaw(this.yaw);
+    camera.rotation.x = this.safePitch(this.pitch, includeRecoil ? this.recoil : 0);
+    // 侧身：视角随 lean 侧倾（roll），与人物模型同步
+    camera.rotation.z = (this.lean || 0) * 0.22;
+  },
   init() {
     document.addEventListener('mousemove', e => {
       if (!this.locked || Game.phase !== 'playing') return;
+      if (!Number.isFinite(e.movementX) || !Number.isFinite(e.movementY)) return;
       // v2.10 视角防倒置：sens 被污染(NaN,设置清空/外部写入)会让 pitch/yaw 永久 NaN → 相机翻转。
       // 非有限 sens 回退默认；结果非有限丢弃（保持上帧）；已被污染则从 0 重启（防卡视角）
-      if (!Number.isFinite(this.yaw)) this.yaw = 0;
-      if (!Number.isFinite(this.pitch)) this.pitch = 0;
+      this.sanitizeOrientation();
       const s = Number.isFinite(this.sens) ? this.sens : 0.22;
       if (Game.mortarMode) { // 迫击炮：鼠标左右转方位（视角跟随），上下可观察落点
-        Game.mortarYaw -= e.movementX * 0.004;
+        Game.mortarYaw = this.safeYaw(Game.mortarYaw - e.movementX * 0.004);
         this.yaw = Game.mortarYaw;
         const np = U.clamp(this.pitch - e.movementY * s * 0.002, -1.45, 1.45);
         if (Number.isFinite(np)) this.pitch = np;
         return;
       }
-      const ny = this.yaw - e.movementX * s * 0.002;
+      const ny = this.safeYaw(this.yaw - e.movementX * s * 0.002);
       const np = U.clamp(this.pitch - e.movementY * s * 0.002, -1.45, 1.45);
       if (Number.isFinite(ny)) this.yaw = ny;
       if (Number.isFinite(np)) this.pitch = np;
@@ -772,6 +835,8 @@ const PC = {
       }
     }, { passive: false });
     document.addEventListener('keydown', e => {
+      // 聊天输入框打开时（T 键唤起的 chat）不触发任何游戏按键——修复按 B 也能开背包
+      if (window.__chatOpen) return;
       this.keys.add(e.code);
       const a = Settings.actionByCode(e.code);
       if (!a) return;
@@ -803,14 +868,21 @@ const PC = {
               // hold-to-revive：房主/单机直接开始；客户端发 revive_req 由房主裁决
               if (Net.connected && !Net.isHost) Net.sendState({ t: 'revive_req', target: rt.id });
               else if (!Game.startRevive(Game.player, rt)) UI.toast('医疗包不足，无法救援！'); // v2.4 救援耗包
-            } else if (typeof Mechanics !== 'undefined' && Mechanics.dispatch && Mechanics.dispatch('interact')) {
-              // 机制交互（探照灯断电面板 / 空投箱拾取）已处理
             } else {
-              const corpse = Backpack.nearestCorpse();
-              if (corpse) {
-                const r = Backpack.lootCorpse(corpse);
-                UI.toast('搜刮：' + r.msg);
-                AudioFX.ui();
+              // 处决倒地敌人（T2 补刀，不耗弹药；优先级高于机制交互/搜刮）
+              const xe = (typeof Game.findExecTargetForPlayer === 'function') ? Game.findExecTargetForPlayer() : null;
+              if (xe) {
+                if (Net.connected && !Net.isHost) Net.sendState({ t: 'exec_req', target: xe.id });
+                else Game.execUnit(Game.player, xe);
+              } else if (typeof Mechanics !== 'undefined' && Mechanics.dispatch && Mechanics.dispatch('interact')) {
+                // 机制交互（探照灯断电面板 / 空投箱拾取）已处理
+              } else {
+                const corpse = Backpack.nearestCorpse();
+                if (corpse) {
+                  const r = Backpack.lootCorpse(corpse);
+                  UI.toast('搜刮：' + r.msg);
+                  AudioFX.ui();
+                }
               }
             }
           }
@@ -827,6 +899,7 @@ const PC = {
       }
     });
     document.addEventListener('keyup', e => {
+      if (window.__chatOpen) return; // 聊天时不更新游戏键位
       this.keys.delete(e.code);
       const a = Settings.actionByCode(e.code);
       if (!a) return;
@@ -877,15 +950,28 @@ const PC = {
     p.pos.x = U.clamp(p.pos.x, 1.5, CFG.WORLD - 1.5); p.pos.z = U.clamp(p.pos.z, 1.5, CFG.WORLD - 1.5);
   },
   update(dt) {
-    if (!this.locked || Game.phase !== 'playing' || Game.player.dead) return;
+    // 聊天空闲（T 键输入）：仅停玩家操控输入，重力/落地/相机照常——避免空中悬停
+    const chatFree = !!window.__chatOpen;
+    if ((!this.locked && !chatFree) || Game.phase !== 'playing' || Game.player.dead) return;
+    const inputOK = this.locked && !chatFree; // 聊天时不读取任何移动/跳跃输入
     const p = Game.player;
+    
+    // 键盘侧身：, 向左偏 / . 向右偏（相机 roll + 人物模型 roll，不影响 yaw 朝向与移动方向）
+    // 按键→lean 方向：,=leanLeft→+1(左倾) ；.=leanRight→-1(右倾)
+    // 注：rotation.z 正值为逆时针（从+Z看）= 向左倾（屏幕顶部向左倒）；负值 = 向右倾
+    const wantLean = (inputOK && this.keys.has(Settings.key('leanLeft')) ? 1 : 0) + (inputOK && this.keys.has(Settings.key('leanRight')) ? -1 : 0);
+    // 平滑过渡：按一下立刻到位，松开缓慢回正
+    this.lean += (wantLean - this.lean) * Math.min(1, dt * (wantLean !== 0 ? 16 : 7));
+    if (Math.abs(this.lean) < 0.01) this.lean = 0;
+    // 人物模型侧倾由 Unit.updateVisual → _applyLean 以脚底为 pivot 处理（此处不直接改 rotation.z）
+    
     // §2.5 倒地爬行：降速 CRAWL_SPEED、禁跳/冲刺/射击/开镜/迫击炮、视角 0.8m 低姿态、可转向
     if (p.down) {
       let f = 0, s = 0;
-      if (this.keys.has(Settings.key('moveF'))) f += 1;
-      if (this.keys.has(Settings.key('moveB'))) f -= 1;
-      if (this.keys.has(Settings.key('moveR'))) s += 1;
-      if (this.keys.has(Settings.key('moveL'))) s -= 1;
+      if (inputOK && this.keys.has(Settings.key('moveF'))) f += 1;
+      if (inputOK && this.keys.has(Settings.key('moveB'))) f -= 1;
+      if (inputOK && this.keys.has(Settings.key('moveR'))) s += 1;
+      if (inputOK && this.keys.has(Settings.key('moveL'))) s -= 1;
       const speed = CFG.CRAWL_SPEED;
       const sin = Math.sin(this.yaw), cos = Math.cos(this.yaw);
       const mx = (-sin * f + cos * s) * speed, mz = (-cos * f - sin * s) * speed;
@@ -893,42 +979,64 @@ const PC = {
       this._moveResolve(p);
       p.yaw = this.yaw;
       p.pos.y = World.heightAt(p.pos.x, p.pos.z, p.pos.y);
+      // 更新玩家模型旋转以匹配相机方向（倒地爬行可转向）
+      if (Game.player && Game.player.mesh && Game.player.mesh.grp) {
+        Game.player.mesh.grp.rotation.y = this.yaw;
+      }
       camera.position.set(p.pos.x, p.pos.y + 0.8, p.pos.z);
-      camera.rotation.order = 'YXZ';
-      camera.rotation.y = Number.isFinite(this.yaw) ? this.yaw : 0;
-      camera.rotation.x = Number.isFinite(this.pitch) ? this.pitch : 0;
+      this.applyCamera(camera, false);
+      // 爬行手感：移动时轻微起伏 + 左右小幅横滚（比站姿更贴地），静止复位
+      // 侧身 roll 叠加在爬行横滚上（applyCamera 已设 lean，这里累加爬行抖动）
+      if (f !== 0 || s !== 0) {
+        this.crawlT = Math.max(0, (this.crawlT || 0) + dt * 9);
+        camera.position.y += Math.abs(Math.sin(this.crawlT)) * 0.05;
+        camera.rotation.z += Math.sin(this.crawlT * 0.5) * 0.025;
+      } else {
+        this.crawlT = 0;
+      }
       this.recoil = Math.max(0, this.recoil - dt * 2.2);
       return;
     }
-    this.prone = this.keys.has(Settings.key('prone')); // 潜伏键按住潜伏
+    this.prone = inputOK && this.keys.has(Settings.key('prone')); // 潜伏键按住潜伏（聊天时不读输入）
     let f = 0, s = 0;
-    if (this.keys.has(Settings.key('moveF'))) f += 1;
-    if (this.keys.has(Settings.key('moveB'))) f -= 1;
-    if (this.keys.has(Settings.key('moveR'))) s += 1;
-    if (this.keys.has(Settings.key('moveL'))) s -= 1;
-    const sprint = this.keys.has(Settings.key('sprint')) && f > 0 && !this.prone; // 潜伏时不能疾跑
-    const speed = (sprint ? CFG.SPRINT : CFG.WALK) * (Game.mortarMode ? 0 : 1) * (this.prone ? 0.45 : 1); // 潜伏爬行 45% 速度
+    if (inputOK && this.keys.has(Settings.key('moveF'))) f += 1;
+    if (inputOK && this.keys.has(Settings.key('moveB'))) f -= 1;
+    if (inputOK && this.keys.has(Settings.key('moveR'))) s += 1;
+    if (inputOK && this.keys.has(Settings.key('moveL'))) s -= 1;
+    const sprint = inputOK && this.keys.has(Settings.key('sprint')) && f > 0 && !this.prone; // 潜伏时不能疾跑
+    const mul = this.speedMul && this.speedMul > 0 ? this.speedMul : 1; // /speed 倍率
+    const speed = (sprint ? CFG.SPRINT : CFG.WALK) * (Game.mortarMode ? 0 : 1) * (this.prone ? 0.45 : 1) * mul; // 潜伏爬行 45% 速度
     const sin = Math.sin(this.yaw), cos = Math.cos(this.yaw);
     let mx = (-sin * f + cos * s) * speed, mz = (-cos * f - sin * s) * speed;
     if (Game.mortarMode) { mx = 0; mz = 0; }
     // 碰撞解析（圆 vs AABB）
     p.pos.x += mx * dt; p.pos.z += mz * dt;
     this._moveResolve(p);
-    // 跳跃与重力
+    // 跳跃与重力（/enablefly 飞行：无重力浮空，Shift=上升 空格=下降）
     const gy = World.heightAt(p.pos.x, p.pos.z, p.pos.y);
-    if (this.keys.has(Settings.key('jump')) && p.pos.y <= gy + 0.01) { this.vy = CFG.JUMP; this.onGround = false; }
-    if (p.pos.y > gy + 0.01 || this.vy > 0) {
-      this.vy -= CFG.GRAV * dt;
-      p.pos.y += this.vy * dt;
-      if (p.pos.y <= gy) { p.pos.y = gy; this.vy = 0; this.onGround = true; }
-    } else { p.pos.y = gy; this.vy = 0; this.onGround = true; }
+    if (this.fly) {
+      this.vy = 0; this.onGround = false; // 飞行：不受重力
+      // /speed 倍率同时作用于飞行升降（mul 上文已按 speedMul 计算）
+      if (inputOK && this.keys.has(Settings.key('jump'))) p.pos.y += CFG.WALK * 1.4 * mul * dt;   // 飞行升高
+      if (inputOK && this.keys.has(Settings.key('sprint'))) p.pos.y -= CFG.WALK * 1.4 * mul * dt; // 飞行下降
+      p.pos.y = Math.max(0.5, p.pos.y); // 不穿地
+    } else {
+      if (inputOK && this.keys.has(Settings.key('jump')) && p.pos.y <= gy + 0.01) { this.vy = CFG.JUMP; this.onGround = false; }
+      if (p.pos.y > gy + 0.01 || this.vy > 0) {
+        this.vy -= CFG.GRAV * dt;
+        p.pos.y += this.vy * dt;
+        if (p.pos.y <= gy) { p.pos.y = gy; this.vy = 0; this.onGround = true; }
+      } else { p.pos.y = gy; this.vy = 0; this.onGround = true; }
+    }
     p.yaw = this.yaw;
+    // 更新玩家模型旋转以匹配相机方向
+    if (Game.player && Game.player.mesh && Game.player.mesh.grp) {
+      Game.player.mesh.grp.rotation.y = this.yaw;
+    }
     if (Game.mortarMode) {
       // 迫击炮模式：视角照常跟随（观察落点标记），不移动不摆武器
       camera.position.set(p.pos.x, p.pos.y + CFG.EYE, p.pos.z);
-      camera.rotation.order = 'YXZ';
-      camera.rotation.y = Number.isFinite(this.yaw) ? this.yaw : 0;
-      camera.rotation.x = (Number.isFinite(this.pitch) ? this.pitch : 0) + (Number.isFinite(this.recoil) ? this.recoil : 0);
+      this.applyCamera(camera);
       this.recoil = Math.max(0, this.recoil - dt * 2.2);
       return;
     }
@@ -939,9 +1047,7 @@ const PC = {
     }
     // 相机（潜伏时视角压低到 0.55m 伏地高度）
     camera.position.set(p.pos.x, p.pos.y + (this.prone ? 0.55 : CFG.EYE), p.pos.z);
-    camera.rotation.order = 'YXZ';
-    camera.rotation.y = Number.isFinite(this.yaw) ? this.yaw : 0;
-    camera.rotation.x = (Number.isFinite(this.pitch) ? this.pitch : 0) + (Number.isFinite(this.recoil) ? this.recoil : 0);
+    this.applyCamera(camera);
     this.recoil = Math.max(0, this.recoil - dt * 2.2);
     if (FX.shake > 0.01) {
       camera.position.x += U.rand(-FX.shake, FX.shake) * 0.12;
