@@ -12,7 +12,7 @@ global.document = {
 };
 global.addEventListener = () => {}; global.requestAnimationFrame = () => 0; global.Image = class {};
 global.localStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {} };
-for (const f of ['js/core.js', 'js/audio.js', 'js/textures.js', 'js/world.js', 'js/maps/registry.js', 'js/maps/suburb.js', 'js/combat.js', 'js/game.js', 'js/ai.js', 'js/ui.js', 'js/accounts.js', 'js/items.js', 'models/soldier_data.js', 'models/weapons_data.js', 'models/buildings_data.js', 'js/models.js', 'js/net.js']) {
+for (const f of ['js/core.js', 'js/audio.js', 'js/textures.js', 'js/world.js', 'js/maps/registry.js', 'js/maps/suburb.js', 'js/combat.js', 'js/game.js', 'js/ai.js', 'js/ui.js', 'js/accounts.js', 'js/items.js', 'js/models.js', 'js/net.js']) {
   try { vm.runInThisContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), { filename: f }); }
   catch (e) { console.log('LOAD FAIL', f, e.message.slice(0, 100)); process.exit(1); }
 }

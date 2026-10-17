@@ -48,9 +48,9 @@ THREE.WebGLRenderer = class {
   constructor() { this.domElement = fakeEl(); this.shadowMap = { enabled: false, type: 0 }; }
   setPixelRatio() {} setSize() {} render() {}
 };
-const scripts = ['libs/three.min.js', 'js/core.js', 'js/audio.js', 'js/textures.js',
+const scripts = ['libs/three.min.js', 'js/glb.js', 'js/assetLoader.js', 'js/core.js', 'js/audio.js', 'js/textures.js',
   'js/maps/registry.js', 'js/maps/suburb.js', 'js/maps/port.js', 'js/maps/desert.js', 'js/world.js',
-  'js/settings.js', 'js/combat.js', 'js/game.js', 'js/ai.js', 'js/ui.js', 'js/accounts.js', 'js/items.js', 'models/soldier_data.js', 'models/weapons_data.js', 'models/buildings_data.js', 'models/buildings_out.js', 'js/models.js', 'js/mechanics.js', 'js/net.js', 'js/main.js'];
+  'js/settings.js', 'js/combat.js', 'js/game.js', 'js/ai.js', 'js/ui.js', 'js/accounts.js', 'js/items.js', 'js/models.js', 'js/mechanics.js', 'js/net.js', 'js/main.js'];
 const vm = require('vm');
 const failures = [];
 function report(title, ok, detail) {
@@ -61,6 +61,9 @@ for (const f of scripts.slice(1)) {
   try { vm.runInThisContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), { filename: f }); }
   catch (e) { failures.push('加载 ' + f + ' 失败: ' + e.message); }
 }
+/* 去内联：模型改为 HTTP 提供的 .glb，测试同步灌入 AssetLoader */
+require('../_harness').preloadSync(ROOT);
+
 try { init(); } catch (e) { failures.push('init 崩溃: ' + (e.stack || e.message).split('\n').slice(0, 3).join(' | ')); }
 
 /* ---- 记录式小地图 context（统计 #ffd166 菱形绘制） ---- */
@@ -96,9 +99,9 @@ try {
   for (const key of Object.keys(LM)) {
     report('1) ' + key + ' status=inline', st[key] === 'inline', 'status=' + st[key]);
   }
-  // BUILDINGS_OUT 内联数据存在（13 型）
-  const outKeys = (typeof BUILDINGS_OUT !== 'undefined' && BUILDINGS_OUT) ? Object.keys(BUILDINGS_OUT) : [];
-  report('1) BUILDINGS_OUT 含 4 地标', ['base', 'refinery', 'stadium', 'megatower'].every(k => outKeys.includes(k)),
+  // 建筑 GLB 资源存在（去内联后：models/buildings/*.glb，由 AssetLoader 加载）
+  const outKeys = (typeof AssetLoader !== 'undefined' && AssetLoader.ready) ? Object.keys(AssetLoader.cache.buildings) : [];
+  report('1) 建筑 GLB 含 4 地标', ['base', 'refinery', 'stadium', 'megatower'].every(k => outKeys.includes(k)),
     outKeys.length + ' 型（' + outKeys.join('/') + '）');
 } catch (e) { report('1) 四地标构建 崩溃', false, e.message); }
 

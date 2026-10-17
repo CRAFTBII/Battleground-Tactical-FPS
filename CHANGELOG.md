@@ -7,10 +7,46 @@
 
 ---
 
+## [1.12.0] - 2026-10-17 · 去内联：模型改为 .glb 资源，必须起服务才能玩
+
+### 破坏性变更（玩家可见）
+- **不再支持双击 `index.html` 直接玩**。现在必须 `node server.js`，浏览器打开 <http://localhost:8080>。
+  原因：模型从「base64 内联在 JS 里」改为「服务器通过 HTTP 提供的标准 `.glb`」。
+  双击会看到明确提示（含修复步骤），不再静默回退方块人或白屏。
+
+### 架构
+- 新增 `js/glb.js`：**零依赖** glTF 2.0 二进制解析器（手写）。不引入打包器、不用 ESM/importmap，
+  因为本工程全局只有 UMD 的 `three.min.js`，而 `libs/GLTFLoader.js` 是 ESM 无法直接使用。
+- 新增 `js/assetLoader.js`：HTTP 预加载 `models/manifest.json` + 全部 GLB，失败**明确报错**不再静默降级。
+- `server.js` 新增静态文件服务：目录白名单（js/css/libs/models/sounds/assets）+ 目录穿越防护 +
+  `.glb` 走标准 MIME `model/gltf-binary` + ETag/304；两条 WebSocket 传输分支共用同一 `httpHandler`。
+- `ModelLib.load()` 改为从 GLB 场景树构建：士兵部件直接用 glTF 节点层级（`gun` 是 `armR` 子节点），
+  不再用 JS 侧阴影数据重建父子关系。
+- 新增 `tools/export_assets.cjs`（内联 base64 → 标准 .glb，含独立第二实现复核）与
+  `tools/gen_manifest.cjs`（生成资源清单）。
+
+### 资源
+- 删除 5 个内联数据文件（`models/*_data.js`，共 2078 KB）。
+- 新增 33 个标准 GLB（1414 KB）：士兵 1 + 枪身 4 + 枪栓 4 + 建筑 24。
+  体积比 base64 内联小约 32%，且可被标准 glTF 工具链读取。
+- 几何逐值一致：士兵 9864 三角形、建筑 bbox 与改造前完全相同（导出工具自检 33/33 PASS）。
+- 枪栓的 `boltRest / boltTravel / zExt` 改存 glTF 顶层 `extras`。
+
+### 测试
+- 新增 `test/glb-runtime-test.js`（19 断言）：HTTP → GLB 解析 → THREE 几何 全链路。
+- 新增 `test/static-serving-test.js`（47 断言）：GLB/MIME/Content-Length/路径穿越/双传输分支/HEAD。
+- 新增 `test/site-check.js`（6 断言）：整站引用可达 + 脚本顺序 + 清单一致 + file:// 明确提示。
+- 新增 `test/_harness.js`：无头测试同步把磁盘 GLB 灌进 AssetLoader，老测试无需改成 async。
+- 35 个既有测试脚本从「加载内联数据全局」改为「加载 js/glb.js + assetLoader.js + harness」。
+- 改造前后 23 个套件逐项对比：PASS/FAIL 计数一致（2 个已知随机用例除外）。
+
+### 仓库
+- `.gitignore` 反转策略：`models/**/*.glb` 与 `manifest.json` **必须入库**（运行必需），
+  `assets/` 源素材继续忽略但放行 `assets/soldier/preview.png`（index.html 菜单立绘）。
+
 ---
 
 ## [1.11.11] - 2026-08-08 · 人物模型再上调 + 名称牌再下调
-
 - 头顶/模型：combat.js `setPose` 的 `MODEL_Y` 0.25→0.45（人物整体再上浮）；头顶名字牌 `tag.y` 2.35→2.1（相对人物更低）。node --check 通过。
 
 ---
@@ -514,134 +550,3 @@
 
 - `Mechanics.zone` 独立子系统：阶段状态机（atSec 推进、伤害即时切换、2s lerp 收缩）、容错契约（zone=null / phases=[] / center 缺字段自动补地图中心）、与既有 `mechanics` 机制引擎共存不冲突。
 - **性能优化**：缩圈环 `RingGeometry` 自适应分段，按当前圈/预告圈状态复用而非每帧重建。
-- AI 进圈复用通用 `zoneDest` 兜底（复活/无目标圈外统一奔圈），不新增大分支。
-- 联机事件 `m_zone` 注入 `applyEvent` 管线，与既有 `m_storm`/`m_pwr`/`m_airdrop`/`m_arty` 同构。
-
-### 已知风险 / Backlog（详见发布清单 `docs/release/release-checklist-v13-2026-08-06.md`）
-
-- 缩圈数值（半径序列 / 阶段时刻 / 伤害曲线）为 `[PLAYTEST]` 标注（终局圈 r31/32/44、伤害 1→15、desert 双压强度、桥面 6m 可攀登性），建议首轮内测收敛一次。
-- 设计口径 CONCERNS（复验 §7.4，均非阻塞）：① 设计 §6.1「圈外有敌 → 走位偏圈内」未实现（实现与架构一致：engage 完全不受扰，需设计侧确认以设计还是架构为准）；② atSec 时序语义字面出入（「警示→收缩」间隔均 5s，体验一致）；③ `escapeDest` 同心环采样非「严格最近」，功能等价。
-- **y-碰撞站立支持 P2**（backlog）：当前移动为 2D x/z 判定 + 按高度跳过，地面单位与高空桥面分层通行已由 overhead 分流解决；y 轴完整站立/攀爬支持留 P2。
-- `#radio` 阶段通知通道（backlog）：缩圈阶段切换进对讲机通知的语音通道待接入。
-- 收缩动画细化、环刻度/方向箭头（backlog）：当前收缩为 2s lerp + 蓝圈闪烁，方向箭头/环刻度提示待细化。
-
----
-
-> 里程碑：三图专属机制（探照灯 / 沙暴 / 空投）+ 夜港 26 栋 + BuildingLib 14 类型 + 建筑内联管线。
-> 质量门控：**PASS**（初评 FAIL → 工程修复批 T14 → 复验 PASS，无 FAIL / 无阻塞项），详见 `docs/quality/maps-qa-v12-2026-08-06.md`（70 项断言 + 密度回归全过）。
-
-### 新增
-
-- **地图机制引擎**（`js/mechanics.js` + 三图 `mapDef.mechanics` 数据，schema 契约见 `design/maps/mechanics.md`）——每图一个独占玩法，叠加在据点占领之上，不改变胜利条件：
-  - **port 夜港 · 探照灯 + 断电**：4 盏巡逻探照灯（40~55m 光锥往复扫描），被扫到即**曝露**（小地图警示点 + HUD「已曝露」）；配电箱 2m 内按 **E** 全港断电 **30s**（环境光 0.46→0.32，夜战窗口）；对方可到任一配电箱按 E 抢修点灯，断电/抢修按队冷却 **45s** 防反复开关。
-  - **desert 荒漠 · 沙暴 + 水塔**：30s 风暴 / 90s 平静循环，雾 15/70 ↔ 120/430 插值；风暴期暴露者 **4HP/s**（建筑内 / 掩体后 / 水塔圈内庇护）；AI 对 **20m 外**目标命中 ×0.5；水塔圈（r=10）占领后回血 **5HP/s**，可反抢（cap id `'tower'`，独立于 A/B/C）。
-  - **suburb 城郊 · 空投 + 炮击**：每 60s 空投补给箱（信标警示 → 落箱 → E 拾取 **+50HP / +30% 弹药**）；每 45s 中央广场 zone 内**随机落点**炮击（8m 警示圈 4s 后落弹，60 伤害，掩体可挡）。
-- **port 夜港 12 → 26 栋**：新增 14 栋（hangar×2 / bunker×2 / pillbox×2 / tower×2 / container×3 / wall / ruins / house），`BuildingLib` 扩展至 **14 类型**。
-- **建筑内联管线**（`models/out` → `models/buildings_out.js`）：15 个 GLB 中建筑类转 `BUILDINGS_OUT` 内联几何（顶点色+索引），**离线可玩、零 GLTFLoader**；`battle_map.glb` 评估弃用（留作第四图草模参考）。
-
-### 修复
-
-- 质量门控初评 FAIL 项逐项消解（详见 `docs/quality/maps-qa-v12-2026-08-06.md` §7.1）：
-  - 水塔回血速率 150HP/s → 2Hz 节流严格 **5HP/s**（多人同圈不叠加）。
-  - port 抢修路径缺失 → 断电期任一配电箱按 E **立即恢复供电** + 抢修队冷却 45s。
-  - suburb 炮击警示圈=整区 28m / 落点固定 → 警示圈=爆炸半径 **8m**、zone 内**均匀随机**落点。
-  - 掩体不挡炮击 → `Game.areaDamage` 增加 `rayBlocked` 判定（墙后可挡）。
-  - 断电数值 45s/53s → **30s / 45s**（断电期 / 队冷却）。
-  - 断电环境光不切换 → 断电 ambient 0.46→0.32（≥0.30 红线），恢复还原。
-  - 建筑内部 / 水塔圈不庇护 → `_inShelter` 增建筑 footprint（外扩 0.5m）+ 水塔圈优先。
-  - AI 命中惩罚无条件 → 补 **20m 距离阈值**（`stormActive() && d > 20`）。
-  - 水塔无 cap 事件 → 广播 `{k:'cap', id:'tower', owner}` + 单人 ≈12s 占领进度（不进 Game.caps，仍 A/B/C）。
-
-### 变更
-
-- 断电数值对齐设计：断电期 **30s**、断电/抢修队冷却 **45s**（此前实现 45/53）。
-- 机制联机现状（房主权威）：`m_storm` / `m_pwr` / `m_airdrop` / `m_arty` 客户端事件注入生效；非房主不跑 sim（空投不落箱等）。
-
-### 技术
-
-- `Mechanics` 机制引擎：按 `mapDef.mechanics.type` 分发（searchlight / sandstorm / airdrop），无机制则跳过，向后兼容；机制对象纯视觉（不入 colliders，不阻塞碰撞/导航）。
-- `BuildingLib` 扩展至 14 类型，新类型走 `BUILDINGS_OUT` 内联几何（非占位盒回退）。
-- 机制数据字段结构对齐设计 schema（结构勿改、数值可调，`[PLAYTEST]` 标注待收敛）。
-
-### 已知风险 / Backlog（详见发布清单 `docs/release/release-checklist-v12-2026-08-06.md`）
-
-- 机制数值多为 `[PLAYTEST]` 标注（扫速/冷却/伤害/回血等），建议首轮内测收敛一次。
-- **联机客户端不处理 `'cap'` 事件**（net.js `applyEvent` 无 `case 'cap'`）→ 水塔占领/易主视觉仅房主可见（C2 backlog）。
-- port 断电方自身队冷却内不能抢修（C1）：与设计 §2.2 文字有冲突，实现取「队冷却阻断该队一切电源操作」，符合防反复开关意图，待设计侧书面澄清。
-- suburb 空投细节（60+rand12 抖动 / 信标 5s 未独立 / 拾取半径 2.2 vs 1.5 / 箱无碰撞实体）留 [PLAYTEST]（C3）。
-- desert 单人回血实测 3.75~5HP/s（2Hz 相位边界，5±20% 内，C4 非回归）。
-- 探照灯 `tiltDeg` 数据保留但暂无物理倾斜；曝露 ping 位置公式用平方距离 → 30m 处小地图落点偏移 ~80m（纯 cosmetic，R8）。
-
----
-
-## [1.1.0] - 2026-08-06 · 三图时代（数据驱动地图架构）
-
-> 里程碑：地图数据驱动化 + 3 张地图 + 建筑程序化精修 + P0 缺陷修复 + 地图选择 UI。
-> 质量门控：**PASS**（含 4 条非阻塞 CONCERN，无 FAIL / 无阻塞项），详见 `docs/quality/maps-qa-2026-08-06.md`。
-
-### 新增
-
-- **地图数据驱动架构**：地图由 `mapDef` 数据驱动（`js/maps/registry.js` + `suburb.js/port.js/desert.js`），新增地图无需改引擎代码；换图走统一 `World.load`（unload + 代际检查，无串图残留）。ADR-001/002 落地。
-- **3 张可玩地图**（地图选择菜单 + `?map=<id>` URL 参数，`file://` 离线可用）：
-  - `suburb` 城郊战场（300×300）——原有地图数据化 1:1 迁移，行为不变。
-  - `port` 夜港工业区（260×260）——**快节奏 / 高垂直度**：冷蓝夜景、窄街密掩体、3 处可攀屋顶制高点、近雾（40~200）压缩交战距离，遭遇战一触即发。
-  - `desert` 荒漠前哨（340×340）——**慢节奏 / 长视线**：暖橙日照、据点间距 ≈90m（城郊 ≈58m）、沙丘起伏制造天然遮蔽与高地，穿越空地需掩护推进。
-- **建筑程序化精修**（纯视觉，不产碰撞）：窗内暗腔、雨落管、屋顶 AC 机组、檐口、角柱、分缝、建筑染色 tint，随 `detail` 等级合批为单 mesh，三图共享材质缓存。
-- **新程序化纹理**：`sand`（沙地/土路）、`plaster`（灰泥墙）、`corrugated`（波纹钢板）、`rust`（锈蚀金属）。
-- **队伍色收敛**：蓝 `#5aa9ff` / 红 `#b3261e` 统一收敛（`CFG.TEAM_COLORS`），URL `?cvd=1` 切换色盲友好配色（蓝-橙安全色相轴）。
-- **地图选择 UI**：主菜单地图按钮行（单选、悬停显示描述、点击即时背景预览），「开始单人战役」使用所选地图。
-
-### 修复
-
-- 阴影范围未覆盖整图（阴影 extent 改为 `size×0.62`，mapSize 2048，三图全覆盖）。
-- 楼层墙段错位/碰撞不一致（`ry=90` 建筑视觉与碰撞对齐）。
-- 碰撞体随建筑旋转不同步（旋转对齐修正）。
-- 几何归一化（detail 关闭时精修几何不残留）。
-- 灯/旗材质与队伍色不一致（统一走 `CFG.TEAM_COLORS`）。
-- `?detail=off` LOD 逃生舱：地图级 `off` 一票否决（建筑级 `detail:'high'` 不再反超），三图全部生效。
-- 既有回归 `test/smoke.js` 独立复核 **RC=0**，断言逐条执行通过（含新增 D-01/02/03/05 精修断言）。
-
-### 变更
-
-- 建筑数据坐标语义明确：`type:'model'` → x/z 为角点；`type:'proc'` → x/z 为中心（文档口径修订，ADR/架构文档同步）。
-- 环境主题化：三图 fog/背景/光照/雾距互异（suburb 白昼 / port 冷蓝夜 / desert 暖橙昼），tint 与主题纹理接线。
-- 默认地图：`suburb`（注册表第一个），未指定 `?map=` 时使用。
-
-### 技术
-
-- 地图注册表 `MapRegistry`（schema 校验：3 据点契约 / 出生点非空 / 坐标合法），坏图只告警不拖垮整局。
-- `GLBSlots` 插槽（ADR-003）：建筑 GLB 为 **opt-in 视觉插槽**，当前**休眠**（未引 GLTFLoader / `file://` / `noglb=1` 恒回退程序化建筑），碰撞/导航/小地图始终来自程序化数据。
-- `World.detailLevel` 地图级一票否决逻辑（C1 收口）。
-- 精修合批 `_mergeBoxes` + `sharedMat`，几何数与材质数可控。
-- 三图性能余量充足：300 帧战斗模拟平均 0.10~0.58ms/帧（阈值 8ms），最坏帧首帧抖动 <27ms（阈值 80ms）。
-
-### 已知风险 / Backlog（详见发布清单 `docs/release/release-checklist-2026-08-06.md`）
-
-- desert D1 南门洞内有 1.4×1.1m 墙墩（门洞可通行打折，A* 60/60 全通不阻塞导航）→ 下批次修数据。
-- `?detail=off` 逃生舱已修复（C1）；但性能最坏帧首帧抖动仍在（建议预热帧规避误报）。
-- `rust`/`sand` 纹理已实现但当前未被地图显式引用（port 用 corrugated/metal/concrete，desert 用 plaster/concrete，沙地色走顶点色）→ 待设计/美术确认是否接线或从口径删除。
-- 回归缺口：三图 A*/出生点/精修不产碰撞/GLB 回退断言建议并入正式 smoke 套件（当前 smoke 只对默认图 suburb 做 gameplay 冒烟）。
-- GLB 插槽休眠：启用需引入构建/importmap 打包 GLTFLoader（ESM-only），需另立 ADR。
-
-### 补记（v2.7 时代遗留系统，随 1.1.0 已发布但未入日志）
-
-> 以下系统在 1.1.0 发布时已存在于代码中（其他会话的 v2.7 时代系统），此前从未写入 CHANGELOG/README，本次一并补记（版本连续性）：
-
-- **小队对讲机指挥**：Z 集合 / X 自由 / C 进攻 / V 防守（浏览器 F1-F4 被系统占用故用 Z/X/C/V）；玩家长时间不下令时 **AI 队长自动接管**下令。
-- **AI 队长指挥**：队长带路、成员清旧路径即时响应；进攻/集合命令下全员疾跑（3.6→6.2），自由/防守常速。
-- **疾跑 / 冲锋**：Shift 疾跑 + 冲锋前倾姿态 + 更高步伐弹跳（玩家与 AI 共用动画逻辑）。
-- **GLTF 脚底补偿**：士兵 GLB 脚底在 y=-0.57（split-glb 未对齐脚底），活体抬升 0.57 防半截入土。
-- **背包 / 搜刮**（同批遗留，一并补记）：B 开背包（仓库互通）；靠近尸体按 E 搜刮。
-
----
-
-## [1.0.0] - 2026-08-05 · 初始可玩版本
-
-> 初始里程碑：单人 + 局域网联机可玩闭环。此为发布基线版本。
-
-- 据点占领玩法（A/B/C，占点 +25、持续产分、击杀 +1、10 分钟胜负）。
-- 红蓝 AI 对抗（每队 10 人），玩家加入蓝队；士兵 GLB 切割模型 + 失败自动回退方块人。
-- 武器系统：手枪/步枪/狙击/霰弹 + 换弹/开镜/近战/手雷/烟雾弹/迫击炮。
-- 局域网联机：Node WebSocket 服务端（薄中继 + 房间管理），listen-server 房主权威。
-- 程序化纹理默认集（brick/concrete/grass/asphalt/sandbag/metal/floor/roof）+ 外部纹理覆盖接口。
-- 无头冒烟测试 `test/smoke.js` + 服务端协议回归 `test/server-test.js`。

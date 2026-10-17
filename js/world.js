@@ -597,7 +597,7 @@ const World = {
 
   placeModelBuilding(b) {
     const vis = new THREE.Group();
-    // v1.2：新类型（BUILDINGS_OUT）按地图 w/d/h 缩放（设计契约「碰撞尺寸以 w/d/h 为准」）；
+    // v1.2：新类型（models/buildings/*.glb）按地图 w/d/h 缩放（设计契约「碰撞尺寸以 w/d/h 为准」）；
     // 旧 5 型传 dims 但 build 内仅对新类型生效 → 沿用 GLB 原尺寸，观感不变
     const dims = this.modelDims(b);
     const built = (typeof BuildingLib !== 'undefined' && BuildingLib) ? BuildingLib.build(b.key, b.x, b.z, b.ry || 0, dims) : null;

@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "generatedAt": "2026-10-17T05:28:27.445Z",
+  "soldier": "soldier.glb",
+  "weapons": {
+    "pistol": "guns/pistol.glb",
+    "rifle": "guns/rifle.glb",
+    "shotgun": "guns/shotgun.glb",
+    "sniper": "guns/sniper.glb"
+  },
+  "bolts": {
+    "pistol": "guns/pistol_bolt.glb",
+    "rifle": "guns/rifle_bolt.glb",
+    "shotgun": "guns/shotgun_bolt.glb",
+    "sniper": "guns/sniper_bolt.glb"
+  },
+  "buildings": {
+    "apartment": "buildings/apartment.glb",
+    "base": "buildings/base.glb",
+    "bridge": "buildings/bridge.glb",
+    "bunker": "buildings/bunker.glb",
+    "complex": "buildings/complex.glb",
+    "container": "buildings/container.glb",
+    "cover": "buildings/cover.glb",
+    "crane": "buildings/crane.glb",
+    "guardhouse": "buildings/guardhouse.glb",
+    "hangar": "buildings/hangar.glb",
+    "house": "buildings/house.glb",
+    "mast": "buildings/mast.glb",
+    "megatower": "buildings/megatower.glb",
+    "pillbox": "buildings/pillbox.glb",
+    "refinery": "buildings/refinery.glb",
+    "ruins": "buildings/ruins.glb",
+    "stadium": "buildings/stadium.glb",
+    "stairs": "buildings/stairs.glb",
+    "tankH": "buildings/tankH.glb",
+    "tankV": "buildings/tankV.glb",
+    "tower": "buildings/tower.glb",
+    "wall": "buildings/wall.glb",
+    "warehouse": "buildings/warehouse.glb",
+    "watchtower": "buildings/watchtower.glb"
+  },
+  "buildingGroups": {
+    "out": [
+      "base",
+      "bridge",
+      "bunker",
+      "complex",
+      "container",
+      "crane",
+      "guardhouse",
+      "hangar",
+      "mast",
+      "megatower",
+      "pillbox",
+      "refinery",
+      "ruins",
+      "stadium",
+      "stairs",
+      "tankH",
+      "tankV",
+      "tower",
+      "wall"
+    ],
+    "legacy": [
+      "apartment",
+      "cover",
+      "house",
+      "warehouse",
+      "watchtower"
+    ]
+  }
+}

@@ -39,9 +39,9 @@ global.localStorage = {
 /* ---- 加载 three + 游戏脚本（按 index.html 顺序） ---- */
 const path = require('path');
 const ROOT = path.join(__dirname, '..');
-const scripts = ['libs/three.min.js', 'js/core.js', 'js/audio.js', 'js/textures.js',
+const scripts = ['libs/three.min.js', 'js/glb.js', 'js/assetLoader.js', 'js/core.js', 'js/audio.js', 'js/textures.js',
   'js/maps/registry.js', 'js/maps/suburb.js', 'js/maps/port.js', 'js/maps/desert.js', 'js/world.js',
-  'js/settings.js', 'js/combat.js', 'js/game.js', 'js/ai.js', 'js/ui.js', 'js/accounts.js', 'js/items.js', 'models/soldier_data.js', 'models/weapons_data.js', 'models/buildings_data.js', 'models/buildings_out.js', 'js/models.js', 'js/mechanics.js', 'js/net.js', 'js/main.js'];
+  'js/settings.js', 'js/combat.js', 'js/game.js', 'js/ai.js', 'js/ui.js', 'js/accounts.js', 'js/items.js', 'js/models.js', 'js/mechanics.js', 'js/net.js', 'js/main.js'];
 const THREE = require(path.join(ROOT, 'libs/three.min.js'));
 global.THREE = THREE; // 浏览器里 three 是全局，这里对齐
 THREE.WebGLRenderer = class {
@@ -54,6 +54,9 @@ for (const f of scripts.slice(1)) {
   try { vm.runInThisContext(fs.readFileSync(fp, 'utf8'), { filename: f }); }
   catch (e) { failures.push('加载 ' + f + ' 失败: ' + e.message); }
 }
+/* 去内联：模型改为 HTTP 提供的 .glb，测试同步灌入 AssetLoader */
+require('./_harness').preloadSync(ROOT);
+
 
 /* ---- 1. 初始化 ---- */
 try { init(); } catch (e) { failures.push('init 崩溃: ' + e.stack.split('\n').slice(0, 3).join(' | ')); }
@@ -93,15 +96,15 @@ try {
 try {
   const wm = ModelLib.buildWeaponMesh('rifle');
   if (!wm || !wm.geometry || !wm.geometry.attributes.position || !wm.geometry.attributes.position.count) {
-    failures.push('buildWeaponMesh 失败（WEAPONS_DATA 缺失或解码错误），第一人称无 3D 武器');
+    failures.push('buildWeaponMesh 失败（models/guns/*.glb 缺失或解析错误），第一人称无 3D 武器');
   } else {
     console.log('武器断言 | rifle 模型构建成功，顶点', wm.geometry.attributes.position.count, '| 索引', wm.geometry.index ? wm.geometry.index.count : 0);
   }
   const ws = ['pistol', 'sniper', 'shotgun'];
   for (const k of ws) {
     const m = ModelLib.buildWeaponMesh(k);
-    if (!m && typeof WEAPONS_DATA !== 'undefined' && WEAPONS_DATA && WEAPONS_DATA[k]) failures.push('武器 ' + k + ' 有数据但构建失败');
-    // WEAPONS_DATA 无该键 → 方块 fallback 合法，不视为失败
+    if (!m && AssetLoader.weapon(k)) failures.push('武器 ' + k + ' 有 GLB 数据但构建失败');
+    // 无该键 GLB → 方块 fallback 合法，不视为失败
   }
   // 武器朝向断言：长轴必须对齐 Z（枪管朝前/后），否则第一人称朝向错误
   for (const k of ['rifle', 'pistol', 'shotgun', 'sniper']) {
@@ -202,15 +205,15 @@ try {
 
 /* ---- 1.3 武器模型断言（WEAPONS_DATA → 玩家手里的模型武器） ---- */
 try {
-  if (typeof WEAPONS_DATA !== 'undefined' && WEAPONS_DATA) {
+  if (AssetLoader.ready && Object.keys(AssetLoader.cache.weapons).length) {
     const hasModel = ['pistol', 'rifle'].every(k => {
       const m = ModelLib.buildWeaponMesh(k);
       return m && m.geometry && m.geometry.attributes.position && m.geometry.index;
     });
-    console.log('武器模型断言 | WEAPONS_DATA 键:', Object.keys(WEAPONS_DATA).join(','), '| pistol/rifle 模型构建:', hasModel ? 'OK' : 'FAIL');
+    console.log('武器模型断言 | GLB 武器键:', Object.keys(AssetLoader.cache.weapons).join(','), '| pistol/rifle 模型构建:', hasModel ? 'OK' : 'FAIL');
     if (!hasModel) failures.push('武器模型构建失败');
   } else {
-    failures.push('WEAPONS_DATA 缺失');
+    failures.push('武器 GLB 未加载（models/guns/*.glb）');
   }
 } catch (e) { failures.push('武器断言崩溃: ' + e.message); }
 
@@ -732,7 +735,7 @@ try {
   );
   if (doorBlocked) failures.push('warehouse 卷帘门被碰撞盒挡住（应留空 8.6~13.4 × 高5.4）');
   // 建筑数据键检查
-  if (typeof BUILDINGS_DATA === 'undefined' || Object.keys(BUILDINGS_DATA).length < 5) failures.push('BUILDINGS_DATA 键数异常: ' + (typeof BUILDINGS_DATA === 'undefined' ? 'undefined' : Object.keys(BUILDINGS_DATA).length));
+  if (!AssetLoader.ready || Object.keys(AssetLoader.cache.buildings).length < 5) failures.push('建筑 GLB 键数异常: ' + (AssetLoader.ready ? Object.keys(AssetLoader.cache.buildings).length : 'AssetLoader 未就绪'));
   console.log('建筑断言 | 5 栋构建 OK + warehouse 卷帘门留空 ✓');
 } catch (e) { failures.push('建筑断言崩溃: ' + e.stack.split('\n').slice(0, 3).join(' | ')); }
 
@@ -811,9 +814,9 @@ try {
 /* ---- 4.10 v1.2：BuildingLib 新增 9 类型（内联管线落地 + 缩放 + 门洞/平台） ---- */
 try {
   const NEW_KEYS = ['bunker', 'hangar', 'pillbox', 'tower', 'wall', 'bridge', 'stairs', 'container', 'ruins'];
-  if (typeof BUILDINGS_OUT === 'undefined' || !BUILDINGS_OUT) failures.push('BUILDINGS_OUT 缺失（models/buildings_out.js 未加载）');
+  if (!AssetLoader.ready || !AssetLoader.manifest) failures.push('建筑 GLB 清单缺失（models/manifest.json 未加载）');
   else {
-    for (const k of NEW_KEYS) if (!BUILDINGS_OUT[k]) failures.push('BUILDINGS_OUT 缺类型 ' + k);
+    for (const k of NEW_KEYS) if (!AssetLoader.hasBuilding(k)) failures.push('建筑 GLB 缺类型 ' + k);
   }
   const status = BuildingLib.status();
   for (const k of NEW_KEYS) if (status[k] !== 'inline') failures.push('BuildingLib.status[' + k + '] = ' + status[k] + '（应 inline）');
@@ -847,7 +850,7 @@ try {
     const hy = bb.max.y - bb.min.y, hz = Math.abs(bb.max.z - bb.min.z);
     if (Math.abs(hy - 3.5) > 0.5 || Math.abs(hz - 8) > 0.5) failures.push('bunker 朝向/缩放错误: y高=' + hy.toFixed(1) + ' z深=' + hz.toFixed(1) + '（期望 高3.5 深8）');
   }
-  console.log('v1.2 建筑断言 | BUILDINGS_OUT ' + NEW_KEYS.length + ' 型内联 + 5 旧型 legacy 不变 + 按 w/d/h 缩放 + 朝向修复 ✓');
+  console.log('v1.2 建筑断言 | ' + NEW_KEYS.length + ' 型 GLB + 5 旧型 legacy 不变 + 按 w/d/h 缩放 + 朝向修复 ✓');
 } catch (e) { failures.push('v1.2 建筑断言崩溃: ' + e.stack.split('\n').slice(0, 3).join(' | ')); }
 
 /* ---- 4.11 v1.2：机制引擎（注入测试配置；真实地图 mechanics 已在 4.9 回归中随 load 初始化） ---- */
@@ -1302,13 +1305,13 @@ try {
   if (World.walkable(251, 71)) failures.push('v1.4 megatower 腿位应不可通行（碰撞腿）');
   // ④ 缺数据回退：删除 BUILDINGS_OUT['stadium'] → placeModelBuilding 回退占位盒不崩（安全），恢复后真模型
   {
-    const saved = BUILDINGS_OUT['stadium'];
-    delete BUILDINGS_OUT['stadium'];
+    const saved = AssetLoader.cache.buildings['stadium'];
+    delete AssetLoader.cache.buildings['stadium'];
     let ok = true;
     try { World.load(scene, MapRegistry.get('suburb')); } catch (e2) { ok = false; failures.push('v1.4 回退: suburb 加载崩溃 ' + e2.message); }
     if (ok && !World.colliders.some(c => c.min.x < 181 && c.max.x > 205 && c.min.z < 151 && c.max.z > 169))
       failures.push('v1.4 回退: stadium 占位盒碰撞缺失（缺数据时应有 w/d/h 占位碰撞）');
-    BUILDINGS_OUT['stadium'] = saved;
+    AssetLoader.cache.buildings['stadium'] = saved;
     World.load(scene, MapRegistry.get('suburb')); // 恢复后重建
   }
   console.log('v1.4 四地标 | stadium/refinery/base/megatower 构建+CONFIGS✓ 状态 inline✓ 腿式可通行✓ 缺数据回退✓');

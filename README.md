@@ -1,6 +1,10 @@
 # 战地突击 · Battleground Tactical FPS
 
-> 当前稳定版本 **v1.11.11** · 零构建静态 Web 游戏（无需 `npm install`/打包）· 双击 `index.html` 即玩（单机）/ `node server.js` 联机
+> 当前稳定版本 **v1.11.11** · 零构建（无需 `npm install`/打包，但**必须起服务**）
+>
+> ⚠ **运行方式已变更**：模型改为标准 `.glb`，由服务器通过 HTTP 提供，因此**不再支持双击 `index.html`**。
+> 请执行 `node server.js`，然后浏览器打开 <http://localhost:8080>。
+> 直接双击会看到明确的「请启动服务」提示，而不是空白页或方块人。
 
 Three.js 浏览器端第一人称战术射击。红蓝两队 AI 对抗（每队 10 人），玩家加入蓝队。**据点占领玩法**：A/B/C 三个据点，站在圈内人数多的一方推进占领进度，占领 +25 分并持续产分（每 2s +1），击杀 +1；10 分钟时间到比分高者胜。客户端 + 独立 Node.js WebSocket 服务端，零外部美术资源（所有模型为 Three.js 内置几何体组合、纹理为程序化生成）。
 
@@ -10,8 +14,10 @@ Three.js 浏览器端第一人称战术射击。红蓝两队 AI 对抗（每队 
 battlegame/
 ├── index.html        # 入口（CSS/HUD/DOM，按依赖序引用本地脚本，无 importmap / 无构建步骤）
 ├── libs/three.min.js # 本地 three.js r160（UMD，唯一运行时依赖，主渲染）
-├── libs/three.module.js / GLTFLoader.js  # 休眠（ESM / GLB 加载器；本项目无构建、file:// 离线约束，运行时永不加载）
+├── libs/three.module.js / GLTFLoader.js  # 休眠（ESM / GLTFLoader；本工程无 importmap，改用自写 js/glb.js 解析 GLB）
 ├── js/
+│   ├── glb.js        # 零依赖 glTF 2.0 二进制解析器（手写，不引入打包器/ESM）
+│   ├── assetLoader.js# 模型资源预加载（HTTP → GLB，失败明确报错）
 │   ├── core.js       # 常量 / 工具 / 噪声
 │   ├── audio.js      # WebAudio 程序化合成音效
 │   ├── textures.js   # 程序化纹理 + 外部纹理覆盖接口
@@ -20,14 +26,16 @@ battlegame/
 │   ├── game.js       # 对战规则 / 伤害结算 / 据点 / 迫击炮 / 对讲机指挥
 │   ├── ai.js         # AI 个体大脑（寻路/交火/躲避/投雷/翻越/队长带路）
 │   ├── ui.js         # 小队战术层 / HUD / 小地图 / 背包
-│   ├── models.js     # 角色/武器模型组装（数据驱动；士兵/枪栓为 Base64 内联，失败回退方块人）
+│   ├── models.js     # 角色/武器模型组装（从 AssetLoader 取 GLB；失败抛错由 main.js 显示红条）
 │   ├── mechanics.js  # 地图机制引擎（探照灯/沙暴/空投 v1.2 + 缩圈 zone v1.3）
 │   ├── net.js        # 联机客户端（listen-server）
 │   └── main.js       # 初始化 / 主循环 / 启动错误兜底
 ├── js/maps/          # 地图注册表 + 三张地图数据（registry/suburb/port/desert，含 mechanics 机制字段）
-├── models/           # 【运行时数据区】只放游戏会加载的内联数据，双击 index.html 必需
-│   ├── soldier_data.js / weapons_data.js / buildings_data.js / buildings_out.js / gun_glb_data.js
-│   │                 # 士兵/枪栓 Base64 内联、建筑 BUILDINGS_OUT 内联几何（离线可玩）
+├── models/           # 【运行时资源区】标准 glTF 2.0 二进制，由 server.js 通过 HTTP 提供
+│   ├── soldier.glb   # 士兵（7 部件节点树：torso/head/armL/armR/legL/legR/gun，gun 挂在 armR 下）
+│   ├── guns/         # <key>.glb 枪身 + <key>_bolt.glb 枪栓（extras 带 boltRest/boltTravel/zExt）
+│   ├── buildings/    # 24 个建筑 GLB（POSITION + COLOR_0 顶点色）
+│   ├── manifest.json # 资源清单（AssetLoader 据此加载）
 │   └── buildings_dims.json  # 建筑真实尺寸表（构建期/审计用）
 ├── assets/           # 【源素材区】构建期才用，运行时永不加载（原先散在 model/ 与 models/ 下）
 │   ├── soldier/      # soldier.glb / soldier_parts.glb / viewer.html / preview.png（index.html 菜单头像取 preview.png）
@@ -37,7 +45,10 @@ battlegame/
 │   ├── buildings/out/       # SCAD 编译出的 GLB（tools/glb2bldg_out.js 输入）
 │   ├── buildings/disabled/  # 停用建筑 SCAD
 │   └── raw/model/           # 早期单数 model/ 目录整体归档（OBJ/贴图/转换脚本，含 346MB 历史素材）
-├── tools/            # 构建/转换/一次性脚本（split-glb、glb2data、glb2bldg*、审计脚本；scratch/ 为临时脚本）
+├── tools/            # 构建/转换脚本
+│   ├── export_assets.cjs  # 内联 base64 → 标准 .glb（33 个产物，自检逐值一致）
+│   ├── gen_manifest.cjs   # 生成 models/manifest.json
+│   └── （其余为历史转换/审计脚本）
 ├── server.js         # Node WebSocket 服务端（薄中继 + 房间管理）
 ├── test/             # 测试与探测
 │   ├── smoke.js      # 无头冒烟测试（DOM 桩驱动真实代码）
@@ -56,7 +67,7 @@ battlegame/
 └── package.json / README.md
 ```
 
-> 角色模型说明：士兵 6 部件（头/躯干/左右臂/左右腿）以关节为 pivot，其几何已 **Base64 内联于 `models/soldier_data.js`**（枪栓内联于 `models/gun_glb_data.js`），
+> 角色模型说明：士兵 6 部件（头/躯干/左右臂/左右腿）+ 枪，以关节为 pivot，几何存放于 **`models/soldier.glb`**（标准 glTF，节点层级即关节层级，`gun` 是 `armR` 的子节点），
 > 游戏内做程序化走路动画（摆臂摆腿+弹跳）。**运行时零 fetch / 零 GLB 加载**（ADR-003），双击 `index.html` 即可离线游玩；
 > URL 加 `?legacy=1` 可强制方块人。`soldier_parts.glb` / `soldier.glb` 仅为构建期源素材，不参与运行。
 
@@ -65,15 +76,22 @@ battlegame/
 当前版本 **1.11.11**（见 `package.json` 与 `CHANGELOG.md`）。本项目为**零构建静态 Web 游戏**：无需 `npm install`、无需打包。
 
 - **发布包**：`battlegame-1.11.11.zip`（约 1.9 MB）——解压即用。剔除 `node_modules`、测试套件、设计文档、美术源素材等开发文件，仅保留运行所需最小文件集（`index.html` + `js/` + `libs/three.min.js` + `models/` 内联数据 + `sounds/` 3 个 mp3 + `server.js`/`startService.bat`）。
-- **本地运行**：单机双击 `index.html` 即玩；局域网联机见下方「局域网联机」。
+- **本地运行**：`node server.js` 后浏览器打开 <http://localhost:8080>；局域网联机见下方。
 - **发布清单**：`docs/release/release-checklist-v111-2026-08-08.md`。
 
 ## 快速开始
 
-### 单机（无需服务器）
-直接用浏览器打开 `index.html`（双击即可），点「开始单人战役」。three.js 已本地化，**不依赖网络**。
-若从发布包运行，先解压 `battlegame-1.11.11.zip`，再双击其中的 `index.html`。
-若页面顶部出现红条错误提示，说明有文件缺失或初始化异常——按提示信息处理，不再静默失效。
+### 单机（需要起服务，不联网）
+```bash
+node server.js            # 零依赖直接跑，默认 8080 端口
+```
+然后浏览器打开 <http://localhost:8080>，点「开始单人战役」。
+
+> **为什么不能双击 index.html**：模型是标准 `.glb` 二进制，由服务器通过 HTTP 提供；
+> `file://` 下浏览器不允许 fetch 本地文件，所以必须走 HTTP。双击会看到明确提示。
+> 本机运行不需要联网，服务只监听本地。
+
+若页面顶部出现红条，说明资源缺失或初始化异常，提示里会说明具体是哪个文件和怎么修。
 
 ### 局域网联机
 ```bash
@@ -92,6 +110,10 @@ node server.js      # 零依赖直接跑！优先用 ws（若 npm install 过）
 ```bash
 node test/smoke.js              # 客户端无头冒烟：初始化 + 跳跃 + 对局模拟 + 手雷/迫击炮 + 联机状态注入
 node test/qa/_qa_v29_settings.js  # 单套质量门禁（其余套件在 test/qa/，按版本号命名）
+# 改造相关的新套件（自带服务器启停，不用手动起服务）：
+node test/glb-runtime-test.js   # HTTP → GLB 解析 → THREE 几何 全链路
+node test/static-serving-test.js# 静态服务：GLB/MIME/Content-Length/路径穿越/双传输分支
+node test/site-check.js         # 整站：所有引用可达 + 脚本顺序 + 清单一致 + file:// 提示
 # 另开终端起服务后：
 node server.js                  # 起服务（默认 8080）
 node test/server-test.js        # 服务端协议回归：握手/建房/加入/state 路由/事件广播
@@ -101,7 +123,8 @@ node test/server-test.js        # 服务端协议回归：握手/建房/加入/s
 
 - 各 js 文件按依赖顺序加载（见 index.html 中 `<script>` 顺序），新增文件需插到 main.js 之前
 - 改完任意 js 后建议跑 `node test/smoke.js` 回归；浏览器控制台无红色报错为准
-- 新增源素材放 `assets/`（构建期用），**不要**放进 `models/`——`models/` 只放运行时内联数据
+- 新增源素材放 `assets/`（构建期用），**不要**放进 `models/`——`models/` 只放运行时 .glb 与 manifest.json
+- 改了模型要用 `node tools/export_assets.cjs` 重新导出，再 `node tools/gen_manifest.cjs` 刷新清单
 - 测试脚本按用途分目录：`test/qa/`（门禁，保留）、`test/debug/`、`test/scratch/`（一次性，可删）
 
 ## 操作
@@ -188,7 +211,7 @@ node test/server-test.js        # 服务端协议回归：握手/建房/加入/s
 - **护甲/医疗**：护甲 <50 且带护甲包 → 主动使用；低血且有敌视线 → 先撤到掩体再治疗。
 - **残血优先**：目标选择优先击杀残血（hp<30）敌人；被探照灯曝露的目标优先级 +1（集火）。
 
-> **四地标**（BuildingLib 新增 base/refinery/stadium/megatower，`models/buildings_out.js` 内联 13 型离线可玩）：体育场 stadium→城郊 (180,150) · 炼油厂 refinery→夜港 **(137,156)**（中央装卸场北侧，小地图金色菱形标记）· 基地 base→荒漠 (60,160) · 巨塔 megatower→荒漠 (232,70)（20×20×28 四腿式、底部可通行、暂不可登顶）。**小地图**会以金色菱形标记四地标，与据点圈分层。
+> **四地标**（BuildingLib 新增 base/refinery/stadium/megatower，对应 `models/buildings/*.glb`）：体育场 stadium→城郊 (180,150) · 炼油厂 refinery→夜港 **(137,156)**（中央装卸场北侧，小地图金色菱形标记）· 基地 base→荒漠 (60,160) · 巨塔 megatower→荒漠 (232,70)（20×20×28 四腿式、底部可通行、暂不可登顶）。**小地图**会以金色菱形标记四地标，与据点圈分层。
 
 ## 地图专属玩法（v1.2）
 

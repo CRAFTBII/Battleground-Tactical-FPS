@@ -37,9 +37,9 @@ global.localStorage = {
 
 const path = require('path');
 const ROOT = path.join(__dirname, '..', '..');
-const scripts = ['libs/three.min.js', 'js/core.js', 'js/audio.js', 'js/textures.js',
+const scripts = ['libs/three.min.js', 'js/glb.js', 'js/assetLoader.js', 'js/core.js', 'js/audio.js', 'js/textures.js',
   'js/maps/registry.js', 'js/maps/suburb.js', 'js/maps/port.js', 'js/maps/desert.js', 'js/world.js',
-  'js/settings.js', 'js/combat.js', 'js/game.js', 'js/ai.js', 'js/ui.js', 'js/accounts.js', 'js/items.js', 'models/soldier_data.js', 'models/weapons_data.js', 'models/buildings_data.js', 'models/buildings_out.js', 'js/models.js', 'js/mechanics.js', 'js/net.js', 'js/main.js'];
+  'js/settings.js', 'js/combat.js', 'js/game.js', 'js/ai.js', 'js/ui.js', 'js/accounts.js', 'js/items.js', 'js/models.js', 'js/mechanics.js', 'js/net.js', 'js/main.js'];
 const THREE = require(path.join(ROOT, 'libs/three.min.js'));
 global.THREE = THREE;
 THREE.WebGLRenderer = class {
@@ -53,6 +53,9 @@ for (const f of scripts.slice(1)) {
   try { vm.runInThisContext(fs.readFileSync(fp, 'utf8'), { filename: f }); }
   catch (e) { failures.push('加载 ' + f + ' 失败: ' + e.message); }
 }
+/* 去内联：模型改为 HTTP 提供的 .glb，测试同步灌入 AssetLoader */
+require('../_harness').preloadSync(ROOT);
+
 let passed = 0, failed = 0;
 const R = (name, ok, extra) => {
   if (ok) { passed++; console.log('  ✓ ' + name); }

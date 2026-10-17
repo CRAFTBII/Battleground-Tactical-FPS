@@ -1,21 +1,122 @@
-/**
- * 战地突击 · 联机服务端（薄中继 + 房间管理）
- * 架构：listen-server 模型 —— 本服务只负责连接、房间与消息路由；
- *       房间创建者（房主客户端）负责权威模拟（AI/伤害/状态），
- *       客户端以 10Hz 上报自身状态，房主广播全量快照。
+#!/usr/bin/env node
+/* ============================================
+ * 战地突击 · server.js — HTTP 静态站 + WebSocket 联机服务端
  *
- * 启动：node server.js           （零依赖，直接可跑）
- * 可选：npm install ws           （装上则自动使用更健壮的 ws 实现）
- * 默认端口 8080，可用环境变量 PORT 覆盖。
- */
+ * 架构变更（去内联）：模型不再是 base64 内联在 JS 里，而是标准 .glb 二进制，
+ * 由本服务通过 HTTP 提供。因此**游戏必须启动服务才能玩**：
+ *     node server.js   → 浏览器打开 http://localhost:8080
+ * 直接双击 index.html 会明确报错（见 js/main.js 的协议自检）。
+ *
+ * 两条 WebSocket 传输分支（npm ws / 内置 RFC6455）共用同一个 httpHandler。
+ * ============================================ */
 'use strict';
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
 const os = require('os');
 
-/* ================= 传输层：优先 ws，否则内置 RFC6455 最小实现 ================= */
 let WSS = null;
-if (process.env.FORCE_INLINE_WS !== '1') {
-  try { WSS = require('ws'); } catch (e) { WSS = null; }
+try { WSS = require('ws'); } catch (e) { WSS = null; }
+
+/* ================= 静态文件服务 ================= */
+const WEB_ROOT = __dirname;
+
+/** 扩展名 → Content-Type（模型走标准 glTF MIME） */
+const MIME = {
+  '.html': 'text/html; charset=utf-8',
+  '.htm': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
+  '.cjs': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.glb': 'model/gltf-binary',
+  '.gltf': 'model/gltf+json',
+  '.bin': 'application/octet-stream',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.gif': 'image/gif',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon',
+  '.mp3': 'audio/mpeg',
+  '.ogg': 'audio/ogg',
+  '.wav': 'audio/wav',
+  '.wasm': 'application/wasm',
+  '.map': 'application/json; charset=utf-8',
+  '.txt': 'text/plain; charset=utf-8',
+  '.md': 'text/markdown; charset=utf-8'
+};
+
+/** 允许对外提供的目录白名单（其余一律 404，避免把 backup/ .git/ tools/ test/ docs/ 暴露出去） */
+const SERVE_DIRS = ['js', 'css', 'libs', 'models', 'sounds', 'assets'];
+
+/** 根目录下允许直接访问的文件 */
+const SERVE_ROOT_FILES = ['index.html'];
+
+/**
+ * 把 URL 路径解析为磁盘绝对路径；越界/不允许 → null。
+ * 目录穿越防护：解码 → 归一化 → 去掉 .. → 仍须落在 WEB_ROOT 内 → 通过目录白名单。
+ */
+function resolveStatic(urlPath) {
+  let decoded;
+  try { decoded = decodeURIComponent(urlPath); } catch (e) { return null; }
+  if (decoded.indexOf('\0') !== -1) return null;          // 空字节截断攻击
+  const normalized = path.posix.normalize(decoded.replace(/\\/g, '/'));
+  if (normalized.indexOf('..') !== -1) return null;
+  const abs = path.join(WEB_ROOT, normalized);
+  const rel = path.relative(WEB_ROOT, abs);
+  if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) return null;
+
+  const parts = rel.split(path.sep);
+  if (parts.length === 1) {
+    return SERVE_ROOT_FILES.includes(parts[0]) ? abs : null;   // 根目录只放行白名单文件
+  }
+  if (!SERVE_DIRS.includes(parts[0])) return null;             // 只放行白名单目录
+  return abs;
 }
+
+function notFound(res, method) {
+  res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' });
+  res.end(method === 'HEAD' ? undefined : '404 Not Found');
+}
+
+/** 静态响应：支持 GET/HEAD、ETag/304、404/405 */
+function serveStatic(req, res, urlPath) {
+  const method = req.method;
+  if (method !== 'GET' && method !== 'HEAD') {
+    res.writeHead(405, { 'Content-Type': 'text/plain; charset=utf-8', 'Allow': 'GET, HEAD' });
+    res.end(method === 'HEAD' ? undefined : '405 Method Not Allowed');
+    return true;
+  }
+  const abs = resolveStatic(urlPath);
+  if (!abs) { notFound(res, method); return true; }
+  let stat;
+  try { stat = fs.statSync(abs); } catch (e) { stat = null; }
+  if (!stat || !stat.isFile()) { notFound(res, method); return true; }
+
+  const ext = path.extname(abs).toLowerCase();
+  const etag = 'W/"' + stat.size.toString(16) + '-' + Math.floor(stat.mtimeMs).toString(16) + '"';
+  const cacheable = ext !== '.html' && ext !== '.htm';
+  const headers = {
+    'Content-Type': MIME[ext] || 'application/octet-stream',
+    'Content-Length': stat.size,
+    'Last-Modified': stat.mtime.toUTCString(),
+    'Cache-Control': cacheable ? 'public, max-age=0, must-revalidate' : 'no-store'
+  };
+  if (cacheable) headers['ETag'] = etag;
+  if (cacheable && req.headers['if-none-match'] === etag) {
+    res.writeHead(304, { 'Cache-Control': headers['Cache-Control'], 'ETag': etag });
+    res.end();
+    return true;
+  }
+  res.writeHead(200, headers);
+  if (method === 'HEAD') { res.end(); return true; }
+  fs.createReadStream(abs).on('error', () => { try { res.destroy(); } catch (e) { } }).pipe(res);
+  return true;
+}
+
 
 /** 服务器状态 JSON（/api/rooms 与列表页共用；调用时 clients/roomList 已就绪） */
 function serverStatus(port) {
@@ -89,10 +190,23 @@ function lobbyPage(res, port) {
     '</script>\n</html>');
 }
 
-/** 普通 HTTP 请求入口：/api/rooms → JSON 状态；其余 → 服务器列表页 */
+/**
+ * 普通 HTTP 请求入口（两条 WebSocket 传输分支共用）：
+ *   /api/rooms    → JSON 状态（保持原契约，server-test.js 依赖）
+ *   /             → 服务器列表页（保持原契约，含 'WebSocket' 与 '/api/rooms' 字样）
+ *   其余          → 静态文件（白名单目录 + 目录穿越防护）
+ * 注意判定顺序：先 API，再根路径列表页，最后才落到静态服务。
+ */
 function httpHandler(req, res, port) {
-  if (req.url === '/api/rooms' || req.url === '/api/rooms/') return httpJson(res, serverStatus(port));
-  return lobbyPage(res, port);
+  let pathname = req.url || '/';
+  const qi = pathname.indexOf('?');
+  if (qi !== -1) pathname = pathname.slice(0, qi);
+  const hi = pathname.indexOf('#');
+  if (hi !== -1) pathname = pathname.slice(0, hi);
+
+  if (pathname === '/api/rooms' || pathname === '/api/rooms/') return httpJson(res, serverStatus(port));
+  if (pathname === '/' || pathname === '') return lobbyPage(res, port);
+  return serveStatic(req, res, pathname);
 }
 
 function createServer(port) {

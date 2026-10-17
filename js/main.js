@@ -215,15 +215,37 @@ window.addEventListener('error', function (e) {
   const el = document.getElementById('fatalErr');
   if (el) { el.style.display = 'block'; el.textContent = '⚠ 运行错误: ' + (e.message || e); }
 });
-/* 启动即初始化（脚本在 body 尾部，DOM 已就绪）；任何异常显式显示而非静默失效 */
-(function () {
+/* 启动：先等模型资源就绪，再 init()。
+ * 模型改为服务器提供的 .glb，所以启动失败必须说清楚「去起服务」，
+ * 而不是像以前那样静默回退方块人。 */
+function fatalShow(msg) {
+  const el = document.getElementById('fatalErr');
+  if (el) { el.style.display = 'block'; el.textContent = msg; }
+}
+(async function boot() {
   if (typeof THREE === 'undefined') {
-    const el = document.getElementById('fatalErr');
-    if (el) { el.style.display = 'block'; el.textContent = '⚠ 缺少 libs/three.min.js —— 请确认该文件存在（游戏已本地化，不再依赖 CDN）'; }
+    fatalShow('⚠ 缺少 libs/three.min.js —— 请确认该文件存在');
+    return;
+  }
+  if (typeof GLB === 'undefined' || typeof AssetLoader === 'undefined') {
+    fatalShow('⚠ 缺少 js/glb.js 或 js/assetLoader.js —— 请确认这两个文件存在');
+    return;
+  }
+  // 直接双击 index.html（file://）时 fetch 不可用，给出可执行的提示而非空白页
+  if (typeof location !== 'undefined' && location.protocol === 'file:') {
+    document.body.classList.add('bootFail');
+    fatalShow('⚠ 本游戏必须启动服务才能运行。\n请在项目目录执行：node server.js\n' +
+      '然后浏览器打开 http://localhost:8080 （直接双击 index.html 已不再支持）');
+    return;
+  }
+  try {
+    await AssetLoader.preload();
+  } catch (err) {
+    fatalShow('⚠ 模型资源加载失败：' + (err && err.message || err) +
+      '\n\n请确认已在本目录执行 node server.js，并通过 http://localhost:8080 访问。');
     return;
   }
   try { init(); } catch (err) {
-    const el = document.getElementById('fatalErr');
-    if (el) { el.style.display = 'block'; el.textContent = '⚠ 初始化失败: ' + (err && err.message || err); }
+    fatalShow('⚠ 初始化失败: ' + (err && err.message || err));
   }
 })();

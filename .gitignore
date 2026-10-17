@@ -16,18 +16,22 @@ battlegame-*.zip
 battlegame-*/
 
 # ---------------------------------------------------------------------------
-# 源素材与二进制：运行时永不加载，只服务于构建（见 README「assets/」）
-# 因此不进 git，避免 154MB 的 .git 继续膨胀；需要历史版本见 backup/ 快照。
+# 运行时资源 vs 源素材
+#
+# 【必须入库】models/ 下的 *.glb 与 manifest.json —— 去内联改造后模型是运行时必需
+#   资源，由 server.js 通过 HTTP 提供。不入库会导致新 clone 后 /models/*.glb 全 404、
+#   游戏直接进不去。
+# 【不入库】assets/ 源素材（构建期专用，运行时永不加载），避免仓库膨胀。
 # ---------------------------------------------------------------------------
 
-# 源素材区（原先单数 model/ + models/ 下的 GLB/OBJ/SCAD）
-assets/
+# 源素材区（SCAD/OBJ 源、AI 生成的中间 GLB、大型原始素材）
+# 用 assets/* 而不是 assets/ ：忽略整个目录会让 git 不进去看，后面的 ! 放行规则会失效
+assets/*
+# 唯一例外：index.html 菜单立绘（运行时真的会用）
+!assets/soldier/preview.png
+
+# 旧单数 model/ 目录（历史遗留，已归档到 assets/raw/model）
 model/
 
-# models/ 里只保留运行时内联数据（*.js / *.json），其余二进制一律忽略
-models/*.glb
-models/**/*.glb
+# models/ 下手滑留下的预览图（保留 .glb 与 .json）
 models/**/*.png
-
-# 旧发布包残留
-battlegame-*/

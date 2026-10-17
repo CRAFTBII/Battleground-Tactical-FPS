@@ -1,5 +1,5 @@
 const fs=require('fs');
-const s=fs.readFileSync('models/buildings_out.js','utf8');
+const s=fs.readFileSync('utf8');
 const start=s.indexOf('{');
 const d=JSON.parse(s.slice(start));
 for (const k of ['base','refinery','stadium','megatower','bunker','hangar','apartment','house','warehouse']) {

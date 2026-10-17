@@ -287,6 +287,9 @@
 <div id="toast"></div>
 <div id="fatalErr"></div>
   <script src="libs/three.min.js"></script>
+  <!-- 模型资源：零依赖 GLB 解析 + HTTP 预加载（必须早于 js/models.js） -->
+  <script src="js/glb.js"></script>
+  <script src="js/assetLoader.js"></script>
   <script src="js/core.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/textures.js"></script>
@@ -304,12 +307,7 @@
   <script src="js/accounts.js"></script>
   <script src="js/items.js"></script>
   <script src="js/mg.js"></script>
-  <script src="models/soldier_data.js"></script>
-  <script src="models/weapons_data.js"></script>
-  <script src="models/buildings_data.js"></script>
-  <script src="models/buildings_out.js"></script>
   <script src="js/models.js"></script>
-  <script src="models/gun_glb_data.js"></script>
   <script src="js/mechanics.js"></script>
   <script src="js/net.js"></script>
   <script src="js/weaponAnim.js"></script>

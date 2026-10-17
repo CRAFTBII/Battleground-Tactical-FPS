@@ -1,0 +1,31 @@
+{
+  "generator": "tools/export_assets.cjs (inline base64 -> glTF 2.0 .glb)",
+  "legacy": [
+    "apartment",
+    "cover",
+    "house",
+    "warehouse",
+    "watchtower"
+  ],
+  "out": [
+    "base",
+    "bridge",
+    "bunker",
+    "complex",
+    "container",
+    "crane",
+    "guardhouse",
+    "hangar",
+    "mast",
+    "megatower",
+    "pillbox",
+    "refinery",
+    "ruins",
+    "stadium",
+    "stairs",
+    "tankH",
+    "tankV",
+    "tower",
+    "wall"
+  ]
+}

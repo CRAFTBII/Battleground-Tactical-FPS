@@ -1,5 +1,5 @@
 const fs=require('fs');
-const s=fs.readFileSync('models/buildings_out.js','utf8');
+const s=fs.readFileSync('utf8');
 const start=s.indexOf('{');
 // 找到 JSON 结尾（最后一个 }）
 const end=s.lastIndexOf('}');

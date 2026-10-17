@@ -1,7 +1,7 @@
 /* ============================================
  * 战地突击 · models.js — 士兵模型构建与克隆
- * 数据: window.SOLDIER_DATA（由 tools/split-glb.js 生成，base64 内联）
- * 构建: 直接使用全局 THREE（无 fetch / 无 ESM / 无 importmap）→ file:// 双击可玩
+ * 数据: models/soldier.glb（标准 glTF 2.0 二进制，由 server.js 通过 HTTP 提供）
+ * 构建: 依赖 js/glb.js 解析 + AssetLoader 预加载；不再有 base64 内联数据
  * 失败回退: 任何异常 → ModelLib.ready=false，游戏继续用方块人
  * 开关: URL 加 ?legacy=1 强制方块人
  * ============================================ */
@@ -12,45 +12,45 @@ const ModelLib = {
   enabled() {
     return !/legacy=1/.test(location.search || '');
   },
-  // 同步构建（无异步依赖），返回 Promise 仅为兼容调用方
+  /** 加载士兵模型：从已预加载的 models/soldier.glb 构建（节点层级直接来自 glTF）。
+   *  失败**不再**回退方块人 —— 记录错误并抛给调用方，由 main.js 显示红条。 */
   load() {
-    if (this.ready || this.failed) return Promise.resolve(this.root);
-    try {
-      if (typeof SOLDIER_DATA === 'undefined' || !SOLDIER_DATA || !SOLDIER_DATA.length) throw new Error('SOLDIER_DATA 缺失');
-      const root = new THREE.Group();
-      const meshByName = {};
-      for (const p of SOLDIER_DATA) {
-        const geo = new THREE.BufferGeometry();
-        geo.setAttribute('position', new THREE.BufferAttribute(f32FromB64(p.pos), 3));
-        geo.setAttribute('normal', new THREE.BufferAttribute(f32FromB64(p.nor), 3));
-        geo.setAttribute('uv', new THREE.BufferAttribute(f32FromB64(p.uv), 2));
-        geo.setIndex(new THREE.BufferAttribute(u16FromB64(p.idx), 1));
-        const mat = new THREE.MeshLambertMaterial({ color: new THREE.Color(p.color[0], p.color[1], p.color[2]) });
-        const m = new THREE.Mesh(geo, mat);
-        m.name = p.name;
-        m.castShadow = true; m.receiveShadow = true;
-        // gun 的 translation 相对 armR（父节点），其余相对 root
-        m.position.set(p.rel ? p.rel[0] : p.pivot[0], p.rel ? p.rel[1] : p.pivot[1], p.rel ? p.rel[2] : p.pivot[2]);
-        meshByName[p.name] = m;
-        this.matsByName[p.name] = mat;
+    if (this.ready) return Promise.resolve(this.root);
+    if (this._loading) return this._loading;
+    this._loading = (async () => {
+      try {
+        const g = (typeof AssetLoader !== 'undefined') && AssetLoader.soldier();
+        if (!g) throw new Error('士兵模型未加载（models/soldier.glb）——请确认已启动 node server.js');
+        const sceneRoot = GLB.scene(g, { castShadow: true, receiveShadow: true });
+        if (!sceneRoot || !sceneRoot.children.length) throw new Error('soldier.glb 里没有可用的节点');
+        // glTF 里 gun 已经是 armR 的子节点，层级不用重建；这里只收集部件引用
+        const meshByName = {};
+        sceneRoot.traverse(o => {
+          if (o.isMesh) {
+            o.castShadow = true; o.receiveShadow = true;
+            if (o.material && o.material.name) this.matsByName[o.name] = o.material;
+          }
+          // 关键：部件要取「节点组」而非 mesh。glTF 里 gun 是 armR 节点的子节点，
+          // 只有旋转 armR 这个父节点，挂在其下的 gun 才会跟着动；取到 mesh 就断链了。
+          if (this.PART_NAMES.includes(o.name) && !meshByName[o.name]) meshByName[o.name] = o;
+        });
+        const missing = this.PART_NAMES.filter(n => !meshByName[n]);
+        if (missing.length) throw new Error('士兵模型缺少部件: ' + missing.join(',') + '（期望 7 个：' + this.PART_NAMES.join(',') + '）');
+        // 校正：模型沿 z 站立且脚在 +z、头在 -z → 绕 X 旋转 +90° 头朝上（+z→-y 脚朝下）
+        sceneRoot.rotation.x = Math.PI / 2;
+        sceneRoot.scale.setScalar(1.8 / 1.9);
+        this.root = sceneRoot;
+        this.ready = true;
+        this.failed = false;
+        console.log('[ModelLib] 士兵模型构建完成，' + this.PART_NAMES.length + ' 部件（来自 soldier.glb）');
+        return sceneRoot;
+      } catch (e) {
+        this.failed = true; this._err = e.message;
+        console.error('[ModelLib] 士兵模型加载失败: ' + e.message);
+        throw e;   // 让 main.js 的启动错误处理显示红条，不再静默降级
       }
-      // 层级：gun 挂 armR 下（摆臂时枪跟随）
-      for (const p of SOLDIER_DATA) {
-        if (p.parent && meshByName[p.parent]) meshByName[p.parent].add(meshByName[p.name]);
-        else root.add(meshByName[p.name]);
-      }
-      // 校正：模型沿 z 站立且脚在 +z、头在 -z → 绕 X 旋转 +90° 头朝上（+z→-y 脚朝下）
-      root.rotation.x = Math.PI / 2;
-      root.scale.setScalar(1.8 / 1.9);
-      this.root = root;
-      this.ready = true;
-      console.log('[ModelLib] 士兵模型构建完成，' + SOLDIER_DATA.length + ' 部件');
-      return Promise.resolve(root);
-    } catch (e) {
-      this.failed = true; this._err = e.message;
-      console.warn('[ModelLib] 模型构建失败，使用方块人: ' + e.message);
-      return Promise.resolve(null);
-    }
+    })();
+    return this._loading;
   },
   // 为单位克隆实例：深拷贝几何 + 部件材质共享（7 材质只上传一次）
   cloneForUnit() {
@@ -66,18 +66,14 @@ const ModelLib = {
     c.traverse(o => { if (o.name && this.PART_NAMES.includes(o.name)) parts[o.name] = o; });
     return { scene: c, parts };
   },
-  // ---- 武器模型（WEAPONS_DATA 内联；长轴旋转到 Z=枪口朝前，缩放到目标长度） ----
+  // ---- 武器模型（models/guns/<key>.glb；长轴旋转到 Z=枪口朝前，缩放到目标长度） ----
   WEAPON_LEN: { pistol: 0.42, rifle: 0.78, sniper: 1.1, shotgun: 0.9 },
   WEAPON_COLOR: { pistol: 0x4a4f55, rifle: 0x4a4d52, sniper: 0x4a4d52, shotgun: 0x4a4e54 },
   buildWeaponMesh(key) {
-    if (typeof WEAPONS_DATA === 'undefined' || !WEAPONS_DATA || !WEAPONS_DATA[key]) return null;
+    const g = (typeof AssetLoader !== 'undefined') ? AssetLoader.weapon(key) : null;
+    if (!g) return null;
     try {
-      const d = WEAPONS_DATA[key];
-      const geo = new THREE.BufferGeometry();
-      geo.setAttribute('position', new THREE.BufferAttribute(f32FromB64(d.pos), 3));
-      geo.setAttribute('normal', new THREE.BufferAttribute(f32FromB64(d.nor), 3));
-      geo.setAttribute('uv', new THREE.BufferAttribute(f32FromB64(d.uv), 2));
-      geo.setIndex(new THREE.BufferAttribute(u16FromB64(d.idx), 1));
+      const geo = GLB.firstGeometry(g);
       geo.computeBoundingBox();
       const sz = geo.boundingBox.getSize(new THREE.Vector3());
       // 精确定向（makeBasis 指定轴目标方向，替代 rotateX/rotateY 猜测）：
@@ -139,14 +135,14 @@ function receiverTopY(inner) {
 }
 
 /* ============================================
- * buildRealWeapon — 枪身用游戏原生精细模型(WEAPONS_DATA)，仅叠加玩家真实枪栓
+ * buildRealWeapon — 枪身用游戏原生精细模型(models/guns/<key>.glb)，仅叠加玩家真实枪栓
  * 之前把整枪换成 trimesh 拼的 GLB，看起来像拆散的方块；现改回精细枪身 + 真实枪栓。
- * 完全离线（无 fetch / 无 GLTFLoader）：枪栓几何来自 models/gun_glb_data.js 内联。
+ * 枪栓几何来自 models/guns/<key>_bolt.glb（HTTP 加载，AssetLoader 预加载）。
  * 返回 Group(root > wapanim_inner > [body, bolt])：
  *   - body：ModelLib.buildWeaponMesh(key)，游戏自带精细武器模型
  *   - bolt（name='bolt'）：玩家做的真实 _bolt.glb，小型化后嵌在机匣右侧偏后，由 WeaponAnim 驱动
  *   - wapanim_inner 供换弹时整体下沉（不干扰 combat.js 对 root 的 HIP/ADS 控制）
- * 失败回退：body 构建失败 → 返回 null，由 combat.js 退回 WEAPONS_DATA / 方块
+ * 失败回退：body 构建失败 → 返回 null，由 combat.js 退回程序化方块枪
  * ============================================ */
 function buildRealWeapon(key) {
   if (typeof ModelLib === 'undefined' || !ModelLib.enabled()) return null;
@@ -165,14 +161,11 @@ function buildRealWeapon(key) {
   const center = new THREE.Vector3(); box.getCenter(center);
   const size = new THREE.Vector3(); box.getSize(size);
 
-  // 叠加玩家真实枪栓（_bolt.glb）
-  if (typeof GUN_GLB_DATA !== 'undefined' && GUN_GLB_DATA && GUN_GLB_DATA[key]) {
-    const d = GUN_GLB_DATA[key];
+  // 叠加玩家真实枪栓（models/guns/<key>_bolt.glb）
+  const boltGlb = (typeof AssetLoader !== 'undefined') ? AssetLoader.bolt(key) : null;
+  if (boltGlb) {
     try {
-      const boltGeo = new THREE.BufferGeometry();
-      boltGeo.setAttribute('position', new THREE.BufferAttribute(f32FromB64(d.bolt.pos), 3));
-      boltGeo.setAttribute('color', new THREE.BufferAttribute(f32FromB64(d.bolt.col), 3));
-      boltGeo.setIndex(new THREE.BufferAttribute(u16FromB64(d.bolt.idx), 1));
+      const boltGeo = GLB.firstGeometry(boltGlb);
       boltGeo.computeVertexNormals();
       // 以枪栓自身质心居中，便于独立定位
       boltGeo.computeBoundingBox();
@@ -249,7 +242,7 @@ function u16FromB64(b64) {
 
 /* ============================================
  * BuildingLib — 模型建筑（用户 SCAD → GLB → 内联数据）
- * 数据: window.BUILDINGS_DATA（tools/glb2bldg.js 生成，base64 + 顶点色）
+ * 数据: models/buildings/<key>.glb（标准 glTF 二进制，带顶点色）
  * 碰撞: 每栋建筑配置碰撞盒列表（SCAD 门洞留空 → 能进门），AABB 格式与 World.colliders 一致
  * 平台: 屋顶/塔台可站立（进入 World.platforms）
  * 坐标: SCAD cube([w,d,h]) 无 center → 模型原点在建筑角
@@ -365,7 +358,7 @@ const BuildingLib = {
       ]
     },
 
-    /* ============ v1.2 新增类型（assets/buildings/out 内联数据，BUILDINGS_OUT）============
+    /* ============ v1.2 新增类型（models/buildings/*.glb）============
      * 尺寸与 GLB 一致（见 tools/glb2bldg_out.js 探测输出）；坐标系：x[0,w] y[0,d](深) z[0,h](高)，
      * 门洞留空（能进门）、屋顶/平台可站（进入 World.platforms）。
      * 注：tower/ruins 的高柱体为纯视觉（碰撞只到平台/残墙高，避免 100m/28m 实体把导航封死）。 */
@@ -484,7 +477,7 @@ const BuildingLib = {
       ]
     },
 
-        /* ============ v1.4 四地标（assets/buildings/out 内联数据，BUILDINGS_OUT）— 碰撞箱按 SCAD 源码编写 ============
+        /* ============ v1.4 四地标（models/buildings/*.glb）— 碰撞箱按 SCAD 源码编写 ============
      * 坐标系 x[0,w] y[0,d](深) z[0,h](高)，尺寸 = 归一化 GLB bbox（tools/glb2bldg_out.js 探测输出）；
      * 运行时按地图 w/d/h 缩放（碰撞尺寸以地图数据为准），门洞留空、平台可站。
      * 全部可进入（真实门洞 + 内部中空 + 楼板楼梯井），由 battle_*.scad 可进入版编译：
@@ -874,7 +867,7 @@ const BuildingLib = {
   },
 
   /* ============ v1.6 程序化主题建筑几何（PROC_GEOS）============
-   * 与 BUILDINGS_OUT 内联数据同一契约：角点原点 + Y-up + 顶点色 + 索引；
+   * 与 models/buildings/*.glb 同一契约：角点原点 + Y-up + 顶点色 + 索引；
    * 运行时按地图 dims（REAL_DIMS×scale）缩放几何与碰撞 → 与内联类型完全同权。
    * 低模方块/圆柱拼装，离线即玩；每个类型预留 GLB 插槽（见 CONFIGS 注释），
    * 用户建模后走 glb2bldg_out 内联即可替换视觉（碰撞不变）。 */
@@ -1011,26 +1004,23 @@ const BuildingLib = {
     };
   })(),
 
-  // dims = {w,d,h}：仅对 BUILDINGS_OUT（新类型）生效 —— 按摆放尺寸缩放几何/碰撞/平台
+  // dims = {w,d,h}：仅对 GLB 新类型生效 —— 按摆放尺寸缩放几何/碰撞/平台
   //        （设计契约「碰撞箱按 SCAD 源码编写」：CONFIGS 本地坐标逐构件抄写 battle_*.scad，
   //          运行时按 dims（= REAL_DIMS×scale）等比缩放，地图不手写 w/d/h；见 docs/building-dimensions-spec.md §5.4）
   // 几何朝向：GLB 由 OpenSCAD(Z-up) 直出、无节点旋转 → 模型 y=深、z=高；
   //          这里对几何 rotateX(-90°) 使其「高朝上」，与 CONFIGS 碰撞约定（y=深→世界z, z=高→世界y）对齐。
   // v1.6 程序化主题类型（PROC_GEOS）：与内联数据同一契约（角点原点 + Y-up + 顶点色），
-  //         运行时同样按 dims 缩放几何与碰撞 → 与 BUILDINGS_OUT 类型完全同权。
+  //         运行时同样按 dims 缩放几何与碰撞 → 与 GLB 类型完全同权。
   build(key, x, z, ry, dims) {
     try {
-      const fromOut = (typeof BUILDINGS_OUT !== 'undefined' && BUILDINGS_OUT && BUILDINGS_OUT[key]);
-      const fromLegacy = (typeof BUILDINGS_DATA !== 'undefined' && BUILDINGS_DATA && BUILDINGS_DATA[key]);
-      const fromProc = !fromOut && !fromLegacy && this.PROC_GEOS && this.PROC_GEOS[key];
-      const d = fromOut ? BUILDINGS_OUT[key] : (fromLegacy ? BUILDINGS_DATA[key] : null);
+      // 数据源：models/buildings/<key>.glb
+      const glb = (typeof AssetLoader !== 'undefined') ? AssetLoader.building(key) : null;
+      const fromOut = !!glb && (!AssetLoader.manifest || AssetLoader.buildingSource(key) !== 'legacy');
+      const fromLegacy = !!glb && !fromOut;
+      const fromProc = !glb && this.PROC_GEOS && this.PROC_GEOS[key];
       let geo = null;
-      if (d) {
-        geo = new THREE.BufferGeometry();
-        geo.setAttribute('position', new THREE.BufferAttribute(f32FromB64(d.pos), 3));
-        geo.setAttribute('normal', new THREE.BufferAttribute(f32FromB64(d.nor), 3));
-        geo.setAttribute('color', new THREE.BufferAttribute(f32FromB64(d.col), 3));
-        geo.setIndex(new THREE.BufferAttribute(u16FromB64(d.idx), 1));
+      if (glb) {
+        geo = GLB.firstGeometry(glb);
         // 朝向修复：Z-up 直出 → 高朝上（模型 z→世界 y），深转世界 z
         geo.rotateX(-Math.PI / 2);
         geo.computeBoundingBox();
@@ -1083,8 +1073,8 @@ const BuildingLib = {
   status() {
     const out = {};
     for (const k of Object.keys(this.CONFIGS)) {
-      if (typeof BUILDINGS_OUT !== 'undefined' && BUILDINGS_OUT && BUILDINGS_OUT[k]) out[k] = 'inline';
-      else if (typeof BUILDINGS_DATA !== 'undefined' && BUILDINGS_DATA && BUILDINGS_DATA[k]) out[k] = 'legacy';
+      const has = (typeof AssetLoader !== 'undefined') && AssetLoader.hasBuilding(k);
+      if (has) out[k] = AssetLoader.buildingSource(k);
       else if (this.PROC_GEOS && this.PROC_GEOS[k]) out[k] = 'proc';
       else out[k] = 'missing';
     }

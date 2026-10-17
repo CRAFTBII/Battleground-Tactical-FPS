@@ -520,7 +520,7 @@ const PlayerGun = {
     const mk = (g, w, h, d, m, x, y, z) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, y, z); g.add(b); return b; };
     const barrel = (g, r, len, m, x, y, z) => { const c = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 8), m); c.rotation.x = Math.PI / 2; c.position.set(x, y, z); g.add(c); };
     const mkG = () => { const g = new THREE.Group(); camera.add(g); g.position.set(HIP_WEAPON_POS[0], HIP_WEAPON_POS[1], HIP_WEAPON_POS[2]); g.visible = false; return g; };
-    // 武器模型：优先玩家自建真实 GLB（buildRealWeapon）→ 回退 WEAPONS_DATA → 方块
+    // 武器模型：优先玩家自建真实 GLB（buildRealWeapon）→ 回退 models/guns/*.glb → 方块
     const build = (w, block) => {
       const g = mkG();
       let m = null;
