@@ -168,8 +168,8 @@ const MG = {
     // 机枪模型转向跟随
     const mesh = this.meshes[this.active];
     mesh.group.rotation.y = this.yaw;
-    // 死亡/菜单强制退出
-    if (Game.player.dead || Game.phase !== 'playing' || !PC.locked) this.exit();
+    // 死亡/菜单强制退出（用 inputReady()：移动端没有 Pointer Lock，不能据此踢出）
+    if (Game.player.dead || Game.phase !== 'playing' || !PC.inputReady()) this.exit();
   },
 
   // 鼠标控制转向（PC mousemove 调用）

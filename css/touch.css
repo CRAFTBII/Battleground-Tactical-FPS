@@ -33,7 +33,7 @@ body.touch-ui #tStick {
   border-radius: 50%;
   opacity: 0;
   transform: scale(.9);
-  transition: opacity .12s, transform .12s;
+  transition: transform .1s ease-out;
   pointer-events: none;
 }
 body.touch-ui #tStick.on { opacity: 1; transform: scale(1); }
@@ -43,7 +43,7 @@ body.touch-ui #tRing {
   border-radius: 50%;
   background: rgba(255,255,255,.06);
   border: 2px solid rgba(255,255,255,.30);
-  box-shadow: 0 0 18px rgba(0,0,0,.35) inset;
+  background: rgba(255,255,255,.06);
 }
 
 body.touch-ui #tKnob {
@@ -52,7 +52,6 @@ body.touch-ui #tKnob {
   border-radius: 50%;
   background: rgba(255,255,255,.50);
   border: 2px solid rgba(255,255,255,.85);
-  box-shadow: 0 2px 10px rgba(0,0,0,.45);
   will-change: transform;
 }
 
@@ -66,13 +65,7 @@ body.touch-ui #tHitTip {
   letter-spacing: 1px;
   text-shadow: 0 1px 4px #000;
   pointer-events: none;
-  animation: tTipFade 6s forwards;
-}
-@keyframes tTipFade {
-  0%   { opacity: 0; }
-  12%  { opacity: 1; }
-  70%  { opacity: 1; }
-  100% { opacity: 0; }
+  opacity: .8;
 }
 
 /* ---------------------------------------------------------------
@@ -103,7 +96,6 @@ body.touch-ui .tbtn {
   letter-spacing: 1px;
   display: flex; align-items: center; justify-content: center;
   -webkit-tap-highlight-color: transparent;
-  backdrop-filter: blur(2px);
   text-shadow: 0 1px 3px rgba(0,0,0,.6);
 }
 body.touch-ui .tbtn.sm { width: 66px; height: 66px; font-size: 13px; }
@@ -126,8 +118,8 @@ body.touch-ui .tbtn#tAim {
 body.touch-ui .tbtn:active,
 body.touch-ui .tbtn.on { background: rgba(255,209,102,.55); border-color: rgba(255,209,102,.95); }
 body.touch-ui .tbtn.off { opacity: .45; }
-body.touch-ui .tbtn.alert { box-shadow: 0 0 0 3px rgba(255,90,80,.75); animation: tPulse .9s infinite; }
-@keyframes tPulse { 50% { box-shadow: 0 0 0 7px rgba(255,90,80,.15); } }
+/* 空弹匣提示：用静态描边代替无限动画（移动端省电省帧） */
+body.touch-ui .tbtn.alert { box-shadow: 0 0 0 3px rgba(255,90,80,.85); }
 
 /* ---------------------------------------------------------------
    武器切换条：横向一排，拇指可扫到

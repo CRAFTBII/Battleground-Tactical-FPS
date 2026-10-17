@@ -54,8 +54,10 @@ const TouchUI = {
     PC.forceLocked = true;          // 绕开 Pointer Lock
     this._bound = true;
 
-    // 每帧同步一次 UI 可见性/按钮状态（回菜单自动隐藏）
-    setInterval(() => this._sync(), 200);
+    // 显隐靠事件驱动（进/退对局、暂停、死亡各挂一次），不再靠定时器轮询 DOM；
+    // 按钮状态刷新降到 500ms，且只有值真的变了才写 DOM（移动端省重排）
+    document.addEventListener('visibilitychange', () => this._sync());
+    setInterval(() => this._sync(), 500);
     this._sync();
     console.log('[TouchUI] 触控层已启用');
     return this;
@@ -149,32 +151,48 @@ const TouchUI = {
     }
     if (!playing) return;
 
-    // 换弹按钮：换弹中置灰并显示进度文案
+    // 只有值真的变了才写 DOM（移动端每次写 class/textContent 都可能触发重排）
+    const dirty = this._dirty || (this._dirty = {});
+    const setCls = (el, cls, on) => {
+      if (!el) return;
+      const key = cls;
+      if (dirty[key] === on) return;
+      dirty[key] = on;
+      el.classList.toggle(cls, on);
+    };
+    const setText = (el, txt) => {
+      if (!el || dirty['txt'] === txt) return;
+      dirty['txt'] = txt;
+      el.textContent = txt;
+    };
+    const setVis = (el, v) => {
+      if (!el || dirty['vis'] === v) return;
+      dirty['vis'] = v;
+      el.style.visibility = v;
+    };
+
+    const w = (typeof WEAPONS !== 'undefined') ? WEAPONS[PlayerGun.cur] : null;
+    const isGun = !!(w && w.damage !== undefined);
+    const isRel = !!PlayerGun.reloading;
+
     if (this.els.reload) {
-      const isRel = !!PlayerGun.reloading;
-      this.els.reload.classList.toggle('off', isRel);
-      this.els.reload.textContent = isRel ? '换弹中' : '换弹';
-      const w = (typeof WEAPONS !== 'undefined') ? WEAPONS[PlayerGun.cur] : null;
-      if (w) {
-        const mag = PlayerGun.mags[PlayerGun.cur] || 0;
-        // 空弹匣时换弹按钮高亮提示
-        this.els.reload.classList.toggle('alert', mag <= 0 && !isRel);
-      }
-      // 非枪械槽（医疗/手雷等）不需要换弹/瞄准
-      const isGun = !!(w && w.damage !== undefined);
-      this.els.reload.style.visibility = isGun ? 'visible' : 'hidden';
-      this.els.aim.style.visibility = isGun ? 'visible' : 'hidden';
+      setCls(this.els.reload, 'off', isRel);
+      setText(this.els.reload, isRel ? '换弹中' : '换弹');
+      const mag = (PlayerGun.mags && PlayerGun.mags[PlayerGun.cur]) || 0;
+      setCls(this.els.reload, 'alert', mag <= 0 && !isRel);
+      setVis(this.els.reload, isGun ? 'visible' : 'hidden');
     }
-    // 瞄准按钮状态跟随开镜
-    if (this.els.aim) this.els.aim.classList.toggle('on', PlayerGun.aimT > 0.5);
-    // 手雷按钮文案随当前槽变化
+    setVis(this.els.aim, isGun ? 'visible' : 'hidden');
+    setCls(this.els.aim, 'on', PlayerGun.aimT > 0.5);
+
     if (this.els.item) {
       const it = PlayerGun.cur === 'medkit' ? '治疗' : PlayerGun.cur === 'armorkit' ? '护甲'
         : PlayerGun.cur === 'smoke' ? '烟雾' : '手雷';
-      this.els.item.textContent = it;
+      setText(this.els.item, it);
     }
-    // 当前武器高亮
-    if (this.els.wbar) {
+    // 当前武器高亮（只在换枪时扫一遍）
+    if (this.els.wbar && dirty['cur'] !== PlayerGun.cur) {
+      dirty['cur'] = PlayerGun.cur;
       this.els.wbar.querySelectorAll('.twpn').forEach(b => {
         b.classList.toggle('on', b.dataset.w === PlayerGun.cur);
       });

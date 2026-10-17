@@ -616,7 +616,9 @@ const PlayerGun = {
     cam.updateProjectionMatrix();
   },
   tryFire(cam) {
-    if (Game.mortarMode || Game.phase !== 'playing' || Game.player.dead || Game.player.down || !PC.locked) return;
+    // 注意：这里必须用 PC.inputReady()（= locked || forceLocked），不能只看 PC.locked。
+    // 移动端永远拿不到 Pointer Lock，写 !PC.locked 会让触控开火在这里被静默 return。
+    if (Game.mortarMode || Game.phase !== 'playing' || Game.player.dead || Game.player.down || !PC.inputReady()) return;
     const W = WEAPONS[this.cur];
     if (!W) return; // 非武器槽（医疗包/护甲包/手雷等）不射击
     const now = performance.now() / 1000;

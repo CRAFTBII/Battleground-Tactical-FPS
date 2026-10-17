@@ -220,6 +220,44 @@ rot && window.getComputedStyle(rot).display === 'flex'
   ? ok('竖屏显示「请横屏」提示')
   : bad('竖屏提示未显示', rot ? window.getComputedStyle(rot).display : 'no el');
 
+
+/* ================= 7. 真实 tryFire 的 locked 关卡（本次 bug 的根因回归） ================= */
+{
+  // 上面用的是 PlayerGun 桩，测不出产品代码里 tryFire 自己的守卫。
+  // 这里直接加载真实 combat.js 的 tryFire 片段逻辑太麻烦，改为对源码做断言 + 行为断言：
+  // 源码断言：tryFire 的守卫必须用 PC.inputReady()，不能写 !PC.locked
+  const combatSrc = fs.readFileSync(path.join(ROOT, 'js', 'combat.js'), 'utf8');
+  const tryFireBody = combatSrc.slice(combatSrc.indexOf('  tryFire(cam) {'), combatSrc.indexOf('  tryFire(cam) {') + 400);
+  if (/!PC\.inputReady\(\)/.test(tryFireBody)) ok('tryFire 守卫使用 PC.inputReady()（移动端可用）');
+  else bad('tryFire 仍用 !PC.locked（移动端开火会被静默 return）', tryFireBody.split('\n')[1]);
+
+  // 行为断言：用最小实现复刻 tryFire 的守卫，验证 forceLocked=true / locked=false 时能通过
+  const guard = (PC, Game) => !(Game.mortarMode || Game.phase !== 'playing' || Game.player.dead || Game.player.down || !PC.inputReady());
+  window.PC.locked = false; window.PC.forceLocked = true;
+  window.Game.player.dead = false; window.Game.player.down = false;
+  guard(window.PC, window.Game) ? ok('locked=false 但 forceLocked=true 时守卫放行（触控可开火）')
+    : bad('触控仍然过不了开火守卫');
+  window.PC.forceLocked = false;
+  guard(window.PC, window.Game) ? bad('两种锁都关时守卫仍放行（应拦截）') : ok('两种锁都关时守卫正确拦截（桌面未锁定不能开枪）');
+  window.PC.forceLocked = true;
+}
+
+/* ================= 8. 移动端性能：不允许重特效 ================= */
+{
+  const touchCss = fs.readFileSync(path.join(ROOT, 'css', 'touch.css'), 'utf8');
+  if (!/backdrop-filter/.test(touchCss)) ok('touch.css 无 backdrop-filter（移动端 GPU 大头）');
+  else bad('touch.css 仍有 backdrop-filter，移动端会卡');
+  if (!/@keyframes|animation:/.test(touchCss)) ok('touch.css 无动画/关键帧（避免持续重绘）');
+  else bad('touch.css 仍有 animation，移动端持续重绘');
+
+  const touchJs = fs.readFileSync(path.join(ROOT, 'js', 'touch.js'), 'utf8');
+  const m = /setInterval\(\(\) => this\._sync\(\), (\d+)\)/.exec(touchJs);
+  if (m && Number(m[1]) >= 500) ok('状态同步间隔 ≥500ms（不是每帧）', m[1] + 'ms');
+  else bad('状态同步过频，移动端耗电掉帧', m ? m[1] + 'ms' : '未找到');
+  if (/_dirty/.test(touchJs)) ok('DOM 写入有变化检测（避免无谓重排）');
+  else bad('DOM 每次全量写，移动端易掉帧');
+}
+
 console.log('\n===== ' + nPass + ' PASS / ' + nFail + ' FAIL =====');
 if (nFail) { console.log('失败清单：'); fails.forEach(f => console.log('  · ' + f)); }
 process.exit(nFail ? 1 : 0);
