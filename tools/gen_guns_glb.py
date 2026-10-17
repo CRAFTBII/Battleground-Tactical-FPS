@@ -9,7 +9,7 @@ import numpy as np
 import trimesh
 from trimesh.transformations import rotation_matrix
 
-OUT = os.path.join(os.path.dirname(__file__), "..", "models", "glb")
+OUT = os.path.join(os.path.dirname(__file__), "..", "assets", "guns", "glb")
 os.makedirs(OUT, exist_ok=True)
 
 # 配色 (linear-ish 0..1)

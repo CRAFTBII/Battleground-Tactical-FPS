@@ -98,7 +98,7 @@
 - **REF1 炼油厂**：`type:'model', key:'refinery', 角点 (186,3) · 20×14×12`，tint 冷灰蓝 `0x7d8a94`（port 夜景工业）。
 - **位置 rationale**：红侧北缘工业锚点——红方出生区 (190~260,190~260) 出门北上即见，蓝方从中场可遥望。它是"红方纵深 + 蓝方绕后目标"的双向地标：贴近东次街延长线，作为绕后 A/C 的视觉参考；不堵主街（纵主街 x[123,137] 东侧 49m）。
 - **flattenPad**：`[196, 10, 20, 14]`（中心）已追加，炼油区地基压平。
-- **BuildingLib 新类型 key:'refinery'**：工程注册前 → `placeModelBuilding` 回退占位盒（碰撞=w/d/h 20×14×12，安全）；GLB 插槽 `models/out/battle_refinery.glb` 离线休眠（ADR-003）。
+- **BuildingLib 新类型 key:'refinery'**：工程注册前 → `placeModelBuilding` 回退占位盒（碰撞=w/d/h 20×14×12，安全）；GLB 插槽 `assets/buildings/out/battle_refinery.glb` 离线休眠（ADR-003）。
 - **A* 自证**：探针 PASS——port 33 栋、纵/横主街端到端可通行、20 出生点 × 3 据点双向 120/120 全连通、出生点零重叠。
 
 ### 4.9 AI 战术对接（v1.4）
@@ -153,7 +153,7 @@
 | **S1/S2** | model | **stairs · 111,60 / 145,60 · 12×12×6** | **Bridge1 两端上下台阶（顶 6m 接桥面）** | — |
 | **BR2** | model | **bridge · 171,92.5 · 30×7×6** | **跨东次街天桥（俯瞰进 C 走廊）** | — |
 | **S5/S4** | model | **stairs · 171,96 / 201,96 · 12×12×6** | **Bridge2 两端上下台阶** | — |
-| **REF1** | model | **refinery · 186,3（角点）· 20×14×12** | **炼油厂地标（红侧北缘工业锚点）** | **`models/out/battle_refinery.glb`** 💤 |
+| **REF1** | model | **refinery · 186,3（角点）· 20×14×12** | **炼油厂地标（红侧北缘工业锚点）** | **`assets/buildings/out/battle_refinery.glb`** 💤 |
 
 **密度自证（v1.4，test/port-density-probe.js）**：
 - 33 栋建筑（26 既有 + 6 桥梯 + REF1 炼油厂）；探针断言 PASS：纵/横主街端到端 A* 可通行、20 出生点 × 3 据点双向 A* 全连通（120/120）、出生点零碰撞体重叠。
@@ -204,7 +204,7 @@
 - [ ] 工程：bridge 桥面 collider overhead 分流 + 移动碰撞 y 判定（可攀登性）——见 zone-br.md §7.3。
 - [ ] [PLAYTEST]：缩圈伤害曲线 1→15、最终圈 r32、桥面 6m 可攀登性实测收敛。
 - [ ] 工程 T9：注册 hangar/bunker/pillbox/tower/wall/container/ruins 新 BuildingLib 类型（port 14 栋新建筑依赖；未注册前占位盒安全）。
-- [ ] 工程：注册 BuildingLib 新类型 **refinery**（REF1 地标依赖；未注册前占位盒安全）+ 接 GLB `models/out/battle_refinery.glb`（离线休眠）。
+- [ ] 工程：注册 BuildingLib 新类型 **refinery**（REF1 地标依赖；未注册前占位盒安全）+ 接 GLB `assets/buildings/out/battle_refinery.glb`（离线休眠）。
 - [ ] 工程：实现 mechanics.searchlight（光锥/曝露/断电/抢修状态机）。
 - [ ] 工程：实现 AI 战术（ai-tactics.md §9）——port 重点：②避光 + 断电推进。
 - [ ] [PLAYTEST]：灯速/sweep、断电期 30s、抢修冷却 45s、避光阈值 2s、断电推进 +20% 实测收敛。

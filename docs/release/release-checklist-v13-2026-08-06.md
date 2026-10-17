@@ -15,8 +15,8 @@
 | 包版本 | `package.json` → **1.3.0**（1.2.0 次版本递增，只改 version 字段） | ✅ |
 | 变更日志 | `CHANGELOG.md` 已含 [1.3.0] 条目（新增/修复/技术/已知风险，含玩家语言补丁说明） | ✅ |
 | 质量门控 | 初评 **FAIL**（1 BLOCKER：bridge 桥面 collider 未分流 overhead）→ 工程修复 → 复验 **PASS**（zone 48 + bridge 42 断言全过，smoke/密度探针全绿，无 FAIL / 无阻塞项） | ✅ |
-| 门禁套件 | `test/_qa_v13_zone.js`（48 断言）+ `test/_qa_v13_bridge.js`（42 断言）作为 v1.3 发布门禁固定回归套件保留 | ✅ |
-| 回归 | `test/smoke.js` RC=0（含 §4.13 缩圈 + §4.14 桥梯）；`test/port-density-probe.js` 三图 ALL PASS；`test/_qa_v12_*.js` 既有机制回归未受影响 | ✅ |
+| 门禁套件 | `test/qa/_qa_v13_zone.js`（48 断言）+ `test/qa/_qa_v13_bridge.js`（42 断言）作为 v1.3 发布门禁固定回归套件保留 | ✅ |
+| 回归 | `test/smoke.js` RC=0（含 §4.13 缩圈 + §4.14 桥梯）；`test/port-density-probe.js` 三图 ALL PASS；`test/qa/_qa_v12_*.js` 既有机制回归未受影响 | ✅ |
 | 本任务改动 | 本次发布收口仅动文档/版本/清理（CHANGELOG / package.json / README / 发布清单 / 临时文件）；生产代码与地图数据由工程/质量批次完成并已复验 | ✅ |
 
 ---
@@ -28,7 +28,7 @@
 - [ ] **离线双击即玩**：直接双击 `index.html`（`file://`），无红条错误、可进菜单、可开始单人战役（three.js 本地化；地图为 JS 模块注册 + `BUILDINGS_OUT` 内联几何，零 GLTFLoader / 无 fetch JSON）。
 - [ ] **联机验证**：`node server.js`（默认 8080）启动无报错；浏览器开 `index.html` → 创建联机房间 → 第二客户端输入房主 IP 加入 → 状态/事件广播正常（Windows 首次放行防火墙）。
 - [ ] **回归全绿**：`node test/smoke.js` → 退出码 0，末尾「无头冒烟测试全部通过」。
-- [ ] **门禁套件全绿**：`node test/_qa_v13_zone.js` → 48 断言全 PASS（RC=0）；`node test/_qa_v13_bridge.js` → 42 断言全 PASS（RC=0）。
+- [ ] **门禁套件全绿**：`node test/qa/_qa_v13_zone.js` → 48 断言全 PASS（RC=0）；`node test/qa/_qa_v13_bridge.js` → 42 断言全 PASS（RC=0）。
 - [ ] **服务端协议回归**：另起 `node server.js` 后跑 `node test/server-test.js` → 通过（握手/建房/加入/state 路由/事件广播）。
 
 ### 1.2 三图缩圈实测（v1.3 核心）
@@ -95,9 +95,9 @@ test/_tmp_debug.js      （临时调试脚本）
 test/smoke.js              # 无头冒烟（RC=0，含 §4.13 缩圈 + §4.14 桥梯）
 test/server-test.js        # 服务端协议回归
 test/port-density-probe.js # 密度探针（建筑数/A* 连通/出生点/内联网格，三图通用）
-test/_qa_v12_stub.js / _qa_v12_port.js / _qa_v12_desert.js / _qa_v12_suburb.js / _qa_v12_coexist.js  # v1.2 机制回归套件（70 断言）
-test/_qa_v13_zone.js       # v1.3 缩圈门禁套件（48 断言）
-test/_qa_v13_bridge.js     # v1.3 桥梯门禁套件（42 断言，含「玩家/AI 移动穿过桥下」断言）
+test/qa/_qa_v12_stub.js / _qa_v12_port.js / _qa_v12_desert.js / _qa_v12_suburb.js / _qa_v12_coexist.js  # v1.2 机制回归套件（70 断言）
+test/qa/_qa_v13_zone.js       # v1.3 缩圈门禁套件（48 断言）
+test/qa/_qa_v13_bridge.js     # v1.3 桥梯门禁套件（42 断言，含「玩家/AI 移动穿过桥下」断言）
 test/v13-zone-bridge-probe.js  # v1.3 缩圈/桥梯深度探针（遗留探测脚本，按约定不作门禁证据、保留）
 ```
 

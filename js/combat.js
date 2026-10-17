@@ -302,18 +302,21 @@ class Unit {
   }
   // 玩家侧身：绕脚底 pivot 侧倾（脚底=组原点下方 MODEL_Y 处；GLTF/方块统一）。
   // 补偿位置位移使脚底"钉地"，rotation.z 为侧倾角；AI/倒地/尸体不侧倾（保留原动画）
+  // 推导：绕脚底(pivot 在组局部 (0,-d,0))旋转 th 后，脚底世界偏移 =
+  //   (d·sin th·cos yaw, -d·cos th, -d·sin th·sin yaw)（旋转序 Z→Y→X）
+  // 故组原点需反向平移：Δx = -d·sin th·cos yaw，Δz = +d·sin th·sin yaw，Δy = -d·(1-cos th)
   _applyLean(p) {
     if (!this.isPlayer || !this.alive || this.down || typeof PC === 'undefined') return;
     const l = PC.lean || 0;
     if (Math.abs(l) < 0.01) { p.rotation.z = 0; return; }
     const th = l * 0.16;           // 侧倾角（与相机 roll 同步）
     const d = 0.45;                // MODEL_Y：脚底在组原点正下方
-    const dx = d * Math.sin(th);   // 绕脚底旋转后组原点的水平位移（局部右轴）
-    const dy = d * (1 - Math.cos(th)); // 垂直抬升补偿
+    const dx = d * Math.sin(th);   // 绕脚底旋转后组原点水平位移幅值
+    const dy = d * (1 - Math.cos(th)); // 垂直方向脚底抬升量
     const cosY = Math.cos(this.yaw), sinY = Math.sin(this.yaw);
-    p.position.x += dx * cosY;
-    p.position.z += -dx * sinY;
-    p.position.y += dy;
+    p.position.x += -dx * cosY;
+    p.position.z += dx * sinY;
+    p.position.y += -dy;
     p.rotation.z = th;
   }
   updateVisual(dt) {
@@ -770,7 +773,7 @@ const PlayerGun = {
 /* ---------- 第一人称控制器 ---------- */
 const PC = {
   yaw: 0, pitch: 0, recoil: 0, locked: false, vy: 0, onGround: true, footT: 0, sens: 0.22, crawlT: 0,
-  lean: 0, // 侧身：+1 左倾 / 0 中立 / -1 右倾（平滑过渡，相机与人物模型同时侧倾；rotation.z 正=逆时针=左倾）
+  lean: 0, // 侧身：-1 左倾 / 0 中立 / +1 右倾（平滑过渡，相机与模型同向；camera.rotation.z 正=画面右倾）
   keys: new Set(), prone: false, // 潜伏（Ctrl 按住）：相机降低 + 移动变慢 + AI 更难命中
   fly: false, speedMul: 1, // 调试指令：/enablefly 飞行浮空；/speed 移动速度倍率
   safeYaw(y = this.yaw) {
@@ -957,9 +960,9 @@ const PC = {
     const p = Game.player;
     
     // 键盘侧身：, 向左偏 / . 向右偏（相机 roll + 人物模型 roll，不影响 yaw 朝向与移动方向）
-    // 按键→lean 方向：,=leanLeft→+1(左倾) ；.=leanRight→-1(右倾)
-    // 注：rotation.z 正值为逆时针（从+Z看）= 向左倾（屏幕顶部向左倒）；负值 = 向右倾
-    const wantLean = (inputOK && this.keys.has(Settings.key('leanLeft')) ? 1 : 0) + (inputOK && this.keys.has(Settings.key('leanRight')) ? -1 : 0);
+    // 按键→lean 方向：,=leanLeft→-1(左倾) ；.=leanRight→+1(右倾)
+    // 注：THREE 相机 rotation.z 正 = 画面顶部向右倒（右倾）；负 = 向左倒（左倾）
+    const wantLean = (inputOK && this.keys.has(Settings.key('leanLeft')) ? -1 : 0) + (inputOK && this.keys.has(Settings.key('leanRight')) ? 1 : 0);
     // 平滑过渡：按一下立刻到位，松开缓慢回正
     this.lean += (wantLean - this.lean) * Math.min(1, dt * (wantLean !== 0 ? 16 : 7));
     if (Math.abs(this.lean) < 0.01) this.lean = 0;

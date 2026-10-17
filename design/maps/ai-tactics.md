@@ -271,7 +271,7 @@ AI 在**开阔地**（8m 内无 `coverPts` 掩体）且**被敌方射界覆盖**
 7. [ ] 战术⑥：`scoreTarget(e)` 多目标评分（距离 + 残血 −12 + 曝露 −6）替换 `perceive` 的最近目标选择；换目标节流（差 <4 不换）。
 8. [ ] 战术⑦：确认全部手感层参数零改动（§8 红线表）；[PLAYTEST] 后按 §8 汇总表收敛。
 9. [ ] 四地标 BuildingLib 类型注册（base/refinery/stadium/megatower）——未注册前地图数据已回退占位盒（安全，探针自证全绿，见各图 GDD §4.8）。
-10. [ ] 外部 GLB（models/out/battle_base.glb / battle_refinery.glb / battle_stadium.glb / battle_megatower.glb）接线：工程注册 CONFIGS 或接 glbSlot（离线休眠，不崩）。
+10. [ ] 外部 GLB（assets/buildings/out/battle_base.glb / battle_refinery.glb / battle_stadium.glb / battle_megatower.glb）接线：工程注册 CONFIGS 或接 glbSlot（离线休眠，不崩）。
 
 ---
 
@@ -318,6 +318,6 @@ AI 在**开阔地**（8m 内无 `coverPts` 掩体）且**被敌方射界覆盖**
 
 ### 10.4 验收
 
-- [ ] `test/_qa_v22_hate.js` 12 断言全 PASS（受伤反应/仇恨注入/旁观仇恨/目标评分/周期衰减/红队救援/读条中断）
-- [ ] `test/_qa_v21_elimination.js` 28 断言回归 PASS
+- [ ] `test/qa/_qa_v22_hate.js` 12 断言全 PASS（受伤反应/仇恨注入/旁观仇恨/目标评分/周期衰减/红队救援/读条中断）
+- [ ] `test/qa/_qa_v21_elimination.js` 28 断言回归 PASS
 - [ ] `test/smoke.js` 全绿

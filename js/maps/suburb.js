@@ -230,10 +230,10 @@
       /* ============ v1.7 岗亭（27→31 栋）：广场四角 + 街坊门岗 ============
        * GH1/GH2 立 A 点广场南/东沿（守卫感 + 街景）；GH3 蓝侧居住街坊门岗；
        * GH4 竞技场区门岗。程序化岗亭（PROC_GEOS），不堵干道/出生点/据点。 */
-      { type: 'model', key: 'guardhouse', x: 150, z: 178, ry: 0, scale: 1, tint: 0xb7b0a4, trim: false, glb: 'models/buildings/suburb_guardhouse.glb' }, // GH1
-      { type: 'model', key: 'guardhouse', x: 122, z: 150, ry: 0, scale: 1, tint: 0xb7b0a4, trim: false, glb: 'models/buildings/suburb_guardhouse.glb' }, // GH2（广场西门岗）
-      { type: 'model', key: 'guardhouse', x: 30, z: 90, ry: 0, scale: 1, tint: 0xb7b0a4, trim: false, glb: 'models/buildings/suburb_guardhouse.glb' },   // GH3
-      { type: 'model', key: 'guardhouse', x: 254, z: 196, ry: 0, scale: 1, tint: 0xb7b0a4, trim: false, glb: 'models/buildings/suburb_guardhouse.glb' }, // GH4（v1.8 挪离 stadium 东门洞出口）
+      { type: 'model', key: 'guardhouse', x: 150, z: 178, ry: 0, scale: 1, tint: 0xb7b0a4, trim: false, glb: 'assets/buildings/out/suburb_guardhouse.glb' }, // GH1
+      { type: 'model', key: 'guardhouse', x: 122, z: 150, ry: 0, scale: 1, tint: 0xb7b0a4, trim: false, glb: 'assets/buildings/out/suburb_guardhouse.glb' }, // GH2（广场西门岗）
+      { type: 'model', key: 'guardhouse', x: 30, z: 90, ry: 0, scale: 1, tint: 0xb7b0a4, trim: false, glb: 'assets/buildings/out/suburb_guardhouse.glb' },   // GH3
+      { type: 'model', key: 'guardhouse', x: 254, z: 196, ry: 0, scale: 1, tint: 0xb7b0a4, trim: false, glb: 'assets/buildings/out/suburb_guardhouse.glb' }, // GH4（v1.8 挪离 stadium 东门洞出口）
 
       /* ============ v1.8 紧凑布局（31→46 栋）：四象限填空 ============
        * 用户要求「布局再紧凑一些」—— 填补各象限空隙，建筑间距拉近到 8~20m，
@@ -299,8 +299,8 @@
        * 真实几何 220×220×32；scale 0.3 → 66×66×9.6（镂空环 + 4 径向隧道门，可进场内/看台下）。
        * 角点 (180,150) → 占地 x[180,246] z[150,216]：东邻主街、A 点东南 30m，不堵干道（桥下可通行）。
        * BuildingLib 新类型 key:'stadium'：工程注册前 → placeModelBuilding 回退占位盒（碰撞=w/d/h，安全）；
-       * GLB 插槽 'models/out/battle_stadium.glb'：离线/未接 GLTFLoader 休眠（ADR-003），不崩。 */
-      { type: 'model', key: 'stadium', x: 180, z: 150, ry: 0, scale: 0.3, tint: 0x8c97a3, trim: false, glb: 'models/out/battle_stadium.glb' }
+       * GLB 插槽 'assets/buildings/out/battle_stadium.glb'：离线/未接 GLTFLoader 休眠（ADR-003），不崩。 */
+      { type: 'model', key: 'stadium', x: 180, z: 150, ry: 0, scale: 0.3, tint: 0x8c97a3, trim: false, glb: 'assets/buildings/out/battle_stadium.glb' }
     ],
 
     /* ---------- 掩体 ---------- */

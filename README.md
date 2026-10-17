@@ -25,19 +25,27 @@ battlegame/
 │   ├── net.js        # 联机客户端（listen-server）
 │   └── main.js       # 初始化 / 主循环 / 启动错误兜底
 ├── js/maps/          # 地图注册表 + 三张地图数据（registry/suburb/port/desert，含 mechanics 机制字段）
-├── models/
-│   ├── soldier_data.js / weapons_data.js / buildings_data.js / buildings_out.js / gun_glb_data.js  # 运行时内联数据（士兵/枪栓 Base64 内联、建筑 BUILDINGS_OUT 内联几何，离线可玩）
-│   ├── soldier_parts.glb / soldier.glb  # 源素材（AI 生成 + 离线切割，仅 tools/ 构建用，运行时永不加载）
-│   └── soldier_viewer.html # 模型预览页（开发用）
-├── tools/split-glb.js # 士兵 GLB 切割（三角形级 + pivot + 内联数据输出，构建期）
-├── tools/glb2data.js  # 武器 GLB → 内联数据转换（丢贴图保几何，构建期）
+├── models/           # 【运行时数据区】只放游戏会加载的内联数据，双击 index.html 必需
+│   ├── soldier_data.js / weapons_data.js / buildings_data.js / buildings_out.js / gun_glb_data.js
+│   │                 # 士兵/枪栓 Base64 内联、建筑 BUILDINGS_OUT 内联几何（离线可玩）
+│   └── buildings_dims.json  # 建筑真实尺寸表（构建期/审计用）
+├── assets/           # 【源素材区】构建期才用，运行时永不加载（原先散在 model/ 与 models/ 下）
+│   ├── soldier/      # soldier.glb / soldier_parts.glb / viewer.html / preview.png（index.html 菜单头像取 preview.png）
+│   ├── guns/glb/     # 枪械/机枪/榴弹炮 GLB（tools/ 转换输入）
+│   ├── guns/ai_guns/ # AI 生成枪械 GLB（历史素材）
+│   ├── buildings/source/    # 建筑 SCAD 源文件（当前 4 XL + legacy/done 归档）
+│   ├── buildings/out/       # SCAD 编译出的 GLB（tools/glb2bldg_out.js 输入）
+│   ├── buildings/disabled/  # 停用建筑 SCAD
+│   └── raw/model/           # 早期单数 model/ 目录整体归档（OBJ/贴图/转换脚本，含 346MB 历史素材）
+├── tools/            # 构建/转换/一次性脚本（split-glb、glb2data、glb2bldg*、审计脚本；scratch/ 为临时脚本）
 ├── server.js         # Node WebSocket 服务端（薄中继 + 房间管理）
-├── test/smoke.js     # 无头冒烟测试（DOM 桩驱动真实代码）
-├── test/server-test.js # 服务端协议回归（握手/建房/加入/state 路由/事件广播）
-├── test/port-density-probe.js # 密度探针（建筑数/A* 连通/出生点/内联网格，三图通用）
-├── test/_qa_v12_*.js  # v1.2 机制回归套件（port/desert/suburb/coexist，70 项断言）
-├── test/_qa_v13_zone.js / _qa_v13_bridge.js  # v1.3 缩圈 + 桥梯门禁套件（48 + 42 项断言）
-├── test/v13-zone-bridge-probe.js # v1.3 缩圈/桥梯深度探针（遗留探测脚本，不作门禁证据）
+├── test/             # 测试与探测
+│   ├── smoke.js      # 无头冒烟测试（DOM 桩驱动真实代码）
+│   ├── server-test.js # 服务端协议回归（握手/建房/加入/state 路由/事件广播）
+│   ├── port-density-probe.js / v13-zone-bridge-probe.js / audio-probe.js / probe_slot.js # 探针
+│   ├── qa/           # 24 个逐版本质量门禁套件（_qa_v12_* … _qa_v29_*，含共用 _qa_v12_stub）
+│   ├── debug/        # 一次性排障脚本（_dbg_*，保留作历史参考，非门禁）
+│   └── scratch/      # 临时探测脚本（_tmp_* / _probe_*，非门禁）
 ├── design/
 │   └── maps/         # 设计规格（mechanics.md 机制契约 + zone-br.md 缩圈定稿 + port/desert/suburb GDD）
 ├── docs/
@@ -82,16 +90,19 @@ node server.js      # 零依赖直接跑！优先用 ws（若 npm install 过）
 
 ### 回归测试
 ```bash
-node test/smoke.js        # 客户端无头冒烟：初始化 + 跳跃 + 对局模拟 + 手雷/迫击炮 + 联机状态注入
+node test/smoke.js              # 客户端无头冒烟：初始化 + 跳跃 + 对局模拟 + 手雷/迫击炮 + 联机状态注入
+node test/qa/_qa_v29_settings.js  # 单套质量门禁（其余套件在 test/qa/，按版本号命名）
 # 另开终端起服务后：
-node server.js            # 起服务（默认 8080）
-node test/server-test.js  # 服务端协议回归：握手/建房/加入/state 路由/事件广播
+node server.js                  # 起服务（默认 8080）
+node test/server-test.js        # 服务端协议回归：握手/建房/加入/state 路由/事件广播
 ```
 
 ## 修改提示
 
 - 各 js 文件按依赖顺序加载（见 index.html 中 `<script>` 顺序），新增文件需插到 main.js 之前
 - 改完任意 js 后建议跑 `node test/smoke.js` 回归；浏览器控制台无红色报错为准
+- 新增源素材放 `assets/`（构建期用），**不要**放进 `models/`——`models/` 只放运行时内联数据
+- 测试脚本按用途分目录：`test/qa/`（门禁，保留）、`test/debug/`、`test/scratch/`（一次性，可删）
 
 ## 操作
 

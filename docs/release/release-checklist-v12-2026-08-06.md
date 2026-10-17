@@ -15,7 +15,7 @@
 | 包版本 | `package.json` → **1.2.0**（1.1.0 次版本递增，只改 version 字段） | ✅ |
 | 变更日志 | `CHANGELOG.md` 已含 [1.2.0] 条目；v2.7 时代遗留系统补记入 [1.1.0]（版本连续性） | ✅ |
 | 质量门控 | 初评 **FAIL**（1 BLOCKER + 2 MAJOR）→ 工程修复批 T14 → 复验 **PASS**（70 项断言 + 密度回归全过，无 FAIL / 无阻塞项） | ✅ |
-| 回归 | `test/smoke.js` RC=0；`test/_qa_v12_*.js` 4 个 ALL PASS（port/desert/suburb/coexist）；`test/port-density-probe.js` 三图 ALL PASS | ✅ |
+| 回归 | `test/smoke.js` RC=0；`test/qa/_qa_v12_*.js` 4 个 ALL PASS（port/desert/suburb/coexist）；`test/port-density-probe.js` 三图 ALL PASS | ✅ |
 | 本任务改动 | 本次发布收口仅动文档/版本/清理（CHANGELOG / package.json / README / 发布清单 / 临时文件）；生产代码与地图数据由工程/质量批次完成并复验 | ✅ |
 
 ---
@@ -88,11 +88,11 @@ _final_smoke.txt       （根目录，smoke 输出捕获）
 test/smoke.js              # 无头冒烟（RC=0）
 test/server-test.js        # 服务端协议回归
 test/port-density-probe.js # 密度探针（建筑数/A* 连通/出生点/内联网格，三图通用）
-test/_qa_v12_stub.js       # v1.2 机制回归套件（真实 mapDef 数据下逐机制探测）
-test/_qa_v12_port.js       # port 探照灯+断电（18 断言）
-test/_qa_v12_desert.js     # desert 沙暴+水塔（17 断言）
-test/_qa_v12_suburb.js     # suburb 空投+炮击（17 断言）
-test/_qa_v12_coexist.js    # 机制与据点共存 + 联机注入（10 断言）
+test/qa/_qa_v12_stub.js       # v1.2 机制回归套件（真实 mapDef 数据下逐机制探测）
+test/qa/_qa_v12_port.js       # port 探照灯+断电（18 断言）
+test/qa/_qa_v12_desert.js     # desert 沙暴+水塔（17 断言）
+test/qa/_qa_v12_suburb.js     # suburb 空投+炮击（17 断言）
+test/qa/_qa_v12_coexist.js    # 机制与据点共存 + 联机注入（10 断言）
 ```
 
 ---

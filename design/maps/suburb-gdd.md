@@ -114,7 +114,7 @@
 - **ST1 竞技场**：`type:'model', key:'stadium', 角点 (180,150) · 26×20×14`，tint 中性灰 `0x8c97a3`（suburb 昼间暖绿中的硬质竞技场）。
 - **位置 rationale**：A 点 (150,150) **东侧 30m** 的广场竞技场——玩家占 A 时抬眼即见，是"中央广场的延伸舞台"；同时是红方推进走廊上的掩体锚点（A→红方途中）。不堵干道（南北/东西干道 x[137,163] 东侧 17m 间隙），东侧留 x[163,180] 绕行通道。
 - **flattenPad**：`[193, 160, 26, 20]`（中心）已追加，竞技场地基压平。
-- **BuildingLib 新类型 key:'stadium'**：工程注册前 → `placeModelBuilding` 回退占位盒（碰撞=w/d/h 26×20×14，安全）；GLB 插槽 `models/out/battle_stadium.glb` 离线休眠（ADR-003）。
+- **BuildingLib 新类型 key:'stadium'**：工程注册前 → `placeModelBuilding` 回退占位盒（碰撞=w/d/h 26×20×14，安全）；GLB 插槽 `assets/buildings/out/battle_stadium.glb` 离线休眠（ADR-003）。
 - **A* 自证**：探针 PASS——suburb 15 栋、南北/东西干道端到端可通行、20 出生点 × 3 据点双向 120/120 全连通、出生点零重叠。
 
 ### 4.9 AI 战术对接（v1.4）
@@ -160,7 +160,7 @@
 - [ ] 工程：bridge 桥面 collider overhead 分流 + 移动碰撞 y 判定——见 zone-br.md §7.3。
 - [ ] [PLAYTEST]：缩圈伤害曲线、最终圈 r31、炮击+缩圈双压 A 点是否过狠（必要时 zone.r 缩至 24 或 intervalSec 调至 55）实测收敛。
 - [ ] 工程：实现 mechanics.airdrop（信标/落箱/拾取）与 mechanics.arty（警示/落弹）。
-- [ ] 工程：注册 BuildingLib 新类型 **stadium**（ST1 地标依赖；未注册前占位盒安全）+ 接 GLB `models/out/battle_stadium.glb`（离线休眠）。
+- [ ] 工程：注册 BuildingLib 新类型 **stadium**（ST1 地标依赖；未注册前占位盒安全）+ 接 GLB `assets/buildings/out/battle_stadium.glb`（离线休眠）。
 - [ ] 工程：实现 AI 战术（ai-tactics.md §9）——suburb 走跨图通用项。
 - [ ] [PLAYTEST]：空投 60s 周期、炮击 45s 周期、dmg 60 / radius 8 / warnSec 4 实测收敛；观察 A 点是否被炮击压得太狠（必要时 zone.r 缩至 24 或 intervalSec 调至 55）。
 - [ ] 平衡：空投价值（50HP + 30% 弹药）是否过强/过弱，必要时改 heal 或 ammoPct。

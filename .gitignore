@@ -8,9 +8,26 @@ node_modules/
 .workbuddy/
 .tools/
 
+# backups (整理/迁移前的快照，体积大，不入库)
+backup/
+
 # build artifacts
 battlegame-*.zip
 battlegame-*/
 
-# build-time source assets (runtime never loads; .glb/.obj/.zip source material)
+# ---------------------------------------------------------------------------
+# 源素材与二进制：运行时永不加载，只服务于构建（见 README「assets/」）
+# 因此不进 git，避免 154MB 的 .git 继续膨胀；需要历史版本见 backup/ 快照。
+# ---------------------------------------------------------------------------
+
+# 源素材区（原先单数 model/ + models/ 下的 GLB/OBJ/SCAD）
+assets/
 model/
+
+# models/ 里只保留运行时内联数据（*.js / *.json），其余二进制一律忽略
+models/*.glb
+models/**/*.glb
+models/**/*.png
+
+# 旧发布包残留
+battlegame-*/

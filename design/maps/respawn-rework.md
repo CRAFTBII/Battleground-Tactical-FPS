@@ -11,7 +11,7 @@
 > | 5 | 兜底 | 40 次失败回原出生点 | 同款保持 |
 >
 > 实现：`Game.scatteredSpawn(team, idx, existing)`（js/game.js）——锚点取象限中心偏外 `mid×0.5`（拉开两军开局距离，suburb 实测红蓝平均 ~150m）；`SPAWN_SPREAD=60×mapScale` 半径内 sqrt 均匀采样 + `walkable` + 间距校验。三入口统一：spawnPlayer / spawnAI / rebalance（联机补员 idx=现存数继续奇偶交替）。
-> 验证：`test/_qa_v26_spread.js` 17 断言（蓝全 Q1∪Q4 / 红全 Q2∪Q3 / 四角有人 / 同队间距 / 红蓝不贴脸 / 三图 mapScale 回归）。
+> 验证：`test/qa/_qa_v26_spread.js` 17 断言（蓝全 Q1∪Q4 / 红全 Q2∪Q3 / 四角有人 / 同队间距 / 红蓝不贴脸 / 三图 mapScale 回归）。
 > 设计口径：**两象限出生已达成"出生分散"诉求，不做四队**——四队需重架构（终局判定从"一方全灭"改"最后一队"、观战目标筛选、计分板/颜色体系、网络协议），收益仅出生分散，成本不成比例。
 
 ---
@@ -27,7 +27,7 @@
 > | 5 | 红队全兵种锁定 | 状态判定有红队，锁定条件漏（v2.2 疏漏） | **锁定条件补 `u.team==='red'`**——红队有敌在旁也能锁上目标去救 |
 >
 > 设计意图：医疗包成为"自愈 + 救援"双用途稀缺资源——救人不是免费的，玩家要权衡"自己回血 vs 救队友"；AI 非医疗兵包变少后更依赖捡箱（v2.3 找箱动机），激活"救人 → 耗包 → 捡箱 → 再救人"经济闭环。救援者救人不亏本（被救者残血 35 仍需自愈），资源流向是单向的（救援者 → 被救者场景）。
-> 实现：`startRevive/completeRevive`（game.js）+ AI 锁定前置检查（ai.js）+ 分配常量（core.js）；新增测试 `test/_qa_v24_revivekit.js`（16 断言全 PASS）。
+> 实现：`startRevive/completeRevive`（game.js）+ AI 锁定前置检查（ai.js）+ 分配常量（core.js）；新增测试 `test/qa/_qa_v24_revivekit.js`（16 断言全 PASS）。
 
 > ⚠ **v2.3 修订（2026-08-07 · 战利品箱规则）**：掉落与"死因"绑定。与 v2.1 修订及 v2.0 正文冲突处以本节为准：
 >
@@ -40,7 +40,7 @@
 > | 5 | 击杀者绑定 lootTarget | 击杀即绑定（击杀者去捡） | 仅"有击杀者且掉箱"才绑定（处决不掉箱 → 实际不触发；保留代码防回归） |
 >
 > 设计意图：**处决 = 拿击杀分，流血 = 留战利品**——玩家击倒红队 AI 后决策："补枪处决（稳拿分、无箱）" vs "不处决赌它队友不来救（20s 后掉箱，可捡弹药/护甲/医疗包，但可能被救走白打）"。玩家箱子弹药不保留是因为 AI 弹药无限后弹药对 AI 无价值，且玩家观战捡不回自己的箱子。
-> 实现：`killUnit` 内 `dropLoot = u.ai ? (cause==='bleed') : true`；`js/ai.js` 换弹补满 + `tryLoot` 动机改医疗包/护甲；新增测试 `test/_qa_v23_loot.js`（21 断言全 PASS）。
+> 实现：`killUnit` 内 `dropLoot = u.ai ? (cause==='bleed') : true`；`js/ai.js` 换弹补满 + `tryLoot` 动机改医疗包/护甲；新增测试 `test/qa/_qa_v23_loot.js`（21 断言全 PASS）。
 
 > ⚠ **v2.1 修订（2026-08-07 · 吃鸡淘汰制）**：本文档 v2.0 的重生路径已作废，改为**全员一条命**。修订点如下，与下方 v2.0 正文冲突处以本节为准：
 >
@@ -57,7 +57,7 @@
 > | 9 | 新增观战常量 | — | `SPECTATE_DIST=3.2 / SPECTATE_HEIGHT=1.6` [PLAYTEST] |
 > | 10 | 出生无敌帧 | 重生时设 `SPAWN_PROT` | 仅开局出生可能涉及；无重生后不再触发（常量保留防回归） |
 >
-> 新增测试：`test/_qa_v21_elimination.js`（28 断言全 PASS）。v2.0 的 §5.2/§5.4 重生相关协同（prepareCover/reformAll 依赖重生）实际失效，保留代码未删（防回归），不在现行流程调用。
+> 新增测试：`test/qa/_qa_v21_elimination.js`（28 断言全 PASS）。v2.0 的 §5.2/§5.4 重生相关协同（prepareCover/reformAll 依赖重生）实际失效，保留代码未删（防回归），不在现行流程调用。
 
 > 项目：战地突击 Battleground Tactical FPS（Three.js r160）
 > 作者：文策渊（design-strategist） · 版本：v2.0「倒地救援 + 智能安全出生点 + AI 协同复活」

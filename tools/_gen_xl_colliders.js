@@ -164,7 +164,7 @@ function configToSource(key, cfg) {
   return s;
 }
 
-const COMMENT = `    /* ============ v1.4 四地标（models/out 内联数据，BUILDINGS_OUT）— 已落地碰撞留空 ============
+const COMMENT = `    /* ============ v1.4 四地标（assets/buildings/out 内联数据，BUILDINGS_OUT）— 已落地碰撞留空 ============
      * 坐标系 x[0,w] y[0,d](深) z[0,h](高)，尺寸 = 归一化 GLB bbox（tools/glb2bldg_out.js 探测输出）；
      * 运行时按地图 w/d/h 缩放（碰撞尺寸以地图数据为准），门洞留空、平台可站。
      * 全部可进入（真实门洞 + 内部中空 + 楼板楼梯井），由 battle_*.scad 可进入版编译：

@@ -32,7 +32,7 @@
 | `js/net.js` | 客户端死亡直接进观战；删房主/客户端 respawn 分支 |
 | `js/main.js` | 抽 `backToMenu` 共用；绑 `#spectateQuit` |
 | `index.html` | `#deathOverlay` 改观战文案（pointer-events:none）+ 新增 `#spectateInfo/#spectateQuit` |
-| `test/_qa_v21_elimination.js` | 新增 28 断言专项 QA |
+| `test/qa/_qa_v21_elimination.js` | 新增 28 断言专项 QA |
 
 ## 3. 行为口径（与 v2.0 的差异）
 

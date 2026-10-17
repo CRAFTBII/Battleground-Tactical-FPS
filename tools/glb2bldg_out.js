@@ -1,4 +1,4 @@
-// models/out → 内联建筑数据（丢弃贴图/材质，保留 POSITION/NORMAL/INDEX + 按类型生成顶点色）
+// assets/buildings/out → 内联建筑数据（丢弃贴图/材质，保留 POSITION/NORMAL/INDEX + 按类型生成顶点色）
 // 用法: node tools/glb2bldg_out.js
 // 输出: models/buildings_out.js → window.BUILDINGS_OUT = { <key>: {pos,nor,col,idx} }
 // 与 tools/glb2bldg.js 同范式：几何 base64 内联，离线 file:// 可玩（无 fetch）。
@@ -11,14 +11,14 @@ const path = require('path');
 
 const OUT = 'models/buildings_out.js';
 // v1.5：按顺序在多个目录里找 battle_<key>.glb —— 早期 9 型编译产物归档在 out/done，
-// 只扫 models/out 会静默丢掉它们（→ 游戏里退化成占位实心盒，bridge/stairs 变实心墙）。
-const SRC_DIRS = ['models/out', 'models/out/done'];
+// 只扫 assets/buildings/out 会静默丢掉它们（→ 游戏里退化成占位实心盒，bridge/stairs 变实心墙）。
+const SRC_DIRS = ['assets/buildings/out', 'assets/buildings/out/done'];
 // 新增类型 → 源文件名（无该文件则跳过并告警）
 const KEYS = ['bunker', 'hangar', 'pillbox', 'tower', 'wall', 'bridge', 'stairs', 'container', 'ruins',
   'base', 'refinery', 'stadium', 'megatower',
-  // v1.7 程序化主题建筑（SCAD 源文件在 models/source/，用户编译后自动接入）
+  // v1.7 程序化主题建筑（SCAD 源文件在 assets/buildings/source/，用户编译后自动接入）
   'crane', 'tankH', 'tankV', 'mast', 'guardhouse',
-  // v1.8 超大型综合体（models/source/battle_complex.scad）
+  // v1.8 超大型综合体（assets/buildings/source/battle_complex.scad）
   'complex'];
 function findSrc(key) {
   for (const dir of SRC_DIRS) {
@@ -158,7 +158,7 @@ for (const key of KEYS) {
 }
 
 /* ---- 输出 ---- */
-const jsonOut = '// 由 tools/glb2bldg_out.js 自动生成：models/out 新增建筑类型内联数据（base64 Float32/Uint16 + 顶点色）\n' +
+const jsonOut = '// 由 tools/glb2bldg_out.js 自动生成：assets/buildings/out 新增建筑类型内联数据（base64 Float32/Uint16 + 顶点色）\n' +
   '// 离线 file:// 可用（无 fetch）；与 BUILDINGS_DATA 同格式，BuildingLib 优先取用\n' +
   'window.BUILDINGS_OUT = ' + JSON.stringify(outData) + ';\n';
 fs.writeFileSync(OUT, jsonOut);

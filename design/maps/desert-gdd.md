@@ -108,7 +108,7 @@
 **v1.4 落地形态**：megatower 做**视觉天际线锚点**（玩家看得到、可作为方向参照），工程注册真模型时做成**腿式结构**（底部四腿之间可通行，复用 tower 类型范式）——既保留"巨塔压迫感"，又不堵地面；登顶玩法等 y 碰撞落地后以 P2 形态追加（可做成"塔内螺旋楼梯 + 顶部平台"）。
 
 - **flattenPad**：`[72,169,24,18]`（BA1）、`[260,80,20,20]`（MG1）已追加，两处地基压平（MG1 压在东南大沙丘 (280,90) 影响半径内，flattenPad 保证塔基平整）。
-- **BuildingLib 新类型 key:'base'/'megatower'**：工程注册前 → `placeModelBuilding` 回退占位盒（碰撞=w/d/h，安全）；GLB 插槽 `models/out/battle_base.glb` / `battle_megatower.glb` 离线休眠（ADR-003）。
+- **BuildingLib 新类型 key:'base'/'megatower'**：工程注册前 → `placeModelBuilding` 回退占位盒（碰撞=w/d/h，安全）；GLB 插槽 `assets/buildings/out/battle_base.glb` / `battle_megatower.glb` 离线休眠（ADR-003）。
 - **A* 自证**：探针 PASS——desert 18 栋、纵/横主道端到端可通行、20 出生点 × 3 据点双向 120/120 全连通、出生点零重叠。
 
 ### 4.9 AI 战术对接（v1.4）
@@ -146,8 +146,8 @@
 | **D13** | model | **tower · 150,130（角点）· 4×4×8** | **水塔（v1.2 专属机制：占领回血，见 mechanics §3）** | — |
 | **BR1** | model | **bridge · 155,116.5 · 30×7×6** | **跨纵主道天桥（B 点↔中庭二层观察位）** | — |
 | **S1/S2** | model | **stairs · 149,120 / 183,120 · 12×12×6** | **Bridge1 两端上下台阶（顶 6m 接桥面）** | — |
-| **BA1** | model | **base · 60,160（角点）· 24×18×8** | **前哨基地（蓝方推进走廊中段）** | **`models/out/battle_base.glb`** 💤 |
-| **MG1** | model | **megatower · 250,70（角点）· 20×20×28** | **巨塔（东北制空锚点，不可上）** | **`models/out/battle_megatower.glb`** 💤 |
+| **BA1** | model | **base · 60,160（角点）· 24×18×8** | **前哨基地（蓝方推进走廊中段）** | **`assets/buildings/out/battle_base.glb`** 💤 |
+| **MG1** | model | **megatower · 250,70（角点）· 20×20×28** | **巨塔（东北制空锚点，不可上）** | **`assets/buildings/out/battle_megatower.glb`** 💤 |
 
 **密度自证（v1.4，test/port-density-probe.js）**：
 - 18 栋建筑（12 既有 + 水塔 D13 + 3 桥梯 + BA1/MG1 地标）；探针断言 PASS：纵/横主道端到端 A* 可通行、20 出生点 × 3 据点双向 A* 全连通（120/120）、出生点零碰撞体重叠。
@@ -200,7 +200,7 @@
 - [ ] [PLAYTEST]：缩圈伤害曲线、最终圈 r44、沙暴+缩圈双压是否过猛（必要时错开首爆时刻）实测收敛。
 - [ ] 工程 T9：注册 tower 新 BuildingLib 类型（水塔依赖；未注册前占位盒安全）。
 - [ ] 工程：实现 mechanics.sandstorm（雾插值/AI 命中惩罚/暴露伤害/水塔占领回血）。
-- [ ] 工程：注册 BuildingLib 新类型 **base / megatower**（BA1/MG1 地标依赖；未注册前占位盒安全）+ 接 GLB `models/out/battle_base.glb` / `battle_megatower.glb`（离线休眠）。
+- [ ] 工程：注册 BuildingLib 新类型 **base / megatower**（BA1/MG1 地标依赖；未注册前占位盒安全）+ 接 GLB `assets/buildings/out/battle_base.glb` / `battle_megatower.glb`（离线休眠）。
 - [ ] 工程：实现 AI 战术（ai-tactics.md §9）——desert 重点：①沙暴庇护 + 水塔联动。
 - [ ] [PLAYTEST]：storm/calm 比例、exposeDmg 4、AI 命中惩罚 0.5、回血 5/s、AI 庇护搜索半径 12m 实测收敛。
 - [ ] [PLAYTEST/Backlog]：MG1 巨塔登顶玩法（等 y 碰撞落地后 P2 追加，见 §4.8 取舍）。

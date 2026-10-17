@@ -365,7 +365,7 @@ const BuildingLib = {
       ]
     },
 
-    /* ============ v1.2 新增类型（models/out 内联数据，BUILDINGS_OUT）============
+    /* ============ v1.2 新增类型（assets/buildings/out 内联数据，BUILDINGS_OUT）============
      * 尺寸与 GLB 一致（见 tools/glb2bldg_out.js 探测输出）；坐标系：x[0,w] y[0,d](深) z[0,h](高)，
      * 门洞留空（能进门）、屋顶/平台可站（进入 World.platforms）。
      * 注：tower/ruins 的高柱体为纯视觉（碰撞只到平台/残墙高，避免 100m/28m 实体把导航封死）。 */
@@ -484,7 +484,7 @@ const BuildingLib = {
       ]
     },
 
-        /* ============ v1.4 四地标（models/out 内联数据，BUILDINGS_OUT）— 碰撞箱按 SCAD 源码编写 ============
+        /* ============ v1.4 四地标（assets/buildings/out 内联数据，BUILDINGS_OUT）— 碰撞箱按 SCAD 源码编写 ============
      * 坐标系 x[0,w] y[0,d](深) z[0,h](高)，尺寸 = 归一化 GLB bbox（tools/glb2bldg_out.js 探测输出）；
      * 运行时按地图 w/d/h 缩放（碰撞尺寸以地图数据为准），门洞留空、平台可站。
      * 全部可进入（真实门洞 + 内部中空 + 楼板楼梯井），由 battle_*.scad 可进入版编译：

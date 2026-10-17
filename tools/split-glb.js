@@ -4,7 +4,7 @@
 'use strict';
 const fs = require('fs');
 
-const buf = fs.readFileSync('models/soldier.glb');
+const buf = fs.readFileSync('assets/soldier/soldier.glb');
 let off = 12, json = null, bin = null;
 while (off < buf.length) {
   const len = buf.readUInt32LE(off), type = buf.toString('ascii', off + 4, off + 8);
@@ -139,8 +139,8 @@ out.writeUInt32LE(0x46546C67, 0); out.writeUInt32LE(2, 4); out.writeUInt32LE(out
 out.writeUInt32LE(jp, 12); out.write('JSON', 16); jsonBuf.copy(out, 20);
 out.fill(0x20, 20 + jsonBuf.length, 20 + jp); // JSON chunk 填充必须是空格
 out.writeUInt32LE(bp, 20 + jp); out.write('BIN\0', 24 + jp); binBuf.copy(out, 28 + jp);
-fs.writeFileSync('models/soldier_parts.glb', out);
-console.log('输出 models/soldier_parts.glb', (out.length / 1024).toFixed(0), 'KB');
+fs.writeFileSync('assets/soldier/soldier_parts.glb', out);
+console.log('输出 assets/soldier/soldier_parts.glb', (out.length / 1024).toFixed(0), 'KB');
 
 // ---- 输出内联数据文件（file:// 双击可用：无 fetch/ESM，base64 编码） ----
 const b64F32 = arr => { const b = Buffer.alloc(arr.length * 4); arr.forEach((v, i) => b.writeFloatLE(v, i * 4)); return b.toString('base64'); };

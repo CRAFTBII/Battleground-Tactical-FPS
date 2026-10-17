@@ -85,7 +85,7 @@
 
 ## 4. 现有建筑资产尺寸清单
 
-### 4.1 超大型综合体（XL，`models/source/` 顶层）
+### 4.1 超大型综合体（XL，`assets/buildings/source/` 顶层）
 | 文件 | 类型 | 占地 | 高度 | 层数 | 门洞 | 窗洞 | 楼梯 | 可进入 |
 |---|---|---|---|---|---|---|---|---|
 | `battle_base.scad` | 军事基地 | ~220×180 | — | 多 | 大门×4(6高)、楼体四面真门 | 营房/指挥楼窗阵列 | 指挥楼 3 层交错直跑井、哨塔爬梯 | ✅ 全中空迷宫 |
@@ -94,7 +94,7 @@
 | `battle_refinery.scad` | 工业区 | ~90×60 | 厂房 22 | 多 | 厂房大门(10×7) | 主厂房 4×4 阵列 | 厂房 catwalk+直跑、冷却塔内部旋梯 | ✅ |
 | `battle_complex.scad` | 超大型综合体 | 120×80 | 48 | 4 层环廊 | 四面大门(14×8) | 每层横窗带 | 4 角楼梯井(10×10 交错直跑) | ✅ 中庭+环廊 |
 
-### 4.2 中型/大型建筑（M/L，`models/source/done/`）
+### 4.2 中型/大型建筑（M/L，`assets/buildings/source/done/`）
 | 文件 | 类型 | 占地 | 高度 | 门洞 | 窗洞 | 楼梯 | 可进入 |
 |---|---|---|---|---|---|---|---|
 | `battle_house.scad` | 民居 | 10×8 | 4 | 2.2 高 | 前后/侧窗(z1.3起) | 人字屋顶(不可上) | ✅ |
@@ -105,7 +105,7 @@
 | `battle_watchtower.scad` | 瞭望塔 | 平台 8×8 | 14 | 无 | 护栏开敞 | 四腿+爬梯上平台 | ✅ 上塔 |
 | `battle_bridge.scad` | 桥梁 | 30×6 | 8 | 两端通 | 栏杆开敞 | 桥面+桥墩 | ✅ 通行 |
 
-### 4.3 可进入小型建筑（S，`models/source/done/`）
+### 4.3 可进入小型建筑（S，`assets/buildings/source/done/`）
 | 文件 | 类型 | 占地 | 高度 | 墙厚 | 门洞 | 楼梯 | 可进入 |
 |---|---|---|---|---|---|---|---|
 | `battle_bunker.scad` | 地堡 | 18×14 | 7 | 1.0 | 3.2 高 | 内部直跑上顶台 | ✅ |
@@ -113,7 +113,7 @@
 | `battle_pillbox.scad` | 暗堡 | 12×12 | 4 | 1.5 | 2.5 高+4 射击孔 | 爬梯上顶射击位 | ✅ |
 | `battle_hangar.scad` | 机库 | 40×24 | 12 | 薄 | 两端开口 9 高 | catwalk | ✅ 可开车进 |
 
-### 4.4 掩体 / 道具（S，`models/source/done/`）
+### 4.4 掩体 / 道具（S，`assets/buildings/source/done/`）
 | 文件 | 类型 | 尺寸 | 用途 |
 |---|---|---|---|
 | `battle_wall.scad` | 矮墙 | 高低断墙 0.6~1.4 厚 | 交火掩护、绕点 |
@@ -121,7 +121,7 @@
 | `battle_cover.scad` | 掩体簇 | 集装箱/沙袋/路障/木箱 | 交火线、安全角 |
 | `battle_map.scad` | 据点营地 | 组合布局 | 非单体，拼装预览用 |
 
-> 历史版本：`models/source/legacy/` 存 4 个 XL 建筑旧版，已被顶层新版取代，**不要再引用**。
+> 历史版本：`assets/buildings/source/legacy/` 存 4 个 XL 建筑旧版，已被顶层新版取代，**不要再引用**。
 
 ---
 
@@ -165,7 +165,7 @@
 3. **门洞通道内不留立柱**：主大门正中的内部立柱会 block 所在格（refinery 曾挡门）；出口方向不要被邻楼贴脸（stadium 东门曾被 suburb 岗亭堵死）。
 
 ### 5.4.5 验证
-- 改完 CONFIGS 后跑 `node test/_qa_v14_landmarks.js`（地标/可进入性断言）+ `node test/smoke.js`；
+- 改完 CONFIGS 后跑 `node test/qa/_qa_v14_landmarks.js`（地标/可进入性断言）+ `node test/smoke.js`；
 - 可用临时探针（`tools/`）实测「门洞外 → 门洞内 → 内部」`World.walkable` 三段全通。
 
 ---
@@ -173,14 +173,14 @@
 ## 6. 命名与文件组织
 
 ```
-models/source/            ← 当前生效的建筑源文件（含 4 个 XL 综合体）
+assets/buildings/source/            ← 当前生效的建筑源文件（含 4 个 XL 综合体）
   battle_base.scad
   battle_megatower.scad
   battle_stadium.scad
   battle_refinery.scad
-models/source/done/       ← 已归档的旧建筑/道具（15 个，仍可用，未删）
-models/source/legacy/     ← 历史版本（4 个 XL 旧版，勿引用）
-models/                   ← 运行 run-convert.bat 的工作目录（拷贝 scad 进来 → 输出 ./out/*.glb）
+assets/buildings/source/done/       ← 已归档的旧建筑/道具（15 个，仍可用，未删）
+assets/buildings/source/legacy/     ← 历史版本（4 个 XL 旧版，勿引用）
+assets/buildings/         ← run-convert.bat / convert-all.py 所在目录（工作目录 = 脚本自身目录）
 ```
 
 命名规则：`battle_<类型>.scad`，类型用英文小写（base/megatower/stadium/refinery/house/apartment/warehouse/bunker/stairs/pillbox/hangar/watchtower/wall/container/ruins/bridge/cover/tower/map）。
@@ -189,12 +189,12 @@ models/                   ← 运行 run-convert.bat 的工作目录（拷贝 sc
 
 ## 7. 导出与接入流程
 
-1. 把要转的 `battle_*.scad` 复制到 `models/`（与 `run-convert.bat`、`convert-all.py` 同目录）。
-2. 运行 `run-convert.bat` → 全部转成 `models/out/*.glb`（含顶点色）。
+1. 把要转的 `battle_*.scad` 放进 `assets/buildings/source/`（`run-convert.bat`、`convert-all.py` 就在上一级目录）。
+2. 运行 `assets/buildings/run-convert.bat` → 全部转成 `assets/buildings/out/*.glb`（含顶点色）。
 3. 用 `tools/glb2bldg_out.js` 将 GLB 内联进游戏（`buildings_out.js`），并校验 dimReport（bbox = REAL_DIMS）。
 4. **同步编写/校核碰撞箱**：按 §5.4 逐构件抄写 SCAD 到 `CONFIGS[key].colliders/platforms`（改 SCAD 必改 CONFIGS，禁止只改一边）。
 5. 地图放置只写 `scale`（w/d/h 由 REAL_DIMS×scale 推导），不手写 w/d/h。
-6. 验证：`node test/_qa_v14_landmarks.js`（地标/可进入性）+ `node test/smoke.js` + 三图密度探针。
+6. 验证：`node test/qa/_qa_v14_landmarks.js`（地标/可进入性）+ `node test/smoke.js` + 三图密度探针。
 
 ---
 

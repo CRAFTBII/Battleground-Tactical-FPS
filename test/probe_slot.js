@@ -1,6 +1,6 @@
 'use strict';
 const fs = require('fs'), vm = require('vm'), path = require('path');
-const ROOT = 'C:/Users/Administrator/WorkBuddy/battlegame';
+const ROOT = path.join(__dirname, '..');
 const THREE = require(path.join(ROOT, 'libs/three.min.js'));
 global.THREE = THREE;
 THREE.WebGLRenderer = class { constructor() { this.domElement = { style: {} }; this.shadowMap = {}; } setPixelRatio(){} setSize(){} render(){} };

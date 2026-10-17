@@ -1,6 +1,0 @@
-/* 兼容入口文件：保留原有引用，实际样式已拆分到多个文件。 */
-@import url('./base.css');
-@import url('./hud.css');
-@import url('./panels.css');
-@import url('./menu.css');
-@import url('./responsive.css');

@@ -165,21 +165,21 @@
         wallTex: 'plaster', roofTex: 'plaster', detailTex: 'concrete', // T-02：土坯灰泥（desert 主题，勿用 brick）
         rooftop: { side: 'west' },                     // 西侧坡道上 7m 屋顶
         balcony: false, chimney: false, detail: 'high',
-        glb: 'models/buildings/desert_fort.glb'        // 占位插槽（T4 已补 glbSlot 钩子；无 GLTFLoader 故休眠）
+        glb: 'assets/buildings/out/desert_fort.glb'        // 占位插槽（T4 已补 glbSlot 钩子；无 GLTFLoader 故休眠）
       },
       /* D2 军需库（近 A 东南，长视线走廊的锚点）—— v1.5 东移让开 S2 台阶 */
       {
         type: 'model', key: 'warehouse', x: 200, z: 132, ry: 0, scale: 1,
         trim: { top: 9.7, cornice: true, pilaster: true }, // D-06：top=实测 9.70
         tint: 0xd8c49a,                                    // T-01：土黄
-        glb: 'models/buildings/desert_depot.glb'
+        glb: 'assets/buildings/out/desert_depot.glb'
       },
       /* D3 蓝侧观察塔楼（19.1m 高，据点 B 的制空视野）—— v1.5 东移让开 HG1 机库 */
       {
         type: 'model', key: 'apartment', x: 74, z: 132, ry: 0, scale: 1,
         trim: { top: 19.1, cornice: true, pilaster: true, bands: [4, 8, 12] }, // D-06：top=实测 19.10
         tint: 0xd0b58c,
-        glb: 'models/buildings/desert_outpost.glb'
+        glb: 'assets/buildings/out/desert_outpost.glb'
       },
       /* D4 蓝侧补给棚（单层大跨度，据点 B 的南向掩护） */
       {
@@ -259,13 +259,13 @@
        * MS1/MS2 桁架天线塔给荒漠补通讯/观察制高点（蓝侧 + 巨塔旁）；
        * GH3 检查站岗亭 + D5 指挥所 + 民居村落组成 C 检查站；TK2 基地补给油罐（BA1 东侧）。
        * 程序化主题建筑（PROC_GEOS），全部离主道 ≥2m、不压出生点/据点。 */
-      { type: 'model', key: 'guardhouse', x: 150, z: 190, ry: 0, scale: 1, tint: 0xd0b58c, trim: false, glb: 'models/buildings/desert_guardhouse.glb' }, // GH1
-      { type: 'model', key: 'guardhouse', x: 172, z: 230, ry: 0, scale: 1, tint: 0xd0b58c, trim: false, glb: 'models/buildings/desert_guardhouse.glb' }, // GH2
-      { type: 'model', key: 'tankV', x: 118, z: 158, ry: 0, scale: 1, tint: 0xb09a70, trim: false, glb: 'models/buildings/desert_tankv.glb' },          // TK1
-      { type: 'model', key: 'mast', x: 52, z: 170, ry: 0, scale: 1, tint: 0x8d7c5c, trim: false, glb: 'models/buildings/desert_mast.glb' },             // MS1
-      { type: 'model', key: 'guardhouse', x: 232, z: 206, ry: 0, scale: 1, tint: 0xd0b58c, trim: false, glb: 'models/buildings/desert_guardhouse.glb' }, // GH3
-      { type: 'model', key: 'mast', x: 250, z: 130, ry: 0, scale: 1, tint: 0x8d7c5c, trim: false, glb: 'models/buildings/desert_mast.glb' },             // MS2
-      { type: 'model', key: 'tankV', x: 116, z: 200, ry: 0, scale: 1, tint: 0xb09a70, trim: false, glb: 'models/buildings/desert_tankv.glb' },          // TK2
+      { type: 'model', key: 'guardhouse', x: 150, z: 190, ry: 0, scale: 1, tint: 0xd0b58c, trim: false, glb: 'assets/buildings/out/desert_guardhouse.glb' }, // GH1
+      { type: 'model', key: 'guardhouse', x: 172, z: 230, ry: 0, scale: 1, tint: 0xd0b58c, trim: false, glb: 'assets/buildings/out/desert_guardhouse.glb' }, // GH2
+      { type: 'model', key: 'tankV', x: 118, z: 158, ry: 0, scale: 1, tint: 0xb09a70, trim: false, glb: 'assets/buildings/out/desert_tankv.glb' },          // TK1
+      { type: 'model', key: 'mast', x: 52, z: 170, ry: 0, scale: 1, tint: 0x8d7c5c, trim: false, glb: 'assets/buildings/out/desert_mast.glb' },             // MS1
+      { type: 'model', key: 'guardhouse', x: 232, z: 206, ry: 0, scale: 1, tint: 0xd0b58c, trim: false, glb: 'assets/buildings/out/desert_guardhouse.glb' }, // GH3
+      { type: 'model', key: 'mast', x: 250, z: 130, ry: 0, scale: 1, tint: 0x8d7c5c, trim: false, glb: 'assets/buildings/out/desert_mast.glb' },             // MS2
+      { type: 'model', key: 'tankV', x: 116, z: 200, ry: 0, scale: 1, tint: 0xb09a70, trim: false, glb: 'assets/buildings/out/desert_tankv.glb' },          // TK2
 
       /* ===== v1.8 紧凑布局（37→45 栋）：前哨链填空 =====
        * 用户要求「布局更紧凑」—— 蓝侧前哨链/中庭东/红侧民居/检查站东岗补建筑，
@@ -288,7 +288,7 @@
         trim: { top: 4.0, cornice: true, chimney: { x: 7.6, z: 2.2, w: 0.9, d: 0.9, h: 2.0, base: 4.0 } }
       },
       { type: 'model', key: 'container', x: 280, z: 240, ry: 0, scale: 1, tint: 0xd8c49a, trim: false },
-      { type: 'model', key: 'guardhouse', x: 300, z: 236, ry: 0, scale: 1, tint: 0xd0b58c, trim: false, glb: 'models/buildings/desert_guardhouse.glb' },
+      { type: 'model', key: 'guardhouse', x: 300, z: 236, ry: 0, scale: 1, tint: 0xd0b58c, trim: false, glb: 'assets/buildings/out/desert_guardhouse.glb' },
       {
         type: 'model', key: 'house', x: 320, z: 180, ry: 0, scale: 1, tint: 0xd0b58c,
         trim: { top: 4.0, cornice: true, chimney: { x: 2.4, z: 2.2, w: 0.9, d: 0.9, h: 2.0, base: 4.0 } }
@@ -320,7 +320,7 @@
        *   - 横主道 z[161,179] 以北 21m；纵主道 x[161,179] 以西 52m；D1 主堡 x[126,154] 东侧留 16.8m；
        *   - D7 废弃库 (124~146,236~250) 东侧留 14.8m；蓝出生区 (0~80,0~80) 以北 120m 不挡出生；
        *   - 西北沙丘/残骸场已整体北移让位（见 terrain.mounds / ruins.rubble）。 */
-      { type: 'model', key: 'base', x: 20, z: 200, ry: 0, scale: 0.4, tint: 0xd8c49a, trim: false, glb: 'models/out/battle_base.glb' },
+      { type: 'model', key: 'base', x: 20, z: 200, ry: 0, scale: 0.4, tint: 0xd8c49a, trim: false, glb: 'assets/buildings/out/battle_base.glb' },
 
       /* ===== 地标 MG1：巨塔 megatower（v1.5 回到真实尺寸）=====
        * 真实几何 36×36×145.48（11 层楼板 + 中央楼梯井 + 奇偶层隔间迷宫，可逐层登顶）。
@@ -330,7 +330,7 @@
        *   - 与 test/smoke.js §4.16③ 硬编码腿位 (251,71)/中庭 (262,82) 对齐（旧图放在 232,70 与测试不符）；
        *   - 纵主道 x[161,179] 以东 71m；红出生区 (260~340,260~340) 以南 154m；
        *   - 东南沙丘已南移到 (318,40)，rubble 场东移到 x[292,332]，均不压塔基。 */
-      { type: 'model', key: 'megatower', x: 250, z: 70, ry: 0, scale: 1, tint: 0xc9b082, trim: false, glb: 'models/out/battle_megatower.glb' },
+      { type: 'model', key: 'megatower', x: 250, z: 70, ry: 0, scale: 1, tint: 0xc9b082, trim: false, glb: 'assets/buildings/out/battle_megatower.glb' },
 
       /* ===== 地标 TW1：摩天楼 tower（v1.5 新增）=====
        * 真实几何 18.6×18.6×100（实心楼体 70m + 两级退台 + 天线）。碰撞已按实体修正（旧配置只有"四条腿"）。
@@ -347,7 +347,7 @@
        *   - 纵主道 x[161,179] 以东 61m、横主道 z[161,179] 以北 181m，不压主道；
        *   - 据点 C(244,222) 东北 138m、megatower(250,70) 东北 290m，各不干扰；
        *   - 东北大区无沙丘（mounds 全在中部/南部），flattenPads 压平即可。 */
-      { type: 'model', key: 'complex', x: 240, z: 360, ry: 0, scale: 1, tint: 0x8fa0ad, trim: false, glb: 'models/out/battle_complex.glb' }
+      { type: 'model', key: 'complex', x: 240, z: 360, ry: 0, scale: 1, tint: 0x8fa0ad, trim: false, glb: 'assets/buildings/out/battle_complex.glb' }
     ],
 
     /* ---------- 掩体（26 处 / 11.6 公顷 ≈ 2.2 处每公顷；港区 ≈ 5.0，差 2.2 倍）----------

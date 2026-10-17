@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-把真实武器 GLB（models/glb/{key}_body.glb / {key}_bolt.glb）烤成内联 JS 数据，
+把真实武器 GLB（assets/guns/glb/{key}_body.glb / {key}_bolt.glb）烤成内联 JS 数据，
 供 battlegame 第一人称武器直接构建（无 fetch / 无 GLTFLoader / 离线 file:// 可玩）。
 
 坐标重映射（关键）：
@@ -22,7 +22,7 @@ import os, base64
 import numpy as np
 import trimesh
 
-BASE = os.path.join(os.path.dirname(__file__), "..", "models", "glb")
+BASE = os.path.join(os.path.dirname(__file__), "..", "assets", "guns", "glb")
 OUT = os.path.join(os.path.dirname(__file__), "..", "models", "gun_glb_data.js")
 
 WEAPON_LEN = {"pistol": 0.42, "rifle": 0.78, "sniper": 1.1, "shotgun": 0.9}

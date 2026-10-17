@@ -136,6 +136,6 @@ Net.applyEvent(e)                      // 联机事件（客户端）
 | `js/maps/desert.js` | 荒漠：`mechanics.sandstorm`（周期 + 水塔 D13） |
 | `js/maps/suburb.js` | 城郊：`mechanics.airdrop`（空投 + 中央广场炮击） |
 | `js/models.js` | BuildingLib 新 9 类型 CONFIGS + BUILDINGS_OUT 内联重建 + 朝向修复/缩放 |
-| `models/buildings_out.js` | models/out 9 新类型内联几何（tools/glb2bldg_out.js 生成） |
+| `models/buildings_out.js` | assets/buildings/out 9 新类型内联几何（tools/glb2bldg_out.js 生成） |
 | `test/smoke.js` | §4.10/4.11/4.12 断言 |
 | `test/port-density-probe.js` | 三图密度/寻路/机制激活回归 |

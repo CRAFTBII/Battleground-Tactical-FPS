@@ -2,7 +2,7 @@
 
 > 对应代码：`js/game.js`（击杀/复活/智能出生）、`js/ai.js`（AIBrain 倒地/救援/处决/归队）、`js/ui.js`（Squad 协同 + UI）、`js/combat.js`（Unit 字段/玩家输入/KeyE）、`js/core.js`（CFG 新常量）、`js/world.js`（mapScale）、`js/net.js`（联机事件）、`index.html`（#downOverlay/#reviveBar）
 > 设计规格：`design/maps/respawn-rework.md`（v2.1，§0 红线 / §1 状态机 / §4 smartSpawn / §6 角色编成 / §8 契约 / §10 交接清单）
-> 冒烟覆盖：`test/_qa_v15_respawn.js`（新，倒地救援 QA）；回归：`test/_qa_v13_zone.js`、`test/_qa_v14_ai.js`、三图 smartSpawn 探针
+> 冒烟覆盖：`test/qa/_qa_v15_respawn.js`（新，倒地救援 QA）；回归：`test/qa/_qa_v13_zone.js`、`test/qa/_qa_v14_ai.js`、三图 smartSpawn 探针
 
 ---
 
@@ -85,16 +85,16 @@
 | `js/world.js` | `CFG.mapScale = mapDef.size/300` |
 | `js/net.js` | down/revive/revive_cancel 事件；快照 down 字段；state 带 down；respawn→smartSpawn；revive_req/revive_cancel |
 | `index.html` | #downOverlay / #reviveBarWrap + CSS |
-| `test/_qa_v15_respawn.js` | 新增倒地救援 QA（10 组断言） |
+| `test/qa/_qa_v15_respawn.js` | 新增倒地救援 QA（10 组断言） |
 
 ## 8. 回归结论
 
-- `test/_qa_v15_respawn.js`：**ALL PASS**（T1~T6 状态机、区域伤害、救援/中断、无敌帧、smartSpawn、角色编成、AI 救援、命中感知、Squad 协同、玩家倒地输入）。
-- `test/_qa_v13_zone.js`：**ALL PASS**（修复 followOrder 对 zone 目标误加散兵偏移）。
-- `test/_qa_v14_ai.js`：**ALL PASS**（role→weapon 重构后 acc/反应/换弹/移速断言不变）。
+- `test/qa/_qa_v15_respawn.js`：**ALL PASS**（T1~T6 状态机、区域伤害、救援/中断、无敌帧、smartSpawn、角色编成、AI 救援、命中感知、Squad 协同、玩家倒地输入）。
+- `test/qa/_qa_v13_zone.js`：**ALL PASS**（修复 followOrder 对 zone 目标误加散兵偏移）。
+- `test/qa/_qa_v14_ai.js`：**ALL PASS**（role→weapon 重构后 acc/反应/换弹/移速断言不变）。
 - 三图 smartSpawn 探针（suburb 300 / port 260 / desert 340）：**ALL PASS**——mapScale 正确、30×2 次全非 null+可走、10v10 压力下零重叠、最终圈绝不出圈、分布不聚点。
 - `test/smoke.js`：34 项失败均为**既有基线问题**（`models/buildings_out.js` 现仅含 4 地标类型，smoke 断言 13 类型；与本次改动无关，隔离探针已证）。
-- `test/_qa_v12_coexist.js` / `_qa_v12_suburb.js`：各 1 项既有失败（护甲吸收语义与测试预期不符，非本次引入）。
+- `test/qa/_qa_v12_coexist.js` / `_qa_v12_suburb.js`：各 1 项既有失败（护甲吸收语义与测试预期不符，非本次引入）。
 
 ## 9. 已知遗留（[PLAYTEST] 观察项）
 

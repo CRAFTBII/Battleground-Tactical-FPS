@@ -85,6 +85,6 @@
 
 ## 8. 验收
 
-- [ ] `test/_qa_v27_mission.js` 17 断言全 PASS：任务表/30 次抽签覆盖 3 任务/KILLS 12 人/SURVIVE·CONTROL 10 人/三任务 elim+time 判定/控制时长累加/CONTROL AI 行为/HUD 文案
+- [ ] `test/qa/_qa_v27_mission.js` 17 断言全 PASS：任务表/30 次抽签覆盖 3 任务/KILLS 12 人/SURVIVE·CONTROL 10 人/三任务 elim+time 判定/控制时长累加/CONTROL AI 行为/HUD 文案
 - [ ] v21~v26 回归 124 断言全 PASS（v21 固定 survive 语义、smoke 单位数跟随任务）
 - [ ] smoke 仅剩 3 项已知外部 world.js 沙暴失败（与 v2.7 无关）

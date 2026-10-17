@@ -1,7 +1,7 @@
 // 探测 soldier.glb 顶点分布：决定切割阈值（y 分头/躯干/腿，x 分左右臂）
 'use strict';
 const fs = require('fs');
-const buf = fs.readFileSync('models/soldier.glb');
+const buf = fs.readFileSync('assets/soldier/soldier.glb');
 let off = 12, json = null, bin = null;
 while (off < buf.length) {
   const len = buf.readUInt32LE(off), type = buf.toString('ascii', off + 4, off + 8);

@@ -72,9 +72,9 @@
 已删除（工程遗留探测脚本与输出，非正式套件）：
 
 ```
-test/_qa_detail_lod.js     （?detail=off 实证探测）
-test/_qa_door_probe.js     （门洞可通行探测）
-test/_qa_maps_smoke.js     （三图功能级冒烟探测）
+test/qa/_qa_detail_lod.js     （?detail=off 实证探测）
+test/qa/_qa_door_probe.js     （门洞可通行探测）
+test/qa/_qa_maps_smoke.js     （三图功能级冒烟探测）
 test/_spawncheck.js        （出生点探测）
 smoke_c4.txt / smoke_r2.txt / smoke_r3.txt / smoke_r4.txt / smoke_r5.txt
 spawncheck_out.txt

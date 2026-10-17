@@ -12,7 +12,7 @@ import os
 import numpy as np
 import trimesh
 
-OUT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "models", "glb"))
+OUT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "assets", "guns", "glb"))
 os.makedirs(OUT, exist_ok=True)
 
 # 配色
