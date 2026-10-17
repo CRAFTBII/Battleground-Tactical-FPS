@@ -193,9 +193,12 @@ function lobbyPage(res, port) {
 /**
  * 普通 HTTP 请求入口（两条 WebSocket 传输分支共用）：
  *   /api/rooms    → JSON 状态（保持原契约，server-test.js 依赖）
- *   /             → 服务器列表页（保持原契约，含 'WebSocket' 与 '/api/rooms' 字样）
+ *   /             → **游戏本体 index.html**（去内联后模型走 HTTP，玩家打开这个地址就能玩）
+ *   /status       → 服务器列表页（原根路径那页，含 'WebSocket' 与 '/api/rooms' 字样，给 server-test.js 用）
  *   其余          → 静态文件（白名单目录 + 目录穿越防护）
- * 注意判定顺序：先 API，再根路径列表页，最后才落到静态服务。
+ *
+ * 历史说明：改造前根路径是服务器列表页（那时游戏靠双击 index.html 打开）。
+ * 现在游戏必须走 HTTP，根路径必须给游戏，否则玩家打开 http://localhost:8080 看不到游戏。
  */
 function httpHandler(req, res, port) {
   let pathname = req.url || '/';
@@ -205,7 +208,8 @@ function httpHandler(req, res, port) {
   if (hi !== -1) pathname = pathname.slice(0, hi);
 
   if (pathname === '/api/rooms' || pathname === '/api/rooms/') return httpJson(res, serverStatus(port));
-  if (pathname === '/' || pathname === '') return lobbyPage(res, port);
+  if (pathname === '/status' || pathname === '/status/') return lobbyPage(res, port);
+  if (pathname === '/' || pathname === '') return serveStatic(req, res, '/index.html');
   return serveStatic(req, res, pathname);
 }
 

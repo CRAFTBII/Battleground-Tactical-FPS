@@ -66,7 +66,7 @@ function waitMsg(c, pred, timeout) {
 }
 
 (async () => {
-  // 0) 普通 HTTP 请求应返回服务器列表页（200，含房间数据与联机指引）；/api/rooms 返回 JSON 状态
+  // 0) 根路径返回游戏本体（去内联后必须走 HTTP 才能玩）；/status 返回服务器列表页；/api/rooms 返回 JSON 状态
   try {
     const http = require('http');
     const get = url => new Promise((resolve, reject) => {
@@ -76,9 +76,15 @@ function waitMsg(c, pred, timeout) {
         r.on('end', () => resolve({ code: r.statusCode, body: d }));
       }).on('error', reject);
     });
-    const page = await get('/');
+    // 根路径必须返回游戏本体（去内联后模型走 HTTP，玩家打开 / 就要能看到游戏）
+    const game = await get('/');
+    if (game.code !== 200 || !game.body.includes('btnSingle') || !game.body.includes('js/glb.js')) {
+      failures.push('根路径未返回游戏本体: code=' + game.code + ' len=' + game.body.length);
+    } else console.log('✓ 根路径返回游戏本体（含主菜单按钮 + GLB 加载器）');
+    // /status 返回服务器列表页（保留原断言语义）
+    const page = await get('/status');
     if (page.code !== 200 || !page.body.includes('WebSocket') || !page.body.includes('/api/rooms')) failures.push('列表页异常: code=' + page.code + ' len=' + page.body.length);
-    else console.log('✓ 服务器列表页返回（200，含房间数据与联机指引）');
+    else console.log('✓ /status 返回服务器列表页（200，含房间数据与联机指引）');
     const api = await get('/api/rooms');
     const st = JSON.parse(api.body);
     if (api.code !== 200 || !Array.isArray(st.rooms) || typeof st.port !== 'number') failures.push('/api/rooms 异常: ' + api.body.slice(0, 120));

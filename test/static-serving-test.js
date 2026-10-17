@@ -292,7 +292,9 @@ async function runSuite(opts) {
       }
     }
 
-    /* ============ 2) GET / → 服务器列表页保持不变 ============ */
+    /* ============ 2) GET / → 游戏本体；GET /status → 服务器列表页 ============ */
+    // 去内联后模型必须走 HTTP，玩家打开根路径就要能看到游戏，所以 / 必须是 index.html。
+    // 原列表页挪到 /status，其 'WebSocket' 与 '/api/rooms' 标记保持不变（test/server-test.js 依赖）。
     const root = await request(port, '/');
     if (root.error) {
       bad(label + ' GET / → 200 text/html', '请求失败: ' + root.error);
@@ -302,11 +304,19 @@ async function runSuite(opts) {
       const ct = String(root.headers['content-type'] || '').toLowerCase();
       if (ct.indexOf('text/html') >= 0) ok(label + ' GET / Content-Type 含 text/html', ct);
       else bad(label + ' GET / Content-Type 含 text/html', '实际 ' + JSON.stringify(root.headers['content-type'] || '(缺)'));
-      if (root.bodyText.indexOf('WebSocket') >= 0 && root.bodyText.indexOf('/api/rooms') >= 0) {
-        ok(label + ' GET / 仍是原列表页', '含 WebSocket 与 /api/rooms（兼容 test/server-test.js 断言）');
+      // 游戏本体的标志：主菜单按钮 + GLB 加载器
+      if (root.bodyText.indexOf('btnSingle') >= 0 && root.bodyText.indexOf('js/glb.js') >= 0) {
+        ok(label + ' GET / 是游戏本体', '含 btnSingle 主菜单与 GLB 加载器');
       } else {
-        bad(label + ' GET / 仍是原列表页', '缺少 WebSocket 或 /api/rooms 标记（列表页被静态服务吃掉了）');
+        bad(label + ' GET / 是游戏本体', '缺少游戏标记（是否又回落成列表页了？）');
       }
+    }
+    const status = await request(port, '/status');
+    if (!status.error && status.status === 200 &&
+        status.bodyText.indexOf('WebSocket') >= 0 && status.bodyText.indexOf('/api/rooms') >= 0) {
+      ok(label + ' GET /status 是服务器列表页', '含 WebSocket 与 /api/rooms');
+    } else {
+      bad(label + ' GET /status 是服务器列表页', 'status=' + (status.error || status.status));
     }
 
     /* ============ 3) GET /api/rooms → 200 JSON ============ */
