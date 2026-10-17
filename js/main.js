@@ -169,7 +169,12 @@ function init() {
   if (typeof TouchUI !== 'undefined' && TouchUI.init) TouchUI.init();
   wireMenu();
   if (typeof Ticker !== 'undefined' && Ticker.init) Ticker.init();
-  window.BATTLEGROUND = { Game, World, Net, PC, PlayerGun, FX, UI, Unit, TouchUI };
+  // camera/renderer 必须暴露：触控层开火要调 PlayerGun.tryFire(camera)，否则射不出去。
+  // 用防护式取值，测试桩未加载 touch.js 时不会抛 ReferenceError。
+  window.BATTLEGROUND = Object.assign(
+    { Game, World, Net, PC, PlayerGun, FX, UI, Unit, camera, renderer },
+    (typeof TouchUI !== 'undefined' ? { TouchUI } : {})
+  );
   loop();
 }
 /* 性能自适应：FPS 长期偏低 → 关闭阴影 → 再降像素比 */

@@ -1,88 +1,176 @@
 /* =====================================================================
-   移动端触控层 —— 只在 body.touch-ui 时生效，桌面端完全不渲染
+   移动端触控层 —— 只在 body.touch-ui 时生效；且只在 body.touch-playing 时显示
+   （回菜单/暂停/结算自动隐藏，修复"离开游戏还有按键"）
    ===================================================================== */
 
 #touchLayer { display: none; }
 
 body.touch-ui #touchLayer {
-  display: block;
   position: fixed;
   inset: 0;
-  z-index: 60;                 /* 在游戏画面之上、菜单之下 */
-  pointer-events: none;        /* 默认穿透，只有具体控件接收触摸 */
-  touch-action: none;          /* 禁止浏览器手势（滚动/缩放） */
+  z-index: 60;
+  pointer-events: none;
+  touch-action: none;
   -webkit-user-select: none;
   user-select: none;
+  /* 默认隐藏：只有进入对局才显示 */
+  display: none;
 }
 
-/* 触控设备隐藏桌面键盘提示，FPS 全屏时不显示鼠标相关文案 */
+/* 对局中才显示 */
+body.touch-ui.touch-playing #touchLayer { display: block; }
+
+/* 触控设备隐藏桌面键盘提示 */
 body.touch-ui #radioHints { display: none !important; }
 
-/* ---------- 左下：虚拟摇杆 ---------- */
+/* ---------------------------------------------------------------
+   浮动摇杆：左半屏任意位置按下才出现（不用去找固定圆心）
+   --------------------------------------------------------------- */
 body.touch-ui #tStick {
-  position: absolute;
-  left: max(18px, env(safe-area-inset-left));
-  bottom: max(18px, env(safe-area-inset-bottom));
-  width: 132px; height: 132px;
+  position: fixed;
+  left: 0; top: 0;
+  width: 124px; height: 124px;
   border-radius: 50%;
-  background: rgba(255,255,255,.07);
-  border: 2px solid rgba(255,255,255,.22);
-  pointer-events: auto;
-  touch-action: none;
+  opacity: 0;
+  transform: scale(.9);
+  transition: opacity .12s, transform .12s;
+  pointer-events: none;
+}
+body.touch-ui #tStick.on { opacity: 1; transform: scale(1); }
+
+body.touch-ui #tRing {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  background: rgba(255,255,255,.06);
+  border: 2px solid rgba(255,255,255,.30);
+  box-shadow: 0 0 18px rgba(0,0,0,.35) inset;
 }
 
 body.touch-ui #tKnob {
   position: absolute; left: 50%; top: 50%;
-  width: 56px; height: 56px; margin: -28px 0 0 -28px;
+  width: 58px; height: 58px; margin: -29px 0 0 -29px;
   border-radius: 50%;
-  background: rgba(255,255,255,.42);
-  border: 2px solid rgba(255,255,255,.75);
-  box-shadow: 0 0 14px rgba(0,0,0,.35);
+  background: rgba(255,255,255,.50);
+  border: 2px solid rgba(255,255,255,.85);
+  box-shadow: 0 2px 10px rgba(0,0,0,.45);
   will-change: transform;
 }
 
-/* ---------- 右下：动作按钮 ---------- */
+/* 右半屏轻点开火的提示（仅开局几秒显示） */
+body.touch-ui #tHitTip {
+  position: fixed;
+  right: 12%;
+  bottom: 46%;
+  color: rgba(232,237,244,.75);
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-shadow: 0 1px 4px #000;
+  pointer-events: none;
+  animation: tTipFade 6s forwards;
+}
+@keyframes tTipFade {
+  0%   { opacity: 0; }
+  12%  { opacity: 1; }
+  70%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ---------------------------------------------------------------
+   右下：动作按钮 —— 尺寸按手游惯例放大（拇指够得到）
+   --------------------------------------------------------------- */
 body.touch-ui #tBtns {
-  position: absolute;
-  right: max(16px, env(safe-area-inset-right));
-  bottom: max(16px, env(safe-area-inset-bottom));
+  position: fixed;
+  right: max(14px, env(safe-area-inset-right));
+  bottom: max(12px, env(safe-area-inset-bottom));
   display: grid;
-  grid-template-columns: repeat(3, auto);
+  grid-template-columns: 76px 76px 92px;
+  grid-template-rows: 76px 92px;
   gap: 10px;
-  justify-items: end;
   align-items: end;
+  justify-items: end;
   pointer-events: auto;
 }
 
 body.touch-ui .tbtn {
   pointer-events: auto;
   touch-action: none;
-  border: 2px solid rgba(255,255,255,.35);
-  background: rgba(20,26,34,.55);
-  color: #e8edf4;
+  border: 2px solid rgba(255,255,255,.42);
+  background: rgba(18,23,31,.62);
+  color: #eef3f9;
   border-radius: 50%;
-  width: 66px; height: 66px;
-  font-size: 13px; font-weight: 700;
+  width: 76px; height: 76px;
+  font-size: 15px; font-weight: 700;
   letter-spacing: 1px;
   display: flex; align-items: center; justify-content: center;
   -webkit-tap-highlight-color: transparent;
+  backdrop-filter: blur(2px);
+  text-shadow: 0 1px 3px rgba(0,0,0,.6);
 }
-body.touch-ui .tbtn.sm { width: 54px; height: 54px; font-size: 12px; }
+body.touch-ui .tbtn.sm { width: 66px; height: 66px; font-size: 13px; }
+
+/* 开火：最大、最显眼，放在拇指自然落点 */
 body.touch-ui .tbtn.fire {
-  width: 84px; height: 84px; font-size: 15px;
-  background: rgba(190,50,40,.62);
-  border-color: rgba(255,140,130,.65);
+  width: 92px; height: 92px;
+  font-size: 17px;
+  background: rgba(196,52,42,.68);
+  border-color: rgba(255,150,140,.75);
   grid-column: 3; grid-row: 2;
 }
-body.touch-ui .tbtn:active { background: rgba(255,209,102,.42); border-color: rgba(255,209,102,.9); }
+/* 瞄准：次大，位于开火上方 */
+body.touch-ui .tbtn#tAim {
+  width: 76px; height: 76px;
+  grid-column: 2; grid-row: 2;
+  background: rgba(40,70,110,.62);
+  border-color: rgba(120,180,255,.65);
+}
+body.touch-ui .tbtn:active,
+body.touch-ui .tbtn.on { background: rgba(255,209,102,.55); border-color: rgba(255,209,102,.95); }
+body.touch-ui .tbtn.off { opacity: .45; }
+body.touch-ui .tbtn.alert { box-shadow: 0 0 0 3px rgba(255,90,80,.75); animation: tPulse .9s infinite; }
+@keyframes tPulse { 50% { box-shadow: 0 0 0 7px rgba(255,90,80,.15); } }
 
-/* ---------- 竖屏提示 ---------- */
+/* ---------------------------------------------------------------
+   武器切换条：横向一排，拇指可扫到
+   --------------------------------------------------------------- */
+body.touch-ui #tWeaponBar {
+  position: fixed;
+  left: 50%;
+  bottom: max(10px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  pointer-events: auto;
+}
+body.touch-ui .twpn {
+  pointer-events: auto;
+  touch-action: none;
+  min-width: 58px;
+  height: 44px;              /* 明确高度：保证拇指可点（>=44px 是移动端最小触控尺寸） */
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.28);
+  background: rgba(18,23,31,.55);
+  color: #cfd8e3;
+  font-size: 12px;
+  letter-spacing: 1px;
+  -webkit-tap-highlight-color: transparent;
+}
+body.touch-ui .twpn.on {
+  background: rgba(255,209,102,.75);
+  border-color: rgba(255,209,102,.95);
+  color: #1a1206;
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------------
+   竖屏提示
+   --------------------------------------------------------------- */
 body.touch-ui #tRotate {
   display: none;
-  position: absolute; inset: 0;
-  background: rgba(8,10,14,.93);
+  position: fixed; inset: 0;
+  background: rgba(8,10,14,.94);
   color: #ffd166;
-  z-index: 70;
+  z-index: 80;
   align-items: center; justify-content: center;
   pointer-events: auto;
   text-align: center;
@@ -92,14 +180,17 @@ body.touch-ui #tRotate {
 body.touch-ui #tRotate .tRotateBox { font-size: 44px; line-height: 1.5; }
 body.touch-ui #tRotate .tRotateHint { font-size: 12px; color: #9fb3c8; letter-spacing: 1px; margin-top: 8px; }
 
-/* ---------- 横屏时压扁 HUD，避免遮挡 ---------- */
-@media (max-height: 480px) {
+/* ---------------------------------------------------------------
+   横屏窄高度：压 HUD，给操作区让位
+   --------------------------------------------------------------- */
+@media (max-height: 500px) {
   body.touch-ui #healthWrap { width: 150px; }
   body.touch-ui #hpText { font-size: 26px; }
   body.touch-ui #ammoCur { font-size: 30px; }
-  body.touch-ui #minimapWrap { width: 118px; }
-  body.touch-ui #mm { width: 104px; height: 104px; }
-  body.touch-ui #slots { display: none; }   /* 窄屏用按钮切换武器，槽位条太挤 */
+  body.touch-ui #minimapWrap { width: 112px; }
+  body.touch-ui #mm { width: 100px; height: 100px; }
+  body.touch-ui #slots { display: none; }       /* 用触控武器条代替 */
   body.touch-ui #teamStat { font-size: 11px; gap: 6px; padding: 4px 10px; }
   body.touch-ui #objective { font-size: 11px; }
+  body.touch-ui #radio { display: none; }
 }
