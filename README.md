@@ -5,6 +5,8 @@
 > ⚠ **运行方式已变更**：模型改为标准 `.glb`，由服务器通过 HTTP 提供，因此**不再支持双击 `index.html`**。
 > 请执行 `node server.js`，然后浏览器打开 <http://localhost:8080>（根路径就是游戏本体）。
 > 直接双击会看到明确的「请启动服务」提示，而不是空白页或方块人。
+>
+> 📱 **手机/平板可直接玩**：同一地址在移动浏览器打开即自动启用触控层（左摇杆移动 + 右半屏转视角 + 动作按钮），**建议横屏**。
 
 Three.js 浏览器端第一人称战术射击。红蓝两队 AI 对抗（每队 10 人），玩家加入蓝队。**据点占领玩法**：A/B/C 三个据点，站在圈内人数多的一方推进占领进度，占领 +25 分并持续产分（每 2s +1），击杀 +1；10 分钟时间到比分高者胜。客户端 + 独立 Node.js WebSocket 服务端，零外部美术资源（所有模型为 Three.js 内置几何体组合、纹理为程序化生成）。
 
@@ -18,6 +20,7 @@ battlegame/
 ├── js/
 │   ├── glb.js        # 零依赖 glTF 2.0 二进制解析器（手写，不引入打包器/ESM）
 │   ├── assetLoader.js# 模型资源预加载（HTTP → GLB，失败明确报错）
+│   ├── touch.js      # 移动端触控层（左摇杆/右半屏视角/动作按钮；桌面自动禁用）
 │   ├── core.js       # 常量 / 工具 / 噪声
 │   ├── audio.js      # WebAudio 程序化合成音效
 │   ├── textures.js   # 程序化纹理 + 外部纹理覆盖接口
@@ -116,6 +119,7 @@ node test/qa/_qa_v29_settings.js  # 单套质量门禁（其余套件在 test/qa
 node test/glb-runtime-test.js   # HTTP → GLB 解析 → THREE 几何 全链路
 node test/static-serving-test.js# 静态服务：GLB/MIME/Content-Length/路径穿越/双传输分支
 node test/site-check.js         # 整站：所有引用可达 + 脚本顺序 + 清单一致 + file:// 提示
+node test/touch-check.js        # 移动端：设备判定/摇杆移动/转视角/不依赖 Pointer Lock/竖屏提示
 # 另开终端起服务后：
 node server.js                  # 起服务（默认 8080）
 node test/server-test.js        # 服务端协议回归：握手/建房/加入/state 路由/事件广播
@@ -147,6 +151,20 @@ node test/server-test.js        # 服务端协议回归：握手/建房/加入/s
 | M | 迫击炮视角（曲射火力，20s 冷却，10 发/局） |
 | Tab | 记分板 |
 | Esc | 暂停 / 释放鼠标 |
+
+### 移动端操作（手机/平板）
+
+打开同一地址即自动启用，无需设置；加 `?touch=1` 可在桌面浏览器强制预览触控层。
+
+| 操作 | 功能 |
+|---|---|
+| 左下虚拟摇杆 | 移动（推满 = 疾跑） |
+| 右半屏拖动 | 转视角（等同鼠标瞄准） |
+| 「开火」按钮 | 按住连发；选消耗品时变使用/投掷 |
+| 「瞄准」按钮 | 按住开镜（等同右键） |
+| 换弹 / 跳 / 交互 / 手雷 | 对应键盘 R / 空格 / E / G |
+
+> 竖屏会提示「请横屏游玩」；触控模式下不依赖 Pointer Lock（移动浏览器不支持）。
 
 ## 武器数据（有 rationale 的设计值，未经 playtest 的部分标 [PLACEHOLDER]）
 

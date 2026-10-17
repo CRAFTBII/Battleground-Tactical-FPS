@@ -1055,8 +1055,14 @@ const Game = {
 };
 function now_s() { return performance.now() / 1000; }
 function requestPointerLockSafe() {
+  // 移动端触控层接管输入：浏览器不支持 Pointer Lock，直接旁路（PC.forceLocked 已在 TouchUI.init 置位）
+  if (typeof TouchUI !== 'undefined' && TouchUI.active) { PC.forceLocked = true; return; }
   const el = renderer.domElement;
-  try { el.requestPointerLock(); } catch (e) { }
+  try {
+    const r = el.requestPointerLock();
+    // 新版浏览器返回 Promise；失败时（部分移动端/iframe）不抛出，这里静默兜底
+    if (r && typeof r.catch === 'function') r.catch(() => { });
+  } catch (e) { }
 }
 
 /* ---------- AI 大脑 ---------- */

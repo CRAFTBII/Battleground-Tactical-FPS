@@ -65,10 +65,13 @@ const waitReady = (n = 60) => new Promise((res, rej) => {
     const iGlb = scripts.indexOf('js/glb.js');
     const iAL = scripts.indexOf('js/assetLoader.js');
     const iModels = scripts.indexOf('js/models.js');
+    const iTouch = scripts.indexOf('js/touch.js');
     const iMain = scripts.indexOf('js/main.js');
-    (iGlb >= 0 && iAL > iGlb && iModels > iAL && iMain === scripts.length - 1)
-      ? ok('脚本顺序正确', 'glb#' + iGlb + ' assetLoader#' + iAL + ' models#' + iModels + ' main#' + iMain + '/' + (scripts.length - 1))
-      : bad('脚本顺序错误', 'glb=' + iGlb + ' assetLoader=' + iAL + ' models=' + iModels + ' main=' + iMain);
+    // 依赖顺序：glb → assetLoader → models；touch 在 main 之前（main.init 会调 TouchUI.init）；main 最后
+    const orderOk = iGlb >= 0 && iAL > iGlb && iModels > iAL && iTouch >= 0 && iTouch < iMain && iMain === scripts.length - 1;
+    orderOk
+      ? ok('脚本顺序正确', 'glb#' + iGlb + ' assetLoader#' + iAL + ' models#' + iModels + ' touch#' + iTouch + ' main#' + iMain + '/' + (scripts.length - 1))
+      : bad('脚本顺序错误', 'glb=' + iGlb + ' assetLoader=' + iAL + ' models=' + iModels + ' touch=' + iTouch + ' main=' + iMain + '/' + (scripts.length - 1));
 
     // 4) 全部脚本可执行（只验证语法/加载不炸，不跑渲染循环）
     const ctx = {}; vm.createContext(ctx);

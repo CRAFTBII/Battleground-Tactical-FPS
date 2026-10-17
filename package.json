@@ -1,6 +1,6 @@
 {
   "name": "battleground-tactical-fps",
-  "version": "1.12.0",
+  "version": "1.13.0",
   "description": "战地突击 · Three.js 浏览器端红蓝 AI 战术射击（单机 + 局域网联机）；模型为标准 .glb，必须运行 node server.js 启动服务",
   "main": "server.js",
   "scripts": {

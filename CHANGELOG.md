@@ -7,6 +7,35 @@
 
 ---
 
+## [1.13.0] - 2026-10-17 · 移动端适配（触控操作层）
+
+### 新增
+- **手机/平板可直接玩**：移动浏览器打开 `http://<服务地址>:8080/` 即自动启用触控层。
+- `js/touch.js`（零依赖）：左半屏虚拟摇杆移动 + 右半屏拖动转视角 + 右侧动作按钮
+  （开火/瞄准/换弹/跳/交互/手雷）。摇杆推满自动疾跑。
+- `css/touch.css`：仅在 `body.touch-ui` 下生效，桌面端完全不渲染；横屏窄高度下压缩 HUD。
+- 竖屏遮罩「请横屏游玩」；`viewport-fit=cover` + 安全区适配（刘海屏）。
+
+### 关键修复
+- **Pointer Lock 旁路**：移动浏览器不支持 `requestPointerLock()`，原实现会让 `PC.locked` 永远为
+  false → 视角与移动完全不响应。新增 `PC.forceLocked` + `PC.inputReady()`，触控层接管后不依赖指针锁。
+- `main.js` 的 `pointerlockchange` 处理：触控模式下失去 pointerlock 是常态，不再据此弹出暂停。
+- `requestPointerLockSafe()`：触控模式直接旁路，避免移动端产生无意义的失败 Promise。
+
+### 兼容性
+- 桌面端行为完全不变（键鼠 + Pointer Lock 原路径未改）。
+- URL 加 `?touch=1` 可在桌面强制预览触控层，`?touch=0` 强制关闭，便于调试。
+- `js/touch.js` 对 `document.body.classList` 做了防御（无头测试环境无该属性时不阻断启动）。
+
+### 测试
+- 新增 `test/touch-check.js`（26 断言）：设备判定、摇杆移动、右半屏转视角、pitch 夹紧、
+  Pointer Lock 旁路、竖屏提示、桌面不激活、`?touch=1` 强制开关。
+- 既有 23 个套件回归：PASS/FAIL 与基线一致。
+
+---
+
+## [1.12.0] - 2026-10-17 · 去内联：模型改为 .glb 资源，必须起服务才能玩
+
 ## [1.12.0] - 2026-10-17 · 去内联：模型改为 .glb 资源，必须起服务才能玩
 
 ### 破坏性变更（玩家可见）

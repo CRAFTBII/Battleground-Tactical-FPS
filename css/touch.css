@@ -1,0 +1,105 @@
+/* =====================================================================
+   移动端触控层 —— 只在 body.touch-ui 时生效，桌面端完全不渲染
+   ===================================================================== */
+
+#touchLayer { display: none; }
+
+body.touch-ui #touchLayer {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 60;                 /* 在游戏画面之上、菜单之下 */
+  pointer-events: none;        /* 默认穿透，只有具体控件接收触摸 */
+  touch-action: none;          /* 禁止浏览器手势（滚动/缩放） */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* 触控设备隐藏桌面键盘提示，FPS 全屏时不显示鼠标相关文案 */
+body.touch-ui #radioHints { display: none !important; }
+
+/* ---------- 左下：虚拟摇杆 ---------- */
+body.touch-ui #tStick {
+  position: absolute;
+  left: max(18px, env(safe-area-inset-left));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  width: 132px; height: 132px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.07);
+  border: 2px solid rgba(255,255,255,.22);
+  pointer-events: auto;
+  touch-action: none;
+}
+
+body.touch-ui #tKnob {
+  position: absolute; left: 50%; top: 50%;
+  width: 56px; height: 56px; margin: -28px 0 0 -28px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.42);
+  border: 2px solid rgba(255,255,255,.75);
+  box-shadow: 0 0 14px rgba(0,0,0,.35);
+  will-change: transform;
+}
+
+/* ---------- 右下：动作按钮 ---------- */
+body.touch-ui #tBtns {
+  position: absolute;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  gap: 10px;
+  justify-items: end;
+  align-items: end;
+  pointer-events: auto;
+}
+
+body.touch-ui .tbtn {
+  pointer-events: auto;
+  touch-action: none;
+  border: 2px solid rgba(255,255,255,.35);
+  background: rgba(20,26,34,.55);
+  color: #e8edf4;
+  border-radius: 50%;
+  width: 66px; height: 66px;
+  font-size: 13px; font-weight: 700;
+  letter-spacing: 1px;
+  display: flex; align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+body.touch-ui .tbtn.sm { width: 54px; height: 54px; font-size: 12px; }
+body.touch-ui .tbtn.fire {
+  width: 84px; height: 84px; font-size: 15px;
+  background: rgba(190,50,40,.62);
+  border-color: rgba(255,140,130,.65);
+  grid-column: 3; grid-row: 2;
+}
+body.touch-ui .tbtn:active { background: rgba(255,209,102,.42); border-color: rgba(255,209,102,.9); }
+
+/* ---------- 竖屏提示 ---------- */
+body.touch-ui #tRotate {
+  display: none;
+  position: absolute; inset: 0;
+  background: rgba(8,10,14,.93);
+  color: #ffd166;
+  z-index: 70;
+  align-items: center; justify-content: center;
+  pointer-events: auto;
+  text-align: center;
+  font-size: 15px;
+  letter-spacing: 2px;
+}
+body.touch-ui #tRotate .tRotateBox { font-size: 44px; line-height: 1.5; }
+body.touch-ui #tRotate .tRotateHint { font-size: 12px; color: #9fb3c8; letter-spacing: 1px; margin-top: 8px; }
+
+/* ---------- 横屏时压扁 HUD，避免遮挡 ---------- */
+@media (max-height: 480px) {
+  body.touch-ui #healthWrap { width: 150px; }
+  body.touch-ui #hpText { font-size: 26px; }
+  body.touch-ui #ammoCur { font-size: 30px; }
+  body.touch-ui #minimapWrap { width: 118px; }
+  body.touch-ui #mm { width: 104px; height: 104px; }
+  body.touch-ui #slots { display: none; }   /* 窄屏用按钮切换武器，槽位条太挤 */
+  body.touch-ui #teamStat { font-size: 11px; gap: 6px; padding: 4px 10px; }
+  body.touch-ui #objective { font-size: 11px; }
+}

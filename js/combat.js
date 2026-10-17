@@ -776,6 +776,12 @@ const PC = {
   lean: 0, // 侧身：-1 左倾 / 0 中立 / +1 右倾（平滑过渡，相机与模型同向；camera.rotation.z 正=画面右倾）
   keys: new Set(), prone: false, // 潜伏（Ctrl 按住）：相机降低 + 移动变慢 + AI 更难命中
   fly: false, speedMul: 1, // 调试指令：/enablefly 飞行浮空；/speed 移动速度倍率
+  // 移动端：浏览器不支持 Pointer Lock，触控层置位后视作已锁定（不依赖 pointerLockElement）
+  forceLocked: false,
+  /** 输入是否已就绪：桌面看 Pointer Lock，触控看 forceLocked */
+  inputReady() { return this.locked || this.forceLocked; },
+  /** 触控摇杆写入的移动向量（-1..1），null 表示没有触控输入 */
+  touchMove: null,
   safeYaw(y = this.yaw) {
     const v = Number.isFinite(y) ? y : 0;
     const m = Math.PI * 2;
@@ -803,7 +809,7 @@ const PC = {
   },
   init() {
     document.addEventListener('mousemove', e => {
-      if (!this.locked || Game.phase !== 'playing') return;
+      if (!this.inputReady() || Game.phase !== 'playing') return;
       if (!Number.isFinite(e.movementX) || !Number.isFinite(e.movementY)) return;
       // v2.10 视角防倒置：sens 被污染(NaN,设置清空/外部写入)会让 pitch/yaw 永久 NaN → 相机翻转。
       // 非有限 sens 回退默认；结果非有限丢弃（保持上帧）；已被污染则从 0 重启（防卡视角）
@@ -823,10 +829,10 @@ const PC = {
     });
     // 滚轮：迫击炮模式下调整仰角（向上滚 = 更高角度 = 射程更近）
     document.addEventListener('wheel', e => {
-      if (this.locked && Game.mortarMode && Game.phase === 'playing') {
+      if (this.inputReady() && Game.mortarMode && Game.phase === 'playing') {
         Game.mortarAngle = U.clamp(Game.mortarAngle - Math.sign(e.deltaY) * 3, 20, 78);
         e.preventDefault();
-      } else if (this.locked && !Game.mortarMode && Game.phase === 'playing') {
+      } else if (this.inputReady() && !Game.mortarMode && Game.phase === 'playing') {
         // 滚轮切换热键槽（Minecraft 风格循环）
         const order = ['pistol', 'rifle', 'sniper', 'shotgun', 'medkit', 'armorkit', 'grenade', 'smoke'];
         const i = order.indexOf(PlayerGun.cur);
@@ -917,7 +923,7 @@ const PC = {
       if (a === 'scoreboard') UI.scoreboard(false);
     });
     document.addEventListener('mousedown', e => {
-      if (!this.locked || Game.phase !== 'playing') return;
+      if (!this.inputReady() || Game.phase !== 'playing') return;
       if (e.button === 0) {
         if (Game.mortarMode) Game.fireMortar();
         else if (PlayerGun.cur === 'medkit') PlayerGun.useMedkit();      // 选中医疗包 → 左键使用
@@ -955,8 +961,8 @@ const PC = {
   update(dt) {
     // 聊天空闲（T 键输入）：仅停玩家操控输入，重力/落地/相机照常——避免空中悬停
     const chatFree = !!window.__chatOpen;
-    if ((!this.locked && !chatFree) || Game.phase !== 'playing' || Game.player.dead) return;
-    const inputOK = this.locked && !chatFree; // 聊天时不读取任何移动/跳跃输入
+    if ((!this.inputReady() && !chatFree) || Game.phase !== 'playing' || Game.player.dead) return;
+    const inputOK = this.inputReady() && !chatFree; // 聊天时不读取任何移动/跳跃输入
     const p = Game.player;
     
     // 键盘侧身：, 向左偏 / . 向右偏（相机 roll + 人物模型 roll，不影响 yaw 朝向与移动方向）
@@ -975,6 +981,7 @@ const PC = {
       if (inputOK && this.keys.has(Settings.key('moveB'))) f -= 1;
       if (inputOK && this.keys.has(Settings.key('moveR'))) s += 1;
       if (inputOK && this.keys.has(Settings.key('moveL'))) s -= 1;
+      if (inputOK && this.touchMove) { f += this.touchMove.f; s += this.touchMove.s; } // 触控摇杆（倒地爬行同样可用）
       const speed = CFG.CRAWL_SPEED;
       const sin = Math.sin(this.yaw), cos = Math.cos(this.yaw);
       const mx = (-sin * f + cos * s) * speed, mz = (-cos * f - sin * s) * speed;
@@ -1006,7 +1013,10 @@ const PC = {
     if (inputOK && this.keys.has(Settings.key('moveB'))) f -= 1;
     if (inputOK && this.keys.has(Settings.key('moveR'))) s += 1;
     if (inputOK && this.keys.has(Settings.key('moveL'))) s -= 1;
-    const sprint = inputOK && this.keys.has(Settings.key('sprint')) && f > 0 && !this.prone; // 潜伏时不能疾跑
+    // 触控摇杆：模拟量（-1..1），与键盘叠加后统一 clamp，避免斜向超速
+    if (inputOK && this.touchMove) { f += this.touchMove.f; s += this.touchMove.s; }
+    f = U.clamp(f, -1, 1); s = U.clamp(s, -1, 1);
+    const sprint = inputOK && (this.keys.has(Settings.key('sprint')) || this.touchSprint) && f > 0 && !this.prone; // 潜伏时不能疾跑
     const mul = this.speedMul && this.speedMul > 0 ? this.speedMul : 1; // /speed 倍率
     const speed = (sprint ? CFG.SPRINT : CFG.WALK) * (Game.mortarMode ? 0 : 1) * (this.prone ? 0.45 : 1) * mul; // 潜伏爬行 45% 速度
     const sin = Math.sin(this.yaw), cos = Math.cos(this.yaw);

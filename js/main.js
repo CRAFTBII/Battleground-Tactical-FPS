@@ -117,6 +117,11 @@ function wireMenu() {
   $('spectateQuit').onclick = backToMenu;
   document.addEventListener('pointerlockchange', () => {
     const locked = document.pointerLockElement === renderer.domElement;
+    // 触控模式不使用 Pointer Lock：失去 pointerlock 对触控玩家是常态，不能据此弹暂停
+    if (typeof TouchUI !== 'undefined' && TouchUI.active) {
+      if (PC.forceLocked) { paused = false; $('paused').style.display = 'none'; }
+      return;
+    }
     // 背包/设置/聊天输入框打开时释放鼠标不弹暂停（聊天用 window.__chatOpen 标记）
     if (!locked && Game.phase === 'playing' && !Game.dead && !Game.mortarMode
       && !window.__chatOpen
@@ -160,9 +165,11 @@ function init() {
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
+  // 移动端触控层：必须在 PC.init() 之后（要用 PC 的状态），无需 Pointer Lock
+  if (typeof TouchUI !== 'undefined' && TouchUI.init) TouchUI.init();
   wireMenu();
   if (typeof Ticker !== 'undefined' && Ticker.init) Ticker.init();
-  window.BATTLEGROUND = { Game, World, Net, PC, PlayerGun, FX, UI, Unit };
+  window.BATTLEGROUND = { Game, World, Net, PC, PlayerGun, FX, UI, Unit, TouchUI };
   loop();
 }
 /* 性能自适应：FPS 长期偏低 → 关闭阴影 → 再降像素比 */
