@@ -36,14 +36,27 @@ for (const k of Object.keys(CONFIGS)) {
   cfgExtent[k] = { w: +w.toFixed(2), d: +d.toFixed(2), h: +h.toFixed(2) };
 }
 
-// ---- 地图声明 ----
+// ---- 地图声明：兼容 scale 与显式 w/d/h ----
 const placements = [];
 for (const map of ['desert', 'port', 'suburb']) {
   const src = fs.readFileSync(R('js/maps/' + map + '.js'), 'utf8');
-  const re = /type:\s*'model',\s*key:\s*'(\w+)',\s*x:\s*([\d.-]+),\s*z:\s*([\d.-]+),\s*ry:\s*([\d.-]+),\s*w:\s*([\d.-]+),\s*d:\s*([\d.-]+),\s*h:\s*([\d.-]+)/g;
+  const re = /type:\s*'model',\s*key:\s*'(\w+)'/g;
   let m;
   while ((m = re.exec(src))) {
-    placements.push({ map, key: m[1], x: +m[2], z: +m[3], ry: +m[4], w: +m[5], d: +m[6], h: +m[7] });
+    const start = m.index;
+    const next = src.indexOf('\n      {', start + 1);
+    const end = next < 0 ? src.length : next;
+    const block = src.slice(start, end);
+    const num = name => {
+      const hit = block.match(new RegExp('\\b' + name + ':\\s*([+-]?(?:\\d+\\.?\\d*|\\.\\d+))'));
+      return hit ? Number(hit[1]) : null;
+    };
+    const key = m[1], t = dims[key];
+    const scale = num('scale');
+    let w = num('w'), d = num('d'), h = num('h');
+    if (scale !== null && t && !t.legacy) { w = t.w * scale; d = t.d * scale; h = t.h * scale; }
+    if (w !== null && d !== null && h !== null)
+      placements.push({ map, key, w, d, h, scale, legacy: !!(t && t.legacy) });
   }
 }
 
