@@ -8,6 +8,7 @@
     "assets": "node tools/export_assets.cjs && node tools/gen_manifest.cjs"
   },
   "dependencies": {
+    "@dimforge/rapier3d-compat": "^0.21.0",
     "@jscad/modeling": "^2.13.0",
     "ws": "^8.17.0"
   }

@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Battleground v4 · 建筑沙盒</title>
+<style>
+  html,body{margin:0;height:100%;background:#0d1116;color:#dbe6f2;font:13px/1.6 system-ui,"Segoe UI",sans-serif;overflow:hidden}
+  #c{display:block;width:100%;height:100%}
+  #hud{position:fixed;left:14px;top:14px;background:rgba(8,12,18,.82);border:1px solid #283446;
+       padding:12px 14px;min-width:310px;max-width:420px;pointer-events:none;backdrop-filter:blur(4px)}
+  #hud h1{font-size:14px;letter-spacing:2px;margin:0 0 6px;color:#ffd166}
+  #hud .muted{color:#8fa2b8}
+  #hud .row{display:flex;justify-content:space-between;gap:14px}
+  #hud .k{color:#8fa2b8}
+  #hud .v{color:#fff;font-variant-numeric:tabular-nums}
+  #hud .ok{color:#5dd39e}.bad{color:#ff6b6b}
+  #hud .hint{margin-top:8px;padding-top:8px;border-top:1px solid #283446;color:#8fa2b8;font-size:12px}
+  #hud .btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;pointer-events:auto}
+  #hud button{background:#182334;color:#cfe0f5;border:1px solid #2f425c;padding:4px 8px;cursor:pointer;font:12px inherit}
+  #hud button:hover{border-color:#ffd166;color:#ffd166}
+  #err{position:fixed;left:0;right:0;top:0;background:#7a1f1f;color:#ffdada;padding:10px 16px;display:none;z-index:9;font:13px monospace}
+  #start{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(5,8,12,.72);z-index:8}
+  #start .box{background:#121a24;border:1px solid #32455e;padding:22px 28px;text-align:center}
+  #start h2{margin:0 0 6px;color:#ffd166;letter-spacing:3px}
+  #start p{color:#9fb2c8;margin:6px 0 14px}
+  #start button{background:#1d2c3f;color:#eaf3ff;border:1px solid #3c5674;padding:9px 18px;cursor:pointer;font:14px inherit}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="err"></div>
+<div id="start"><div class="box"><h2>BATTLEGROUND v4 · MODEL SANDBOX</h2>
+  <p>角色 2.5m / 相机眼高 2.30m / 胶囊 0.45m · Rapier 3D</p>
+  <button id="btnStart">点击进入（锁定鼠标）</button></div></div>
+<div id="hud">
+  <h1>建筑沙盒 · v4 Step 1</h1>
+  <div class="row"><span class="k">角色</span><span class="v" id="vActor">—</span></div>
+  <div class="row"><span class="k">相机眼高</span><span class="v" id="vEye">—</span></div>
+  <div class="row"><span class="k">位置</span><span class="v" id="vPos">—</span></div>
+  <div class="row"><span class="k">着地</span><span class="v" id="vGround">—</span></div>
+  <div class="row"><span class="k">静态碰撞</span><span class="v" id="vCol">—</span></div>
+  <div class="btns">
+    <button data-tp="house">房子</button>
+    <button data-tp="cover">掩体</button>
+    <button data-tp="base">基地</button>
+    <button data-tp="estate">庄园</button>
+    <button id="btnCol">COL 线框 (C)</button>
+  </div>
+  <div class="hint">WASD 移动 · Shift 疾跑 · 空格 跳 · 鼠标看 · Esc 释放鼠标<br>
+    模型：house 11×8.8×9 · cover 14.5×2.8×6.3 · base 90×16×75 · estate 80×10×60</div>
+</div>
+<script src="/libs/three.min.js"></script>
+<script src="/js/glb.js"></script>
+<script src="/js/core.js"></script>
+<script src="/js/actors.js"></script>
+<script type="module">
+import * as RAPIER from '/libs/rapier/rapier.mjs';
+
+const errEl = document.getElementById('err');
+function fail(msg) { errEl.style.display = 'block'; errEl.textContent = '⚠ ' + msg; console.error(msg); }
+window.addEventListener('error', e => fail(e.message));
+
+await RAPIER.init();
+await ActorCatalog.load().catch(() => ActorCatalog.applyDefault());
+const prof = ActorCatalog.get();
+const EYE = prof.eyeHeight;
+const R = prof.capsule.radius;
+const HH = prof.capsule.halfHeight || (prof.height - 2 * R) / 2;
+
+/* ---------- three ---------- */
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x8fb4cc);
+scene.fog = new THREE.Fog(0x8fb4cc, 120, 420);
+const camera = new THREE.PerspectiveCamera(prof.camera.fov || 70, innerWidth / innerHeight, prof.camera.near || 0.1, prof.camera.far || 1200);
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+scene.add(new THREE.HemisphereLight(0xdfeaff, 0x3d4a3a, 0.9));
+const sun = new THREE.DirectionalLight(0xfff2d8, 1.2);
+sun.position.set(40, 70, 30);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = -60; sun.shadow.camera.right = 60;
+sun.shadow.camera.top = 60; sun.shadow.camera.bottom = -60;
+sun.shadow.camera.far = 260;
+scene.add(sun); scene.add(sun.target);
+scene.add(new THREE.AmbientLight(0x8899aa, 0.25));
+
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), new THREE.MeshLambertMaterial({ color: 0x4a6b3c }));
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+const grid = new THREE.GridHelper(240, 240, 0x668855, 0x39502f);
+grid.position.y = 0.01; scene.add(grid);
+
+/* ---------- Rapier ---------- */
+const world = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
+const fixBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
+world.createCollider(RAPIER.ColliderDesc.cuboid(120, 0.5, 120).setTranslation(0, -0.5, 0), fixBody);
+
+const playerBody = world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(0, R + HH, 18));
+const playerCol = world.createCollider(RAPIER.ColliderDesc.capsule(HH, R), playerBody);
+const controller = world.createCharacterController(0.02);
+controller.enableAutostep(prof.stepHeight || 0.55, 0.2, true);
+controller.enableSnapToGround(0.6);
+controller.setApplyImpulsesToDynamicBodies(true);
+controller.setCharacterMass(80);
+
+/* ---------- models ---------- */
+const MODELS = [
+  { key: 'house', url: '/models/buildings/house.glb', x: 0, z: 0, ry: 0 },
+  { key: 'cover', url: '/models/buildings/cover.glb', x: 16, z: 2, ry: 0 },
+  { key: 'base', url: '/models/buildings/base.glb', x: 0, z: -52, ry: 0 },
+  { key: 'estate', url: '/models/buildings/estate.glb', x: -62, z: -18, ry: Math.PI / 2 }
+];
+const debugGroup = new THREE.Group();
+debugGroup.visible = false;
+scene.add(debugGroup);
+let staticCols = 0, loaded = 0;
+
+async function loadModel(def) {
+  const res = await fetch(def.url + '?v=' + Date.now(), { cache: 'no-store' });
+  if (!res.ok) throw new Error(def.url + ' HTTP ' + res.status);
+  const g = GLB.parse(await res.arrayBuffer());
+  const root = GLB.scene(g, { castShadow: true, receiveShadow: true });
+  root.position.set(def.x, 0, def.z);
+  root.rotation.y = def.ry || 0;
+  scene.add(root);
+  root.updateMatrixWorld(true);
+
+  const colGroup = root.getObjectByName('COL__' + def.key);
+  const navGroup = root.getObjectByName('NAV__' + def.key);
+  if (navGroup) navGroup.visible = false;
+
+  if (!colGroup) { console.warn('[sandbox] no COL for ' + def.key); return; }
+  colGroup.visible = false;
+  const body = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
+  colGroup.traverse(o => {
+    if (!o.isMesh || !o.geometry) return;
+    const geo = o.geometry.clone();
+    geo.applyMatrix4(o.matrixWorld);
+    if (!geo.attributes.position) return;
+    const pos = new Float32Array(geo.attributes.position.array);
+    let idx;
+    if (geo.index) idx = new Uint32Array(geo.index.array);
+    else {
+      idx = new Uint32Array(pos.length / 3);
+      for (let i = 0; i < idx.length; i++) idx[i] = i;
+    }
+    if (idx.length < 3) return;
+    world.createCollider(RAPIER.ColliderDesc.trimesh(pos, idx), body);
+    staticCols++;
+    // debug wireframe
+    const wire = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0x43ff9e, wireframe: true, transparent: true, opacity: 0.8, depthWrite: false }));
+    debugGroup.add(wire);
+  });
+  // anchor markers
+  root.traverse(o => {
+    if (o.name && o.name.startsWith('ANCHOR__')) {
+      const s = new THREE.Mesh(new THREE.SphereGeometry(0.18, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffd166 }));
+      const p = new THREE.Vector3(); o.getWorldPosition(p); s.position.copy(p); s.position.y += 1.0;
+      debugGroup.add(s);
+    }
+  });
+  loaded++;
+}
+
+try {
+  for (const m of MODELS) await loadModel(m);
+} catch (e) { fail('模型加载失败：' + e.message); }
+
+/* ---------- player ---------- */
+const keys = new Set();
+let yaw = 0, pitch = 0, vy = 0, grounded = false;
+let locked = false;
+const canvas = document.getElementById('c');
+const startEl = document.getElementById('start');
+const btnStart = document.getElementById('btnStart');
+
+function lock() {
+  canvas.requestPointerLock && canvas.requestPointerLock();
+}
+btnStart.onclick = () => { startEl.style.display = 'none'; lock(); };
+canvas.onclick = () => { if (!locked) lock(); };
+document.addEventListener('pointerlockchange', () => { locked = document.pointerLockElement === canvas; });
+document.addEventListener('mousemove', e => {
+  if (!locked) return;
+  yaw -= e.movementX * 0.0022;
+  pitch -= e.movementY * 0.0022;
+  pitch = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, pitch));
+});
+addEventListener('keydown', e => {
+  keys.add(e.code);
+  if (e.code === 'Space') e.preventDefault();
+  if (e.code === 'KeyC') { debugGroup.visible = !debugGroup.visible; }
+});
+addEventListener('keyup', e => keys.delete(e.code));
+
+function teleport(x, z, yawV) {
+  yaw = yawV;
+  pitch = 0;
+  vy = 0;
+  playerBody.setTranslation({ x, y: R + HH, z }, true);
+  playerBody.setNextKinematicTranslation({ x, y: R + HH, z });
+}
+document.querySelectorAll('[data-tp]').forEach(b => {
+  b.onclick = () => {
+    const k = b.dataset.tp;
+    if (k === 'house') teleport(0, 16, 0);
+    if (k === 'cover') teleport(0, 20, 0);
+    if (k === 'base') teleport(0, -20, 0);
+    if (k === 'estate') teleport(-30, 10, -Math.PI / 2);
+  };
+});
+document.getElementById('btnCol').onclick = () => { debugGroup.visible = !debugGroup.visible; };
+
+/* ---------- loop ---------- */
+const clock = new THREE.Clock();
+let acc = 0;
+const FIXED = 1 / 60;
+const up = new THREE.Vector3();
+function frame() {
+  requestAnimationFrame(frame);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  acc += dt;
+  while (acc >= FIXED) { step(FIXED); acc -= FIXED; }
+  renderer.render(scene, camera);
+}
+function step(dt) {
+  const fwd = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
+  const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
+  const wish = new THREE.Vector3();
+  if (keys.has('KeyW')) wish.add(fwd);
+  if (keys.has('KeyS')) wish.sub(fwd);
+  if (keys.has('KeyD')) wish.add(right);
+  if (keys.has('KeyA')) wish.sub(right);
+  if (wish.lengthSq() > 0) wish.normalize();
+  const sprint = keys.has('ShiftLeft') || keys.has('ShiftRight');
+  const speed = sprint ? 7.8 : 4.4;
+  if (grounded && keys.has('Space')) { vy = 6.2; grounded = false; }
+  vy -= 9.81 * dt;
+  if (vy < -40) vy = -40;
+  const desired = { x: wish.x * speed * dt, y: vy * dt, z: wish.z * speed * dt };
+  controller.computeColliderMovement(playerCol, desired);
+  const mv = controller.computedMovement();
+  const t = playerBody.translation();
+  const nx = t.x + mv.x, ny = t.y + mv.y, nz = t.z + mv.z;
+  playerBody.setNextKinematicTranslation({ x: nx, y: ny, z: nz });
+  grounded = controller.computedGrounded();
+  if (grounded && vy < 0) vy = 0;
+  world.step();
+  const feet = ny - (R + HH);
+  camera.position.set(nx, feet + EYE, nz);
+  camera.rotation.set(pitch, yaw, 0, 'YXZ');
+  sun.position.set(nx + 40, 70, nz + 30);
+  sun.target.position.set(nx, 0, nz);
+  updateHud(nx, feet, nz);
+}
+let hudT = 0;
+function updateHud(x, feet, z) {
+  hudT += FIXED;
+  if (hudT < 0.12) return;
+  hudT = 0;
+  document.getElementById('vActor').textContent = prof.name + ' · H ' + prof.height.toFixed(2) + 'm';
+  document.getElementById('vEye').textContent = EYE.toFixed(2) + 'm';
+  document.getElementById('vPos').textContent = x.toFixed(1) + ', ' + feet.toFixed(2) + ', ' + z.toFixed(1);
+  document.getElementById('vGround').textContent = grounded ? '是' : '否';
+  document.getElementById('vGround').className = 'v ' + (grounded ? 'ok' : 'bad');
+  document.getElementById('vCol').textContent = staticCols + ' 个 trimesh';
+}
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+camera.position.set(0, EYE, 18);
+camera.rotation.set(0, 0, 0, 'YXZ');
+frame();
+console.log('[sandbox] ready', { models: loaded, staticCols, eye: EYE, height: prof.height });
+window.__SANDBOX = { scene, renderer, camera, world, MODELS, prof, playerBody, playerCol, controller, debugGroup, RAPIER, keys, step, teleport,
+  get staticCols() { return staticCols; }, get loaded() { return loaded; },
+  ray(ox, oy, oz, dx, dy, dz, maxToi) {
+    const hit = world.castRay(new RAPIER.Ray({ x: ox, y: oy, z: oz }, { x: dx, y: dy, z: dz }), maxToi || 50, true);
+    return hit ? { toi: hit.timeOfImpact, handle: hit.collider.handle } : null;
+  } };
+</script>
+</body>
+</html>

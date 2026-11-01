@@ -50,10 +50,10 @@ const MIME = {
 };
 
 /** 允许对外提供的目录白名单（其余一律 404，避免把 backup/ .git/ tools/ test/ docs/ 暴露出去） */
-const SERVE_DIRS = ['js', 'css', 'libs', 'models', 'sounds', 'assets'];
+const SERVE_DIRS = ['js', 'css', 'libs', 'models', 'sounds', 'assets', 'data'];
 
 /** 根目录下允许直接访问的文件 */
-const SERVE_ROOT_FILES = ['index.html'];
+const SERVE_ROOT_FILES = ['index.html', 'sandbox.html'];
 
 /**
  * 把 URL 路径解析为磁盘绝对路径；越界/不允许 → null。

@@ -53,3 +53,7 @@ Three.js 右手系，Y-up，1 world unit = 1m；建筑局部原点是 footprint 
 
 ## 运行状态
 旧 `js/world.js` 和旧地图脚本从活动路径移除。新 runtime 未完成时入口应显示“v4 重建中”并中止启动，避免误导性报错。此分支不是可玩版本，也不应合并 main，直到 P0 验收通过。
+
+**可试玩沙盒**：`node server.js` 后打开 `http://localhost:8080/sandbox.html`。
+当前接入 house / cover / base / estate 四个修复模型，Rapier 胶囊控制器，角色 2.5m / 相机 2.3m。
+详见 [sandbox-report.md](sandbox-report.md)。主入口仍是“v4 重建中”。
