@@ -174,27 +174,21 @@ const COMMENT = `    /* ============ v1.4 四地标（models/out 内联数据，
      *   - megatower 巨塔（GLB 36×36×145.5）：前墙大门 + 11层楼板(中央楼梯井) + 奇偶层隔间迷宫（可逐层登顶）
      * 注：垂直爬行依赖游戏楼梯/平台机制；碰撞盒为 AABB 近似（圆形 stadium/冷却塔用外接方墙近似）。 */`;
 
-function apply(modelsPath) {
-  const xl = buildXL();
-  const body = [COMMENT,
-    configToSource('base', xl.base), ',',
-    configToSource('refinery', xl.refinery), ',',
-    configToSource('stadium', xl.stadium), ',',
-    configToSource('megatower', xl.megatower)
-  ].join('\n');
-  const src = fs.readFileSync(modelsPath, 'utf8');
-  const re = /\/\* =+ v1\.4 四地标[\s\S]*?\n    megatower: \{[\s\S]*?\n    \}/;
-  if (!re.test(src)) throw new Error('未在 models.js 找到 v1.4 区块，中止写入');
-  const updated = src.replace(re, body);
-  if (updated === src) throw new Error('替换未发生（正则未命中）');
-  fs.writeFileSync(modelsPath, updated);
-  console.log('已写回', modelsPath);
-  console.log('统计: base', xl.base.colliders.length, 'refinery', xl.refinery.colliders.length,
-    'stadium', xl.stadium.colliders.length, 'megatower', xl.megatower.colliders.length);
+// 安全策略：该生成器中的 OFF / wall / slab 数据属于旧版模型坐标，
+// 不得再写入当前 BuildingLib.CONFIGS。保留 buildXL() 仅供历史对照。
+// 正式碰撞配置必须以 js/models.js 为唯一事实源。
+function apply() {
+  throw new Error(
+    '已阻止写入：此 XL 生成器使用过时的尺寸/门洞数据。请先更新并通过 tools/_validate_xl.js，' +
+    '再由人工审查后修改 js/models.js。'
+  );
 }
 
 if (require.main === module) {
-  const modelsPath = path.join(__dirname, '..', 'js', 'models.js');
-  apply(modelsPath);
+  const xl = buildXL();
+  console.log('[SAFE PREVIEW ONLY] 旧版 XL 生成器不会写入 js/models.js。');
+  console.log('历史配置盒数:', Object.fromEntries(Object.entries(xl).map(([k, v]) => [k, v.colliders.length])));
+  console.error('如需正式更新碰撞配置，请先修正模型坐标与地图 scale，再人工审查变更。');
+  process.exitCode = 2;
 }
 module.exports = { buildXL, configToSource, apply };
