@@ -1,0 +1,3103 @@
+{
+  "sourceDir": "D:\\Projects\\battlegame\\assets\\source-buildings",
+  "files": [
+    {
+      "file": "Tactical_FPS_Buildings.glb",
+      "bytes": 310952,
+      "objects": 371,
+      "meshes": 370,
+      "lights": 0,
+      "cameras": 0,
+      "roots": [
+        {
+          "name": "world",
+          "type": "EMPTY",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "worldBBox": {
+        "min": [
+          -25.67,
+          -6.32,
+          -8.9225
+        ],
+        "max": [
+          28.67,
+          0.02,
+          15.96
+        ],
+        "size": [
+          54.34,
+          6.34,
+          24.8825
+        ]
+      },
+      "totalTris": 11516,
+      "materials": [
+        "Concrete_Dark",
+        "Concrete_Warm_Grey",
+        "Dark_Tinted_Glass",
+        "Faded_Safety_Yellow",
+        "Faded_White_Plaster",
+        "Faded_Wood",
+        "Old_Dark_Wood",
+        "Old_Red_Brick",
+        "Painted_Metal",
+        "Sandbag_Olive_Fabric",
+        "Terracotta_Roof",
+        "Weathered_Plaster",
+        "Weathered_Roof_Metal"
+      ],
+      "images": [],
+      "groups": {
+        "House_A": {
+          "objects": 36,
+          "tris": 432,
+          "bbox": {
+            "min": [
+              -19.19,
+              -3.57,
+              -3.69
+            ],
+            "max": [
+              -10.81,
+              0.0,
+              3.69
+            ],
+            "size": [
+              8.38,
+              3.57,
+              7.38
+            ]
+          }
+        },
+        "House_B": {
+          "objects": 76,
+          "tris": 912,
+          "bbox": {
+            "min": [
+              -4.68,
+              -6.32,
+              -4.235
+            ],
+            "max": [
+              6.12,
+              0.0,
+              4.35
+            ],
+            "size": [
+              10.8,
+              6.32,
+              8.585
+            ]
+          }
+        },
+        "Warehouse": {
+          "objects": 51,
+          "tris": 604,
+          "bbox": {
+            "min": [
+              14.33,
+              -6.14,
+              -5.35
+            ],
+            "max": [
+              28.67,
+              0.0,
+              5.35
+            ],
+            "size": [
+              14.34,
+              6.14,
+              10.7
+            ]
+          }
+        },
+        "Guard": {
+          "objects": 24,
+          "tris": 288,
+          "bbox": {
+            "min": [
+              -7.09,
+              -3.35,
+              11.98
+            ],
+            "max": [
+              -2.91,
+              0.0,
+              15.96
+            ],
+            "size": [
+              4.18,
+              3.35,
+              3.98
+            ]
+          }
+        },
+        "Cover": {
+          "objects": 183,
+          "tris": 9280,
+          "bbox": {
+            "min": [
+              -25.67,
+              -2.08,
+              -8.9225
+            ],
+            "max": [
+              28.325,
+              0.02,
+              15.39
+            ],
+            "size": [
+              53.995,
+              2.1,
+              24.3125
+            ]
+          }
+        }
+      },
+      "meshIssues": {}
+    },
+    {
+      "file": "Tactical_FPS_Additional_Buildings.glb",
+      "bytes": 162692,
+      "objects": 258,
+      "meshes": 257,
+      "lights": 0,
+      "cameras": 0,
+      "roots": [
+        {
+          "name": "world",
+          "type": "EMPTY",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "worldBBox": {
+        "min": [
+          41.775,
+          -7.58,
+          -6.325
+        ],
+        "max": [
+          125.2,
+          0.0,
+          5.7714
+        ],
+        "size": [
+          83.425,
+          7.58,
+          12.0964
+        ]
+      },
+      "totalTris": 3068,
+      "materials": [
+        "Aged_Sand_Plaster",
+        "Aged_Terracotta_Tile",
+        "Concrete_Dark_Weathered",
+        "Concrete_Mid_Grey",
+        "Dark_Roof_Metal",
+        "Faded_Cream_Plaster",
+        "Faded_Safety_Yellow",
+        "Faded_Timber",
+        "Painted_Industrial_Metal",
+        "Rusty_Metal",
+        "Smoky_Blue_Glass",
+        "Weathered_Red_Brick",
+        "Weathered_Timber"
+      ],
+      "images": [],
+      "groups": {
+        "Farmhouse": {
+          "objects": 54,
+          "tris": 640,
+          "bbox": {
+            "min": [
+              41.775,
+              -6.22,
+              -5.65
+            ],
+            "max": [
+              52.225,
+              0.0,
+              4.3899
+            ],
+            "size": [
+              10.45,
+              6.22,
+              10.0399
+            ]
+          }
+        },
+        "Workshop": {
+          "objects": 38,
+          "tris": 448,
+          "bbox": {
+            "min": [
+              56.675,
+              -6.3,
+              -5.7714
+            ],
+            "max": [
+              71.325,
+              0.0,
+              5.7714
+            ],
+            "size": [
+              14.65,
+              6.3,
+              11.5429
+            ]
+          }
+        },
+        "Apartment": {
+          "objects": 97,
+          "tris": 1164,
+          "bbox": {
+            "min": [
+              75.8,
+              -7.58,
+              -6.325
+            ],
+            "max": [
+              88.2,
+              0.0,
+              4.7
+            ],
+            "size": [
+              12.4,
+              7.58,
+              11.025
+            ]
+          }
+        },
+        "PumpStation": {
+          "objects": 43,
+          "tris": 516,
+          "bbox": {
+            "min": [
+              94.825,
+              -5.51,
+              -4.25
+            ],
+            "max": [
+              106.115,
+              0.0,
+              4.2
+            ],
+            "size": [
+              11.29,
+              5.51,
+              8.45
+            ]
+          }
+        },
+        "Bunker": {
+          "objects": 25,
+          "tris": 300,
+          "bbox": {
+            "min": [
+              112.8,
+              -4.49,
+              -3.79
+            ],
+            "max": [
+              125.2,
+              0.0,
+              3.79
+            ],
+            "size": [
+              12.4,
+              4.49,
+              7.58
+            ]
+          }
+        }
+      },
+      "meshIssues": {}
+    },
+    {
+      "file": "large_combat_base.glb",
+      "bytes": 230084,
+      "objects": 70,
+      "meshes": 69,
+      "lights": 0,
+      "cameras": 0,
+      "roots": [
+        {
+          "name": "world",
+          "type": "EMPTY",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "worldBBox": {
+        "min": [
+          -43.275,
+          -11.7,
+          -33.4
+        ],
+        "max": [
+          43.275,
+          0.24,
+          33.275
+        ],
+        "size": [
+          86.55,
+          11.94,
+          66.675
+        ]
+      },
+      "totalTris": 12264,
+      "materials": [
+        "black",
+        "concrete",
+        "concrete_dark",
+        "concrete_light",
+        "crate",
+        "glass",
+        "metal",
+        "metal_light",
+        "olive",
+        "olive_dark",
+        "sand",
+        "white",
+        "wood",
+        "yellow"
+      ],
+      "images": [],
+      "groups": {
+        "00": {
+          "objects": 3,
+          "tris": 72,
+          "bbox": {
+            "min": [
+              -43.0,
+              -0.0475,
+              -33.0
+            ],
+            "max": [
+              43.0,
+              0.24,
+              33.0
+            ],
+            "size": [
+              86.0,
+              0.2875,
+              66.0
+            ]
+          }
+        },
+        "01": {
+          "objects": 1,
+          "tris": 12,
+          "bbox": {
+            "min": [
+              -26.0,
+              -0.2,
+              -17.0
+            ],
+            "max": [
+              26.0,
+              0.0,
+              17.0
+            ],
+            "size": [
+              52.0,
+              0.2,
+              34.0
+            ]
+          }
+        },
+        "02": {
+          "objects": 3,
+          "tris": 2004,
+          "bbox": {
+            "min": [
+              -26.25,
+              -4.5,
+              -17.25
+            ],
+            "max": [
+              26.2,
+              -0.2,
+              17.2
+            ],
+            "size": [
+              52.45,
+              4.3,
+              34.45
+            ]
+          }
+        },
+        "03": {
+          "objects": 3,
+          "tris": 144,
+          "bbox": {
+            "min": [
+              -26.025,
+              -4.3,
+              -17.3
+            ],
+            "max": [
+              26.025,
+              -0.2,
+              17.025
+            ],
+            "size": [
+              52.05,
+              4.1,
+              34.325
+            ]
+          }
+        },
+        "04": {
+          "objects": 1,
+          "tris": 48,
+          "bbox": {
+            "min": [
+              -11.36,
+              -4.5,
+              -11.36
+            ],
+            "max": [
+              11.36,
+              -0.2,
+              11.36
+            ],
+            "size": [
+              22.72,
+              4.3,
+              22.72
+            ]
+          }
+        },
+        "05": {
+          "objects": 1,
+          "tris": 1032,
+          "bbox": {
+            "min": [
+              -25.6,
+              -4.5,
+              -15.0
+            ],
+            "max": [
+              25.6,
+              -0.2,
+              15.0
+            ],
+            "size": [
+              51.2,
+              4.3,
+              30.0
+            ]
+          }
+        },
+        "06": {
+          "objects": 1,
+          "tris": 156,
+          "bbox": {
+            "min": [
+              -26.0,
+              -4.8,
+              -17.0
+            ],
+            "max": [
+              26.0,
+              -4.5,
+              17.0
+            ],
+            "size": [
+              52.0,
+              0.3,
+              34.0
+            ]
+          }
+        },
+        "07": {
+          "objects": 3,
+          "tris": 2388,
+          "bbox": {
+            "min": [
+              -26.24,
+              -8.25,
+              -17.24
+            ],
+            "max": [
+              26.19,
+              -4.8,
+              17.19
+            ],
+            "size": [
+              52.43,
+              3.45,
+              34.43
+            ]
+          }
+        },
+        "08": {
+          "objects": 1,
+          "tris": 1032,
+          "bbox": {
+            "min": [
+              -25.6,
+              -8.25,
+              -15.0
+            ],
+            "max": [
+              25.6,
+              -4.8,
+              15.0
+            ],
+            "size": [
+              51.2,
+              3.45,
+              30.0
+            ]
+          }
+        },
+        "09": {
+          "objects": 4,
+          "tris": 1320,
+          "bbox": {
+            "min": [
+              -21.9,
+              -5.18,
+              -13.0
+            ],
+            "max": [
+              21.9,
+              -0.2,
+              -5.25
+            ],
+            "size": [
+              43.8,
+              4.98,
+              7.75
+            ]
+          }
+        },
+        "10": {
+          "objects": 2,
+          "tris": 60,
+          "bbox": {
+            "min": [
+              -26.4,
+              -9.055,
+              -17.4
+            ],
+            "max": [
+              26.4,
+              -8.25,
+              17.4
+            ],
+            "size": [
+              52.8,
+              0.805,
+              34.8
+            ]
+          }
+        },
+        "11": {
+          "objects": 4,
+          "tris": 276,
+          "bbox": {
+            "min": [
+              -23.1,
+              -11.7,
+              -12.98
+            ],
+            "max": [
+              22.4,
+              -8.57,
+              12.9
+            ],
+            "size": [
+              45.5,
+              3.13,
+              25.88
+            ]
+          }
+        },
+        "12": {
+          "objects": 2,
+          "tris": 96,
+          "bbox": {
+            "min": [
+              -9.0,
+              -1.43,
+              -9.785
+            ],
+            "max": [
+              9.0,
+              -0.2,
+              9.785
+            ],
+            "size": [
+              18.0,
+              1.23,
+              19.57
+            ]
+          }
+        },
+        "13": {
+          "objects": 4,
+          "tris": 336,
+          "bbox": {
+            "min": [
+              -23.75,
+              -6.075,
+              -10.65
+            ],
+            "max": [
+              23.75,
+              -0.195,
+              11.0
+            ],
+            "size": [
+              47.5,
+              5.88,
+              21.65
+            ]
+          }
+        },
+        "14": {
+          "objects": 1,
+          "tris": 72,
+          "bbox": {
+            "min": [
+              -12.27,
+              -3.98,
+              -13.6
+            ],
+            "max": [
+              12.27,
+              -3.86,
+              13.6
+            ],
+            "size": [
+              24.54,
+              0.12,
+              27.2
+            ]
+          }
+        },
+        "20": {
+          "objects": 2,
+          "tris": 660,
+          "bbox": {
+            "min": [
+              -43.275,
+              -2.9,
+              -33.275
+            ],
+            "max": [
+              43.275,
+              0.0,
+              33.275
+            ],
+            "size": [
+              86.55,
+              2.9,
+              66.55
+            ]
+          }
+        },
+        "21": {
+          "objects": 2,
+          "tris": 120,
+          "bbox": {
+            "min": [
+              -7.3,
+              -2.775,
+              -33.4
+            ],
+            "max": [
+              7.3,
+              -0.125,
+              -33.16
+            ],
+            "size": [
+              14.6,
+              2.65,
+              0.24
+            ]
+          }
+        },
+        "22": {
+          "objects": 8,
+          "tris": 648,
+          "bbox": {
+            "min": [
+              -11.31,
+              -3.52,
+              -32.41
+            ],
+            "max": [
+              11.31,
+              0.1,
+              -28.025
+            ],
+            "size": [
+              22.62,
+              3.62,
+              4.385
+            ]
+          }
+        },
+        "23": {
+          "objects": 16,
+          "tris": 1200,
+          "bbox": {
+            "min": [
+              -40.15,
+              -7.27,
+              -30.15
+            ],
+            "max": [
+              40.15,
+              0.0,
+              30.15
+            ],
+            "size": [
+              80.3,
+              7.27,
+              60.3
+            ]
+          }
+        },
+        "24": {
+          "objects": 2,
+          "tris": 180,
+          "bbox": {
+            "min": [
+              -31.425,
+              -7.85,
+              -28.8
+            ],
+            "max": [
+              31.425,
+              -0.15,
+              20.225
+            ],
+            "size": [
+              62.85,
+              7.7,
+              49.025
+            ]
+          }
+        },
+        "25": {
+          "objects": 3,
+          "tris": 264,
+          "bbox": {
+            "min": [
+              -37.9,
+              -2.9,
+              -8.56
+            ],
+            "max": [
+              37.9,
+              0.0,
+              9.45
+            ],
+            "size": [
+              75.8,
+              2.9,
+              18.01
+            ]
+          }
+        },
+        "26": {
+          "objects": 2,
+          "tris": 144,
+          "bbox": {
+            "min": [
+              -30.65,
+              -1.16,
+              -14.47
+            ],
+            "max": [
+              30.65,
+              -0.08,
+              14.47
+            ],
+            "size": [
+              61.3,
+              1.08,
+              28.94
+            ]
+          }
+        }
+      },
+      "meshIssues": {}
+    },
+    {
+      "file": "large_house.glb",
+      "bytes": 50168,
+      "objects": 96,
+      "meshes": 96,
+      "lights": 0,
+      "cameras": 0,
+      "roots": [
+        {
+          "name": "ground_1",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "south_wall_seg_2",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "south_wall_lintel_3",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "south_wall_seg_4",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "south_wall_lintel_5",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "south_wall_seg_6",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "south_wall_lintel_7",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "south_wall_seg_8",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "north_wall_seg_9",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "north_wall_lintel_10",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "north_wall_seg_11",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "north_wall_lintel_12",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "north_wall_seg_13",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "north_wall_lintel_14",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "north_wall_seg_15",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "west_wall_seg_16",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "west_wall_lintel_17",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "west_wall_seg_18",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "west_wall_lintel_19",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "west_wall_seg_20",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "east_wall_seg_21",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "east_wall_lintel_22",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "east_wall_seg_23",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "east_wall_lintel_24",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "east_wall_seg_25",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "west_office_wall_seg_26",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "west_office_wall_lintel_27",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "west_office_wall_seg_28",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "west_office_wall_lintel_29",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "west_office_wall_seg_30",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "east_warehouse_wall_seg_31",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "east_warehouse_wall_lintel_32",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "east_warehouse_wall_seg_33",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "east_warehouse_wall_lintel_34",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "east_warehouse_wall_seg_35",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "west_office_split_seg_36",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "west_office_split_lintel_37",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "west_office_split_seg_38",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "east_warehouse_split_seg_39",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "east_warehouse_split_lintel_40",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "east_warehouse_split_seg_41",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "column_42",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "column_43",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "column_44",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "column_45",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "column_46",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "column_47",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "platform_north_48",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "platform_south_49",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "platform_east_50",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "platform_west_51",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "rail_north_left_52",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "rail_north_right_53",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "rail_south_left_54",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "rail_south_right_55",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "rail_east_56",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "rail_west_57",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "stair_north_step_58",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "stair_north_step_59",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "stair_north_step_60",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "stair_north_step_61",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "stair_north_step_62",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "stair_north_step_63",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "stair_north_step_64",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "stair_north_step_65",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "stair_north_step_66",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "stair_north_step_67",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "stair_north_step_68",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "stair_north_step_69",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "stair_north_step_70",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "stair_north_step_71",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "stair_north_step_72",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "stair_north_step_73",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "stair_south_step_74",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "stair_south_step_75",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "stair_south_step_76",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "stair_south_step_77",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "stair_south_step_78",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "stair_south_step_79",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "stair_south_step_80",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "stair_south_step_81",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "stair_south_step_82",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "stair_south_step_83",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "stair_south_step_84",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "stair_south_step_85",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "stair_south_step_86",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "stair_south_step_87",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "stair_south_step_88",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "stair_south_step_89",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "container_1_90",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "container_2_91",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "low_cover_1_92",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "low_cover_2_93",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "mid_cover_1_94",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "mid_cover_2_95",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "name": "roof_96",
+          "type": "MESH",
+          "location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "worldBBox": {
+        "min": [
+          -40.0,
+          -8.3,
+          -30.0
+        ],
+        "max": [
+          40.0,
+          0.2,
+          30.0
+        ],
+        "size": [
+          80.0,
+          8.5,
+          60.0
+        ]
+      },
+      "totalTris": 1152,
+      "materials": [
+        "DefaultMaterial",
+        "DefaultMaterial.001",
+        "DefaultMaterial.002",
+        "DefaultMaterial.003",
+        "DefaultMaterial.004",
+        "DefaultMaterial.005",
+        "DefaultMaterial.006",
+        "DefaultMaterial.007",
+        "DefaultMaterial.008",
+        "DefaultMaterial.009",
+        "DefaultMaterial.010",
+        "DefaultMaterial.011",
+        "DefaultMaterial.012",
+        "DefaultMaterial.013",
+        "DefaultMaterial.014",
+        "DefaultMaterial.015",
+        "DefaultMaterial.016",
+        "DefaultMaterial.017",
+        "DefaultMaterial.018",
+        "DefaultMaterial.019",
+        "DefaultMaterial.020",
+        "DefaultMaterial.021",
+        "DefaultMaterial.022",
+        "DefaultMaterial.023",
+        "DefaultMaterial.024",
+        "DefaultMaterial.025",
+        "DefaultMaterial.026",
+        "DefaultMaterial.027",
+        "DefaultMaterial.028",
+        "DefaultMaterial.029",
+        "DefaultMaterial.030",
+        "DefaultMaterial.031",
+        "DefaultMaterial.032",
+        "DefaultMaterial.033",
+        "DefaultMaterial.034",
+        "DefaultMaterial.035",
+        "DefaultMaterial.036",
+        "DefaultMaterial.037",
+        "DefaultMaterial.038",
+        "DefaultMaterial.039",
+        "DefaultMaterial.040",
+        "DefaultMaterial.041",
+        "DefaultMaterial.042",
+        "DefaultMaterial.043",
+        "DefaultMaterial.044",
+        "DefaultMaterial.045",
+        "DefaultMaterial.046",
+        "DefaultMaterial.047",
+        "DefaultMaterial.048",
+        "DefaultMaterial.049",
+        "DefaultMaterial.050",
+        "DefaultMaterial.051",
+        "DefaultMaterial.052",
+        "DefaultMaterial.053",
+        "DefaultMaterial.054",
+        "DefaultMaterial.055",
+        "DefaultMaterial.056",
+        "DefaultMaterial.057",
+        "DefaultMaterial.058",
+        "DefaultMaterial.059",
+        "DefaultMaterial.060",
+        "DefaultMaterial.061",
+        "DefaultMaterial.062",
+        "DefaultMaterial.063",
+        "DefaultMaterial.064",
+        "DefaultMaterial.065",
+        "DefaultMaterial.066",
+        "DefaultMaterial.067",
+        "DefaultMaterial.068",
+        "DefaultMaterial.069",
+        "DefaultMaterial.070",
+        "DefaultMaterial.071",
+        "DefaultMaterial.072",
+        "DefaultMaterial.073",
+        "DefaultMaterial.074",
+        "DefaultMaterial.075",
+        "DefaultMaterial.076",
+        "DefaultMaterial.077",
+        "DefaultMaterial.078",
+        "DefaultMaterial.079",
+        "DefaultMaterial.080",
+        "DefaultMaterial.081",
+        "DefaultMaterial.082",
+        "DefaultMaterial.083",
+        "DefaultMaterial.084",
+        "DefaultMaterial.085",
+        "DefaultMaterial.086",
+        "DefaultMaterial.087",
+        "DefaultMaterial.088",
+        "DefaultMaterial.089",
+        "DefaultMaterial.090",
+        "DefaultMaterial.091",
+        "DefaultMaterial.092",
+        "DefaultMaterial.093",
+        "DefaultMaterial.094",
+        "DefaultMaterial.095"
+      ],
+      "images": [],
+      "groups": {
+        "ground": {
+          "objects": 1,
+          "tris": 12,
+          "bbox": {
+            "min": [
+              -40.0,
+              0.0,
+              -30.0
+            ],
+            "max": [
+              40.0,
+              0.2,
+              30.0
+            ],
+            "size": [
+              80.0,
+              0.2,
+              60.0
+            ]
+          }
+        },
+        "south": {
+          "objects": 7,
+          "tris": 84,
+          "bbox": {
+            "min": [
+              -24.0,
+              -8.0,
+              -18.2
+            ],
+            "max": [
+              24.0,
+              0.0,
+              -17.8
+            ],
+            "size": [
+              48.0,
+              8.0,
+              0.4
+            ]
+          }
+        },
+        "north": {
+          "objects": 7,
+          "tris": 84,
+          "bbox": {
+            "min": [
+              -24.0,
+              -8.0,
+              17.8
+            ],
+            "max": [
+              24.0,
+              0.0,
+              18.2
+            ],
+            "size": [
+              48.0,
+              8.0,
+              0.4
+            ]
+          }
+        },
+        "west": {
+          "objects": 13,
+          "tris": 156,
+          "bbox": {
+            "min": [
+              -24.2,
+              -8.0,
+              -18.0
+            ],
+            "max": [
+              -9.85,
+              0.0,
+              18.0
+            ],
+            "size": [
+              14.35,
+              8.0,
+              36.0
+            ]
+          }
+        },
+        "east": {
+          "objects": 13,
+          "tris": 156,
+          "bbox": {
+            "min": [
+              9.85,
+              -8.0,
+              -18.0
+            ],
+            "max": [
+              24.2,
+              0.0,
+              18.0
+            ],
+            "size": [
+              14.35,
+              8.0,
+              36.0
+            ]
+          }
+        },
+        "column": {
+          "objects": 6,
+          "tris": 72,
+          "bbox": {
+            "min": [
+              -12.3,
+              -8.0,
+              -9.3
+            ],
+            "max": [
+              12.3,
+              0.0,
+              9.3
+            ],
+            "size": [
+              24.6,
+              8.0,
+              18.6
+            ]
+          }
+        },
+        "platform": {
+          "objects": 4,
+          "tris": 48,
+          "bbox": {
+            "min": [
+              -15.0,
+              -4.5,
+              -12.0
+            ],
+            "max": [
+              15.0,
+              -4.2,
+              12.0
+            ],
+            "size": [
+              30.0,
+              0.3,
+              24.0
+            ]
+          }
+        },
+        "rail": {
+          "objects": 6,
+          "tris": 72,
+          "bbox": {
+            "min": [
+              -12.06,
+              -5.6,
+              -12.0
+            ],
+            "max": [
+              12.06,
+              -4.5,
+              12.0
+            ],
+            "size": [
+              24.12,
+              1.1,
+              24.0
+            ]
+          }
+        },
+        "stair": {
+          "objects": 32,
+          "tris": 384,
+          "bbox": {
+            "min": [
+              -1.0,
+              -4.5,
+              -9.0
+            ],
+            "max": [
+              1.0,
+              0.0,
+              9.0
+            ],
+            "size": [
+              2.0,
+              4.5,
+              18.0
+            ]
+          }
+        },
+        "container": {
+          "objects": 2,
+          "tris": 24,
+          "bbox": {
+            "min": [
+              -8.0,
+              -2.5,
+              -4.25
+            ],
+            "max": [
+              8.0,
+              0.0,
+              4.25
+            ],
+            "size": [
+              16.0,
+              2.5,
+              8.5
+            ]
+          }
+        },
+        "low": {
+          "objects": 2,
+          "tris": 24,
+          "bbox": {
+            "min": [
+              -5.5,
+              -1.2,
+              -5.4
+            ],
+            "max": [
+              5.5,
+              0.0,
+              5.4
+            ],
+            "size": [
+              11.0,
+              1.2,
+              10.8
+            ]
+          }
+        },
+        "mid": {
+          "objects": 2,
+          "tris": 24,
+          "bbox": {
+            "min": [
+              -7.5,
+              -1.6,
+              -4.75
+            ],
+            "max": [
+              7.5,
+              0.0,
+              4.75
+            ],
+            "size": [
+              15.0,
+              1.6,
+              9.5
+            ]
+          }
+        },
+        "roof": {
+          "objects": 1,
+          "tris": 12,
+          "bbox": {
+            "min": [
+              -24.0,
+              -8.3,
+              -18.0
+            ],
+            "max": [
+              24.0,
+              -8.0,
+              18.0
+            ],
+            "size": [
+              48.0,
+              0.3,
+              36.0
+            ]
+          }
+        }
+      },
+      "meshIssues": {}
+    }
+  ]
+}
