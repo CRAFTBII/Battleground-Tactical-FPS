@@ -1,5 +1,163 @@
 {
   "schemaVersion": 1,
   "units": "m",
-  "assets": {}
+  "actorProfile": "vanguard",
+  "actorMaxHeight": 2.5,
+  "targetContract": {
+    "doorClearHeight": 3.0,
+    "doorClearWidth": 1.6,
+    "floorToFloor": 4.4,
+    "clearHeight": 3.8,
+    "stepHeight": 0.55,
+    "corridorWidth": 2.2
+  },
+  "assets": {
+    "house_small": {
+      "status": "draft",
+      "source": "assets/source-buildings/Tactical_FPS_Buildings.glb#House_A",
+      "sourceGroup": "House_A",
+      "sourceDims": { "w": 8.38, "d": 7.38, "h": 3.57 },
+      "targetDims": { "w": 10, "d": 8, "h": 4.4 },
+      "floors": [{ "id": "F0", "y": 0, "clear": 3.8 }],
+      "door": { "width": 1.6, "height": 3.0 },
+      "requiredNodes": ["VIS", "COL", "NAV", "ANCHOR"],
+      "issues": ["源 Z-up 被当 Y-up，导入躺倒", "原点不在 footprint 中心地面", "无 COL/NAV/ANCHOR"]
+    },
+    "house": {
+      "status": "draft",
+      "source": "assets/source-buildings/Tactical_FPS_Buildings.glb#House_B",
+      "sourceGroup": "House_B",
+      "sourceDims": { "w": 10.8, "d": 8.585, "h": 6.32 },
+      "targetDims": { "w": 11, "d": 9, "h": 8.8 },
+      "floors": [{ "id": "F0", "y": 0, "clear": 3.8 }, { "id": "F1", "y": 4.4, "clear": 3.8 }],
+      "door": { "width": 1.6, "height": 3.0 },
+      "stairs": { "risePerFloor": 4.4, "stepRiseMax": 0.55 },
+      "requiredNodes": ["VIS", "COL", "NAV", "ANCHOR"],
+      "issues": ["源层高约 3.0，需补到 4.4", "外梯需 COL/NAV link"]
+    },
+    "apartment": {
+      "status": "draft",
+      "source": "assets/source-buildings/Tactical_FPS_Additional_Buildings.glb#Apartment_E",
+      "sourceGroup": "Apartment_E",
+      "sourceDims": { "w": 12.4, "d": 11.025, "h": 7.58 },
+      "targetDims": { "w": 16, "d": 12, "h": 22.0 },
+      "floors": [
+        { "id": "F0", "y": 0, "clear": 3.8 },
+        { "id": "F1", "y": 4.4, "clear": 3.8 },
+        { "id": "F2", "y": 8.8, "clear": 3.8 },
+        { "id": "F3", "y": 13.2, "clear": 3.8 },
+        { "id": "F4", "y": 17.6, "clear": 3.8 }
+      ],
+      "door": { "width": 1.8, "height": 3.0 },
+      "stairs": { "risePerFloor": 4.4, "stepRiseMax": 0.55 },
+      "requiredNodes": ["VIS", "COL", "NAV", "ANCHOR"],
+      "issues": ["源模型只有 2 层，必须补到 5 层", "内梯/楼层平台需 NAV link"]
+    },
+    "warehouse": {
+      "status": "draft",
+      "source": "assets/source-buildings/Tactical_FPS_Buildings.glb#Warehouse",
+      "sourceGroup": "Warehouse",
+      "sourceDims": { "w": 14.34, "d": 10.7, "h": 6.14 },
+      "targetDims": { "w": 22, "d": 14, "h": 10.5 },
+      "floors": [{ "id": "F0", "y": 0, "clear": 8.0 }],
+      "door": { "width": 5.0, "height": 5.0, "type": "roller" },
+      "requiredNodes": ["VIS", "COL", "NAV", "ANCHOR"],
+      "issues": ["源屋顶未给可行走 NAV", "卷帘/货架需单独 COL"]
+    },
+    "guardhouse": {
+      "status": "draft",
+      "source": "assets/source-buildings/Tactical_FPS_Buildings.glb#Guard_Shack",
+      "sourceGroup": "Guard_Shack",
+      "sourceDims": { "w": 4.18, "d": 3.98, "h": 3.35 },
+      "targetDims": { "w": 5, "d": 5, "h": 4.4 },
+      "floors": [{ "id": "F0", "y": 0, "clear": 3.8 }],
+      "door": { "width": 1.2, "height": 3.0 },
+      "requiredNodes": ["VIS", "COL", "NAV", "ANCHOR"],
+      "issues": ["原尺寸偏小，需按目标重做"]
+    },
+    "cover": {
+      "status": "draft",
+      "source": "assets/source-buildings/Tactical_FPS_Buildings.glb#Cover_*",
+      "sourceGroup": "Cover_Concrete_Wall_A/C/B + Jersey_Barrier_A + Sandbags_A",
+      "sourceDims": { "w": null, "d": null, "h": null },
+      "targetDims": { "w": 14.5, "d": 6.3, "h": 2.8 },
+      "floors": [],
+      "requiredNodes": ["VIS", "COL"],
+      "issues": ["组件散布，必须组合并给每段沙袋/矮墙显式 COL", "可翻越边界 ≤2.8m"]
+    },
+    "farmhouse": {
+      "status": "draft",
+      "source": "assets/source-buildings/Tactical_FPS_Additional_Buildings.glb#Farmhouse_C",
+      "sourceGroup": "Farmhouse_C",
+      "sourceDims": { "w": 10.45, "d": 10.04, "h": 6.22 },
+      "targetDims": { "w": 12, "d": 11, "h": 8.8 },
+      "floors": [{ "id": "F0", "y": 0, "clear": 3.8 }, { "id": "F1", "y": 4.4, "clear": 3.8 }],
+      "door": { "width": 1.6, "height": 3.0 },
+      "requiredNodes": ["VIS", "COL", "NAV", "ANCHOR"],
+      "issues": ["坡屋顶不能整块 COL/平台"]
+    },
+    "workshop": {
+      "status": "draft",
+      "source": "assets/source-buildings/Tactical_FPS_Additional_Buildings.glb#Workshop_D",
+      "sourceGroup": "Workshop_D",
+      "sourceDims": { "w": 14.65, "d": 11.54, "h": 6.3 },
+      "targetDims": { "w": 16, "d": 12, "h": 8.8 },
+      "floors": [{ "id": "F0", "y": 0, "clear": 3.8 }, { "id": "F1", "y": 4.4, "clear": 3.8 }],
+      "door": { "width": 1.8, "height": 3.0 },
+      "doors": [{ "width": 3.0, "height": 3.2, "type": "equipment" }],
+      "requiredNodes": ["VIS", "COL", "NAV", "ANCHOR"],
+      "issues": ["办公室/设备门需独立 COL"]
+    },
+    "pumpstation": {
+      "status": "draft",
+      "source": "assets/source-buildings/Tactical_FPS_Additional_Buildings.glb#PumpStation_F",
+      "sourceGroup": "PumpStation_F",
+      "sourceDims": { "w": 11.29, "d": 8.45, "h": 5.51 },
+      "targetDims": { "w": 12, "d": 9, "h": 6.0 },
+      "floors": [{ "id": "F0", "y": 0, "clear": 3.8 }],
+      "door": { "width": 1.6, "height": 3.0 },
+      "requiredNodes": ["VIS", "COL", "NAV", "ANCHOR"],
+      "issues": ["设备层/管道需单独 COL"]
+    },
+    "bunker": {
+      "status": "draft",
+      "source": "assets/source-buildings/Tactical_FPS_Additional_Buildings.glb#Bunker_G",
+      "sourceGroup": "Bunker_G",
+      "sourceDims": { "w": 12.4, "d": 7.58, "h": 4.49 },
+      "targetDims": { "w": 18, "d": 14, "h": 6.6 },
+      "floors": [{ "id": "F0", "y": 0, "clear": 4.0 }],
+      "door": { "width": 2.0, "height": 3.0 },
+      "requiredNodes": ["VIS", "COL", "NAV", "ANCHOR"],
+      "issues": ["入口需 ANCHOR/portalId"]
+    },
+    "base": {
+      "status": "draft",
+      "source": "assets/source-buildings/large_combat_base.glb",
+      "sourceGroup": "large_combat_base",
+      "sourceDims": { "w": 86.55, "d": 66.675, "h": 11.94 },
+      "targetDims": { "w": 90, "d": 75, "h": 16.0 },
+      "floors": [{ "id": "F0", "y": 0, "clear": 4.8 }, { "id": "F1", "y": 4.8, "clear": 4.8 }],
+      "door": { "width": 6.0, "height": 4.5, "type": "main-gate" },
+      "doors": [{ "width": 2.0, "height": 3.0, "type": "interior" }],
+      "requiredNodes": ["VIS", "COL", "NAV", "ANCHOR"],
+      "issues": ["聚合内外墙/围墙必须用真实 COL 代理，不能整体 AABB", "大门/主楼门需 ANCHOR"]
+    },
+    "estate": {
+      "status": "draft",
+      "source": "assets/source-buildings/large_house.glb",
+      "sourceGroup": "large_house",
+      "sourceDims": { "w": 80, "d": 60, "h": 8.5 },
+      "targetDims": { "w": 80, "d": 60, "h": 10.0 },
+      "floors": [{ "id": "F0", "y": 0, "clear": 3.8 }, { "id": "F1", "y": 4.4, "clear": 3.8 }],
+      "door": { "width": 1.8, "height": 3.0 },
+      "doors": [{ "width": 4.0, "height": 3.0, "type": "courtyard" }],
+      "requiredNodes": ["VIS", "COL", "NAV", "ANCHOR"],
+      "issues": ["源无材质仅顶点色", "墙洞需 door/lintel 锚点"]
+    }
+  },
+  "missing": [
+    "container", "watchtower", "stairs", "bridge", "wall", "ruins", "hangar",
+    "pillbox", "crane", "tankH", "tankV", "mast", "tower", "megatower",
+    "stadium", "refinery", "complex"
+  ]
 }

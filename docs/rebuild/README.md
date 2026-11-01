@@ -17,6 +17,8 @@
 |---|---|---|
 | 1 | [架构总览](architecture.md) | 模块边界、生命周期、依赖 |
 | 2 | [资产契约](asset-contract.md) | Blender / GLB 尺寸、坐标和节点角色 |
+| 2.1 | [尺度决策](scale-decision.md) | 2.5m 角色 / 2.3m 相机 → 层高、门洞、建筑目标尺寸 |
+| 2.2 | [角色契约](actor-contract.md) | 多人物模型扩展口、相机/胶囊/锚点 |
 | 3 | [MapSpec](map-spec.md) | 地图 JSON 唯一格式 |
 | 4 | [碰撞与导航](collision-navigation.md) | Rapier、角色控制器、分层导航 |
 | 5 | [实施计划](implementation-plan.md) | 实施顺序、产物和退出门槛 |
@@ -28,6 +30,7 @@
 ```text
 assets/source-buildings/    # 原始输入 GLB，仅供 Blender 修复
 data/assets/                # 建筑 Catalog、agent profiles
+data/actors/                # 角色 profile Catalog（身高/相机/胶囊/锚点）
 data/maps/                  # suburb / port / desert MapSpec JSON
 js/world/core/              # runtime 生命周期和编排
 js/world/assets/            # Catalog、GLB 解析、节点校验
@@ -45,6 +48,8 @@ test/fixtures/world/        # 可重复的小测试场景
 
 ## 坐标与尺度
 Three.js 右手系，Y-up，1 world unit = 1m；建筑局部原点是 footprint 中心的地面点。默认 scale=(1,1,1)，禁止隐藏的全局资产倍率。模型目标尺寸由设计契约单独决定，不能把当前 GLB 的缩水尺寸当作标准。
+
+**角色基准**：最高 2.5m，相机眼高 2.3m，胶囊 0.9m 直径/2.5m 高，台阶 0.55m。门净高 3.0m、净宽 1.6m，层高 4.4m，净层高 3.8m；详见 [尺度决策](scale-decision.md) 与 [角色契约](actor-contract.md)。
 
 ## 运行状态
 旧 `js/world.js` 和旧地图脚本从活动路径移除。新 runtime 未完成时入口应显示“v4 重建中”并中止启动，避免误导性报错。此分支不是可玩版本，也不应合并 main，直到 P0 验收通过。

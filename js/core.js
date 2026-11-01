@@ -11,7 +11,8 @@
 
 /* ---------- 0. 常量 ---------- */
 const CFG = {
-  WORLD: 300, CELL: 2, EYE: 1.7, GRAV: 24, JUMP: 10.5, // 跳跃滞空高度 ≈ v²/2g ≈ 2.3m
+  WORLD: 300, CELL: 2, EYE: 2.3, GRAV: 24, JUMP: 10.5, // v4：角色设计身高 2.5m，相机眼高 2.3m（0.92H）；跳跃滞空 ≈2.3m
+  PLAYER_HEIGHT: 2.5, PLAYER_RADIUS: 0.45, PLAYER_CAPSULE_HEIGHT: 2.5, PLAYER_STEP: 0.55, // v4 角色胶囊/台阶契约（ActorCatalog 可覆盖）
   WALK: 4.4, SPRINT: 7.8, PLAYER_HP: 100, // 走 4.4 / 冲刺 7.8：冲刺显著快于 AI(3.6)，近身/脱离靠冲刺
   MATCH_TIME: 600, // 据点玩法：时间到比分高者胜；吃鸡制下另有「一方全灭提前结束」（v2.1）
   MORTAR_CD: 20, MORTAR_MAX: 10, SMOKE_TIME: 10,

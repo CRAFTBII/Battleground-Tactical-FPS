@@ -17,6 +17,12 @@
 - 地面/楼板/楼梯支撑稳定；落地高度由物理接触决定。
 - 同一地图加载/卸载 20 次，无残留 collider、监听器或 geometry。
 
+### 角色与相机（2.5m 基准）
+- Actor Profile 身高 ≤2.5m；胶囊半径 0.45m、总高 2.5m、台阶 0.55m。
+- 相机眼高 = profile.eyeHeight（默认 2.3m），不穿天花板/门楣；fov/near/far 来自 profile。
+- 第一人称武器/枪口/投掷锚点来自 profile.anchors，不写死 1.7m 坐标。
+- 门净高 ≥3.0m、净宽 ≥1.6m、走廊 ≥2.2m、净层高 ≥3.8m。
+
 ### 导航
 - 每个 NAV surface 有 floorId / 高度 / 净空。
 - 每个 navLink 两端可达，角色胶囊实际能通过。

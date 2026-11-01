@@ -148,6 +148,16 @@ function init() {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1200);
+  // v4：相机参数来自角色 profile（眼高由 CFG.EYE 使用；near/far/fov 也随 profile）
+  if (typeof ActorCatalog !== 'undefined') {
+    const prof = ActorCatalog.get();
+    if (prof && prof.camera) {
+      camera.fov = prof.camera.fov || camera.fov;
+      camera.near = prof.camera.near || camera.near;
+      camera.far = prof.camera.far || camera.far;
+      camera.updateProjectionMatrix();
+    }
+  }
   scene.add(camera); // 相机必须入场景图，否则其子节点（第一人称枪）不会被渲染遍历
   clock = new THREE.Clock();
   FX.init(scene);
@@ -273,6 +283,10 @@ function fatalShow(msg) {
     return;
   }
   if (mapModule.ready) await mapModule.ready;
+  // v4 角色扩展口：相机眼高/胶囊/锚点来自 profile（设计上限 2.5m），不要写死 1.7m
+  if (typeof ActorCatalog !== 'undefined' && ActorCatalog.load) {
+    try { await ActorCatalog.load(); } catch (e) { console.warn('[Actors] profile 加载异常：' + (e && e.message || e)); }
+  }
   if (typeof World === 'undefined' || typeof MapRegistry === 'undefined') {
     document.body.classList.add('bootFail');
     fatalShow('地图 v4 入口尚未提供 World / MapRegistry 兼容接口。请参照 docs/rebuild/architecture.md。');
