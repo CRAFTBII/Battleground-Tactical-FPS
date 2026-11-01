@@ -28,18 +28,18 @@
     name: '城郊战场',
     desc: '十字干道 + 中央广场，仓库/公寓/民居环绕，东西两片废墟。开阔与巷战各半。',
     theme: 'suburb',
-    size: 450, // v2.9 地图扩大 ×1.5
+    size: 700, // v3.1 小镇化：450 → 700（外围程序化街区）
     detail: 'high',           // 建筑精修等级：off | low | high
 
     /* ---------- 环境（雾/天空/光照） ---------- */
     env: {
-      fog: { color: 0x8fb4cc, near: 120, far: 340 },
+      fog: { color: 0x8fb4cc, near: 160, far: 560 },
       background: 0x8fb4cc,
       hemi: { sky: 0xdfe9ff, ground: 0x3d4a3a, intensity: 0.85 },
       sun: {
         color: 0xfff2d8, intensity: 1.4, pos: [120, 160, 80],
-        target: [150, 150], // D-05/T-04：阴影覆盖整张地图（extent=size×0.62，mapSize 2048）
-        shadow: { mapSize: 2048, extent: 279, far: 690 } // v2.9 地图 ×1.5 后阴影覆盖同步放大
+        target: [350, 350], // 新城中心；阴影相机运行时跟随玩家（World.updateSun）
+        shadow: { mapSize: 2048, extent: 170, far: 420 }
       },
       ambient: { color: 0x8899aa, intensity: 0.25 }
     },
@@ -48,7 +48,7 @@
     terrain: {
       seed: 20260805,
       amp: 4.4,               // 基准起伏峰峰值（±amp/2）
-      seg: 128,               // PlaneGeometry 细分
+      seg: 192,               // PlaneGeometry 细分（700m 图）
       colors: [0x4a6b3c, 0x5c6e52],
       colorMix: 0,            // 0 = 全部用 colors[1]（与重构前一致，见架构文档「已知缺陷」）
       flattenPad: 4,          // flattenPads 每边外扩
@@ -367,8 +367,8 @@
 
     /* ---------- 出生点 ---------- */
     spawns: {
-      blue: [[40, 40], [56, 30], [30, 56], [70, 45], [45, 70], [80, 84], [60, 26], [26, 60], [80, 34], [34, 80]], // (75,62)→(80,84)：原点在 warehouse 占地内被堵（D-fix）
-      red: [[260, 260], [244, 270], [270, 244], [230, 255], [255, 230], [225, 238], [240, 274], [274, 240], [220, 266], [266, 220]]
+      blue: [[40, 40], [56, 30], [30, 56], [70, 45], [45, 70], [80, 84], [60, 26], [26, 60], [80, 34], [34, 80]],
+      red: [[650, 650], [634, 660], [660, 634], [620, 645], [645, 620], [615, 628], [630, 664], [664, 630], [610, 656], [656, 610]]
     },
 
     /* ---------- 专属机制：空投补给 + 中央广场炮击（v1.2，规格见 design/maps/mechanics.md）----------
@@ -379,11 +379,11 @@
       type: 'airdrop',
       intervalSec: 60,
       drops: [
-        { x: 120, z: 180 },   // 广场西南空地
-        { x: 185, z: 110 }    // 广场东北空地
+        { x: 220, z: 480 },   // 北区居民街
+        { x: 500, z: 240 }    // 东区商业街
       ],
       crate: { heal: 50, ammoPct: 0.3 },
-      arty: { intervalSec: 45, zone: { x: 150, z: 150, r: 28 }, warnSec: 4, dmg: 60, radius: 8 }
+      arty: { intervalSec: 45, zone: { x: 350, z: 350, r: 28 }, warnSec: 4, dmg: 60, radius: 8 }
     },
 
     /* ---------- 缩圈（v1.3，规格见 design/maps/zone-br.md）----------
@@ -393,16 +393,42 @@
      * ⚠️ 阶段语义：atSec≤t 取最后一个阶段为当前生效；到下一 atSec → warnSec 警示 5s → 2s 收缩。
      */
     zone: {
-      center: { x: 150, z: 150 },
+      center: { x: 350, z: 350 },
       phases: [
-        { atSec: 0,   r: 330, dmgPerSec: 1 },
-        { atSec: 135,  r: 204, dmgPerSec: 3 },
-        { atSec: 315, r: 132,  dmgPerSec: 6 },
-        { atSec: 495, r: 85,  dmgPerSec: 10 },
-        { atSec: 675, r: 46,  dmgPerSec: 15 }
+        { atSec: 0,   r: 520, dmgPerSec: 1 },
+        { atSec: 135,  r: 321, dmgPerSec: 3 },
+        { atSec: 315, r: 208,  dmgPerSec: 6 },
+        { atSec: 495, r: 135,  dmgPerSec: 10 },
+        { atSec: 675, r: 73,  dmgPerSec: 15 }
       ],
       warnSec: 5,
       color: 0x4d9bff
+    },
+
+    /* ---------- 小镇化：外围程序化街区（TownGen 在 World.load 前展开） ---------- */
+    town: {
+      seed: 20261101,
+      max: 160,
+      perBlock: 3,
+      margin: 3,
+      styles: {
+        residential: ['house', 'house', 'house', 'house', 'apartment', 'guardhouse', 'container', 'watchtower'],
+        commercial: ['apartment', 'warehouse', 'guardhouse', 'container', 'pillbox'],
+        industrial: ['warehouse', 'warehouse', 'container', 'container', 'bunker', 'hangar', 'tankH', 'tankV', 'mast', 'guardhouse']
+      },
+      palette: {
+        residential: [0x8a8f86, 0xb7b0a4, 0xd8c49a, 0xa9a29a],
+        commercial: [0xb7b0a4, 0xc9b082, 0x9aa4a8],
+        industrial: [0x7d8a94, 0x8a9396, 0x9aa4a8, 0x6e7880]
+      },
+      districts: [
+        // 北区：住宅小镇（旧核心以北）
+        { x0: 0, z0: 315, x1: 695, z1: 695, gw: 78, gd: 68, street: 11, style: 'residential', density: 0.9 },
+        // 东区：商业 + 轻工业（旧核心以东）
+        { x0: 315, z0: 0, x1: 695, z1: 310, gw: 92, gd: 80, street: 12, style: 'industrial', density: 0.85 },
+        // 旧核心填空：低密度，不破坏原有地标
+        { x0: 0, z0: 0, x1: 305, z1: 300, gw: 88, gd: 76, street: 11, style: 'commercial', density: 0.45, infill: true }
+      ]
     },
 
     /* ---------- 小地图静态层 ---------- */

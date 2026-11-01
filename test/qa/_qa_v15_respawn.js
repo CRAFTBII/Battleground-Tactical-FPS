@@ -219,7 +219,7 @@ try {
   for (const mid of ['suburb', 'port', 'desert']) {
     loadMap(mid);
     const MS = CFG.mapScale;
-    report('⑤ ' + mid + ' mapScale = size/300', Math.abs(MS - MapRegistry.get(mid).size / 300) < 0.001, 'mapScale=' + MS.toFixed(3));
+    report('⑤ ' + mid + ' mapScale = clamp(size/300, 0.8, 1.5)', Math.abs(MS - Math.max(0.8, Math.min(1.5, MapRegistry.get(mid).size / 300))) < 0.001, 'mapScale=' + MS.toFixed(3));
     for (let i = 0; i < 5; i++) {
       const p = Game.smartSpawn('blue', {});
       report('⑤ ' + mid + ' smartSpawn 非 null', !!p, '');

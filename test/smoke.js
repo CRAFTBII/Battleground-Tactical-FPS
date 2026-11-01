@@ -748,13 +748,13 @@ try {
   if (!inRotated) failures.push('D-03 ry=90 碰撞未旋转到视觉 footprint（(34,276) 应被挡）');
   if (inOld) failures.push('D-03 ry=90 碰撞旋转错误（(34,284) 不应有碰撞）');
   console.log('精修断言 D-03 | ry=90 建筑视觉/碰撞对齐 ✓（旋转 footprint 命中，旧位无残留）');
-  // ③ D-05：阳光阴影相机 extent 覆盖整图
+  // ③ D-05：阴影相机改为跟随玩家（大图不再整图覆盖），只验跟随半径合理
   const sun = World.objects.find(o => o && o.isDirectionalLight);
   if (!sun) failures.push('D-05 场景无 DirectionalLight');
   else {
     const ext = sun.shadow.camera.right;
-    if (ext < CFG.WORLD * 0.5) failures.push('D-05 阴影 extent ' + ext + ' 未覆盖地图（< size/2=' + (CFG.WORLD * 0.5) + '）');
-    console.log('精修断言 D-05 | 阴影 extent=' + ext + ' 覆盖整图 ✓');
+    if (ext < 120 || ext > 220) failures.push('D-05 阴影跟随半径异常: ' + ext + '（应 120~220）');
+    console.log('精修断言 D-05 | 阴影跟随玩家 extent=' + ext + ' ✓');
   }
 } catch (e) { failures.push('精修断言崩溃: ' + e.stack.split('\n').slice(0, 3).join(' | ')); }
 

@@ -33,8 +33,8 @@ console.log('\n[1] 2 队象限');
 Game.teamCount = 2; Game.startSingle();
 const blueAI2 = Game.units.filter(u => u.ai && u.team === 'blue');
 const redAI2 = Game.units.filter(u => u.ai && u.team === 'red');
-R('蓝队全在 Q1∪Q4', blueAI2.every(u => [0, 3].includes(quadOf(u.pos.x, u.pos.z))), '');
-R('红队全在 Q2∪Q3', redAI2.every(u => [1, 2].includes(quadOf(u.pos.x, u.pos.z))), '');
+R('蓝队全在 Q1（西南营地）', blueAI2.every(u => quadOf(u.pos.x, u.pos.z) === 0), '');
+R('红队全在 Q4（东北营地）', redAI2.every(u => quadOf(u.pos.x, u.pos.z) === 3), '');
 R('玩家在 Q1', quadOf(Game.player.pos.x, Game.player.pos.z) === 0, 'q=' + quadOf(Game.player.pos.x, Game.player.pos.z));
 
 /* ============ 2. 4 队：每队一个象限 ============ */
@@ -45,9 +45,9 @@ for (const t of Object.keys(quads)) {
   quads[t] = Game.units.filter(u => u.ai && u.team === t).map(u => quadOf(u.pos.x, u.pos.z));
 }
 R('蓝队全在 Q1', quads.blue.every(q => q === 0), quads.blue.join(','));
-R('红队全在 Q2', quads.red.every(q => q === 1), quads.red.join(','));
-R('绿队全在 Q3', quads.green.every(q => q === 2), quads.green.join(','));
-R('黄队全在 Q4', quads.yellow.every(q => q === 3), quads.yellow.join(','));
+R('红队全在 Q4（显式 NE 出生点）', quads.red.every(q => q === 3), quads.red.join(','));
+R('绿队全在 Q2（未占用象限）', quads.green.every(q => q === 1), quads.green.join(','));
+R('黄队全在 Q3（未占用象限）', quads.yellow.every(q => q === 2), quads.yellow.join(','));
 // 同队最小间距 ≥ SPAWN_SEP
 const sep2 = CFG.SPAWN_SEP * CFG.SPAWN_SEP;
 let minD = 1e9;
@@ -99,7 +99,7 @@ const prog0 = c.progress;
 Game.updateCaps(0.5);
 R('平票僵持（不推进）', c.progress === prog0, 'prog=' + c.progress);
 // 红队离开 → 蓝队独占推进 → 占领（2人×1.6/次，需 32 次，给 45 次余量）
-reds.forEach(u => u.pos.set(200, u.pos.y, 200));
+reds.forEach(u => u.pos.set(260, u.pos.y, 260)); // 挪出 A 条带（700 图的 B 带）
 for (let i = 0; i < 45; i++) Game.updateCaps(0.5);
 R('蓝队独占占领 A 区', c.owner === 'blue', 'owner=' + c.owner + ' prog=' + c.progress);
 Game.teamCount = 2;

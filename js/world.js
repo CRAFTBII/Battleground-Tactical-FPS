@@ -82,13 +82,230 @@ const GLBSlots = {
   }
 };
 
+/* ============================================================
+ * TownGen · 小镇化外围街区生成器（v3.1）
+ * ------------------------------------------------------------
+ * 目标：把大地图外围补成可打的街区，而不是空地。
+ * 只改数据（mapDef.buildings / roads / terrain.flatten / minimap），
+ * 建筑仍走 placeModelBuilding（碰撞/导航/精修与手写建筑完全同权）。
+ * 约束：
+ *  - 只避让现有建筑、道路、据点、出生区；不会拆/改手写内容。
+ *  - 生成物写进 mapDef._townDone，重复 World.load 不会重复叠加。
+ *  - 建筑一律 trim:false（合批友好）；ry 只用 0，碰撞轴对齐可预测。
+ * ============================================================ */
+const TownGen = {
+  _rng(seed) {
+    let s = seed | 0;
+    return function () {
+      s = (s + 0x6D2B79F5) | 0;
+      let t = Math.imul(s ^ (s >>> 15), 1 | s);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  },
+  _dims(b) {
+    if (!b) return null;
+    if (b.w && b.d) return { w: b.w, d: b.d, h: b.h || 4 };
+    const lib = (typeof BuildingLib !== 'undefined') ? BuildingLib : null;
+    if (lib && lib.REAL_DIMS && lib.REAL_DIMS[b.key]) {
+      const k = b.scale || 1, r = lib.REAL_DIMS[b.key];
+      return { w: r.w * k, d: r.d * k, h: r.h * k };
+    }
+    return null;
+  },
+  _hit(a, b, m) {
+    m = m || 0;
+    return a.x0 < b.x1 + m && a.x1 > b.x0 - m && a.z0 < b.z1 + m && a.z1 > b.z0 - m;
+  },
+  expand(mapDef) {
+    const T = mapDef && mapDef.town;
+    if (!T || mapDef._townDone) return;
+    mapDef._townDone = true;
+    const size = mapDef.size || CFG.WORLD;
+    const rnd = this._rng(T.seed || 20261101);
+    const occ = [];              // 不可放置建筑（建筑/道路/据点/出生区）
+    const occOrig = [];          // 生成前已有内容（用于判断街道能否穿过）
+    const pads = [];             // 新增 terrain.flattenPads
+    const addRect = (arr, x0, z0, x1, z1, m) => arr.push({ x0: x0 - (m || 0), z0: z0 - (m || 0), x1: x1 + (m || 0), z1: z1 + (m || 0) });
+
+    // 1) 现有建筑占地
+    for (const b of (mapDef.buildings || [])) {
+      const d = this._dims(b); if (!d) continue;
+      if (b.type === 'proc') { addRect(occ, b.x - d.w / 2, b.z - d.d / 2, b.x + d.w / 2, b.z + d.d / 2, 2); addRect(occOrig, b.x - d.w / 2, b.z - d.d / 2, b.x + d.w / 2, b.z + d.d / 2, 2); }
+      else { addRect(occ, b.x, b.z, b.x + d.w, b.z + d.d, 2); addRect(occOrig, b.x, b.z, b.x + d.w, b.z + d.d, 2); }
+    }
+    // 2) 现有道路
+    const roads = mapDef.roads || (mapDef.roads = { strips: [], marks: [] });
+    if (!roads.strips) roads.strips = [];
+    if (!roads.marks) roads.marks = [];
+    for (const s of roads.strips) {
+      addRect(occ, s.x - s.w / 2, s.z - s.d / 2, s.x + s.w / 2, s.z + s.d / 2, 1);
+      addRect(occOrig, s.x - s.w / 2, s.z - s.d / 2, s.x + s.w / 2, s.z + s.d / 2, 1);
+    }
+    // 3) 现有掩体/废墟（粗略，避免新楼压住掩体）
+    for (const c of (mapDef.cover || [])) {
+      if (!c) continue;
+      if (c.t === 'box') addRect(occ, c.x - (c.w || 2) / 2, c.z - (c.d || 2) / 2, c.x + (c.w || 2) / 2, c.z + (c.d || 2) / 2, 0);
+      else if (c.t === 'sandline' || c.t === 'barrier') {
+        const L = c.len || 4;
+        addRect(occ, c.x - (c.horiz ? L / 2 : 1), c.z - (c.horiz ? 1 : L / 2), c.x + (c.horiz ? L / 2 : 1), c.z + (c.horiz ? 1 : L / 2), 0);
+      }
+    }
+    // 3b) 废墟/瞭望塔（避免新楼压住残墙与塔基）
+    const ru = mapDef.ruins || {};
+    for (const w of (ru.walls || [])) addRect(occ, w.x - w.w / 2, w.z - w.d / 2, w.x + w.w / 2, w.z + w.d / 2, 1);
+    for (const r of (ru.rubble || [])) addRect(occ, r.x0, r.z0, r.x1, r.z1, 0);
+    for (const t of ((mapDef.props || {}).towers || [])) addRect(occ, t[0] - 3, t[1] - 3, t[0] + 3, t[1] + 3, 0);
+    // 4) 据点（band 据点由 spawns 推导）：保 26m 广场
+    const caps = (typeof World !== 'undefined' && World.bandsCaps) ? World.bandsCaps(mapDef) : (mapDef.capturePoints || []);
+    const flats = (mapDef.terrain && (mapDef.terrain.flatten || (mapDef.terrain.flatten = []))) || [];
+    const mm = mapDef.minimap || (mapDef.minimap = { roads: [] });
+    if (!mm.roads) mm.roads = [];
+    for (const c of caps) {
+      addRect(occ, c.x - 26, c.z - 26, c.x + 26, c.z + 26, 0);
+      if (!(mm.plaza && Math.abs(mm.plaza.x - c.x) < 1 && Math.abs(mm.plaza.z - c.z) < 1)) {
+        flats.push({ x0: c.x - 20, x1: c.x + 20, z0: c.z - 20, z1: c.z + 20 });
+      }
+    }
+    // 5) 出生区：保 30m 并压平
+    for (const team in (mapDef.spawns || {})) {
+      for (const s of mapDef.spawns[team]) {
+        const x = Array.isArray(s) ? s[0] : s.x, z = Array.isArray(s) ? s[1] : s.z;
+        addRect(occ, x - 30, z - 30, x + 30, z + 30, 0);
+        flats.push({ x0: x - 26, x1: x + 26, z0: z - 26, z1: z + 26 });
+      }
+    }
+    // 5b) 机制点位：炮击圈/空投点保持开阔（避免新楼挡住落弹或压住补给）
+    const mech = mapDef.mechanics;
+    if (mech) {
+      if (mech.arty && mech.arty.zone) {
+        const az = mech.arty.zone, rr = (az.r || 8) + 6;
+        addRect(occ, az.x - rr, az.z - rr, az.x + rr, az.z + rr, 0);
+        flats.push({ x0: az.x - rr, x1: az.x + rr, z0: az.z - rr, z1: az.z + rr });
+      }
+      for (const d of (mech.drops || [])) {
+        addRect(occ, d.x - 7, d.z - 7, d.x + 7, d.z + 7, 0);
+      }
+    }
+
+    // 6) 街道：每条网格线一条长街；与旧建筑冲突则跳过
+    const streetKeys = new Set();
+    const addStreet = (x, z, w, d) => {
+      const key = Math.round(x) + ':' + Math.round(z) + ':' + Math.round(w) + ':' + Math.round(d);
+      if (streetKeys.has(key)) return;
+      streetKeys.add(key);
+      const r = { x0: x - w / 2, z0: z - d / 2, x1: x + w / 2, z1: z + d / 2 };
+      for (const o of occOrig) if (this._hit(r, o, 0)) return;
+      roads.strips.push({ x: x, z: z, w: w, d: d, h: 0.12 });
+      flats.push({ x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1 });
+      mm.roads.push({ x: x, z: z, w: w, d: d });
+      addRect(occ, r.x0, r.z0, r.x1, r.z1, 1);
+    };
+
+    const blocks = [];
+    for (const dist of (T.districts || [])) {
+      const xs = [], zs = [];
+      for (let x = dist.x0; x <= dist.x1 + 0.1; x += dist.gw) xs.push(Math.min(x, dist.x1));
+      for (let z = dist.z0; z <= dist.z1 + 0.1; z += dist.gd) zs.push(Math.min(z, dist.z1));
+      for (const x of xs) addStreet(x, (dist.z0 + dist.z1) / 2, dist.street || 12, dist.z1 - dist.z0);
+      for (const z of zs) addStreet((dist.x0 + dist.x1) / 2, z, dist.x1 - dist.x0, dist.street || 12);
+      for (let i = 0; i < xs.length - 1; i++) for (let j = 0; j < zs.length - 1; j++) {
+        const sw = dist.street || 12;
+        const x0 = xs[i] + sw / 2 + 2, x1 = xs[i + 1] - sw / 2 - 2;
+        const z0 = zs[j] + sw / 2 + 2, z1 = zs[j + 1] - sw / 2 - 2;
+        if (x1 - x0 < 14 || z1 - z0 < 14) continue;
+        blocks.push({ x0, z0, x1, z1, dist });
+      }
+    }
+    // 打乱街区顺序，让各地块均匀分布（而不是先填满北区）
+    for (let i = blocks.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); const t = blocks[i]; blocks[i] = blocks[j]; blocks[j] = t; }
+
+    // 7) 沿街区南北边缘布置建筑
+    const paletteFor = (style) => (T.palette && T.palette[style]) || [0x8a8f86];
+    const pickKind = (style, maxW, maxD) => {
+      const ks = (T.styles && T.styles[style]) || []; if (!ks.length) return null;
+      for (let i = 0; i < 8; i++) {
+        const k = ks[Math.floor(rnd() * ks.length)];
+        const d = this._dims({ key: k, scale: 1 }); if (!d) continue;
+        if (d.w <= maxW && d.d <= maxD) return { key: k, d };
+      }
+      return null;
+    };
+    let placed = 0;
+    const max = T.max || 80;
+    const tryPlace = (kind, x, z) => {
+      if (x < 2 || z < 2 || x + kind.d.w > size - 2 || z + kind.d.d > size - 2) return false;
+      const r = { x0: x, z0: z, x1: x + kind.d.w, z1: z + kind.d.d };
+      for (const o of occ) if (this._hit(r, o, T.margin || 3)) return false;
+      const pal = paletteFor(kind.style);
+      mapDef.buildings.push({
+        type: 'model', key: kind.key, x: Math.round(x * 10) / 10, z: Math.round(z * 10) / 10,
+        ry: 0, scale: 1, tint: pal[Math.floor(rnd() * pal.length)], trim: false
+      });
+      addRect(occ, r.x0, r.z0, r.x1, r.z1, T.margin || 3);
+      pads.push([(r.x0 + r.x1) / 2, (r.z0 + r.z1) / 2, kind.d.w, kind.d.d]);
+      placed++;
+      return true;
+    };
+    for (const b of blocks) {
+      if (placed >= max) break;
+      const style = b.dist.style || 'residential';
+      const dens = b.dist.density !== undefined ? b.dist.density : 0.7;
+      const perBlock = T.perBlock || 3; // 每块上限：防止前面街区吃满配额、后面整块空置
+      let blockPlaced = 0;
+      // 四边沿街立面（每条边最多 6 个槽位；密度按街区风格）
+      for (const row of ['south', 'north', 'west', 'east']) {
+        if (placed >= max || blockPlaced >= perBlock) break;
+        let guard = 0;
+        if (row === 'south' || row === 'north') {
+          let cx = b.x0 + 2 + rnd() * 5;
+          while (cx < b.x1 - 8 && guard++ < 6) {
+            const kind = pickKind(style, b.x1 - cx - 2, (b.z1 - b.z0) / 2 - 3);
+            if (!kind) break;
+            kind.style = style;
+            const z = row === 'south' ? b.z1 - kind.d.d - 2 : b.z0 + 2;
+            if (rnd() < dens && tryPlace(kind, cx, z)) { cx += kind.d.w + 3 + rnd() * 5; blockPlaced++; }
+            else cx += Math.min(12, kind.d.w) + 3 + rnd() * 4;
+            if (placed >= max || blockPlaced >= perBlock) break;
+          }
+        } else {
+          let cz = b.z0 + 2 + rnd() * 5;
+          while (cz < b.z1 - 8 && guard++ < 6) {
+            const kind = pickKind(style, b.x1 - b.x0 - 4, b.z1 - cz - 2);
+            if (!kind) break;
+            kind.style = style;
+            const x = row === 'west' ? b.x0 + 2 : b.x1 - kind.d.w - 2;
+            if (rnd() < dens && tryPlace(kind, x, cz)) { cz += kind.d.d + 3 + rnd() * 5; blockPlaced++; }
+            else cz += Math.min(10, kind.d.d) + 3 + rnd() * 4;
+            if (placed >= max || blockPlaced >= perBlock) break;
+          }
+        }
+      }
+      // 大块内部补一栋（公寓/仓库/货柜），避免大块只有一圈薄边
+      if (placed < max && blockPlaced < perBlock && (b.x1 - b.x0) > 38 && (b.z1 - b.z0) > 34) {
+        const kind = pickKind(style, Math.min(22, (b.x1 - b.x0) - 10), Math.min(18, (b.z1 - b.z0) - 10));
+        if (kind && rnd() < dens * 0.65) {
+          kind.style = style;
+          tryPlace(kind, (b.x0 + b.x1) / 2 - kind.d.w / 2, (b.z0 + b.z1) / 2 - kind.d.d / 2);
+        }
+      }
+    }
+    // 8) 写回地形压平与小地图
+    if (mapDef.terrain) {
+      if (!mapDef.terrain.flattenPads) mapDef.terrain.flattenPads = [];
+      for (const p of pads) mapDef.terrain.flattenPads.push(p);
+    }
+    console.log('[Town] ' + (mapDef.id || '?') + ' 新增街区建筑 ' + placed + ' 栋 | 新街道 ' + streetKeys.size + ' 条');
+  }
+};
+
 const World = {
   scene: null, colliders: [], walls: [], platforms: [], overhead: [], grid: null,
   terrainH: null, minimapStatic: null, spawns: { blue: [], red: [] },
   capturePoints: [], capMeshes: [],
   objects: [],            // 本图创建的场景根级对象（用于换图卸载）
   mapDef: null, mapId: null,
-  _grp: null, _gen: 0, _detail: 2, _matCache: {},
+  _grp: null, _gen: 0, _detail: 2, _matCache: {}, _batchMeshes: [], _batchMat: null,
 
   DETAIL: { off: 0, none: 0, low: 1, high: 2, full: 2 },
 
@@ -115,16 +332,21 @@ const World = {
     this.mapDef = mapDef;
     this.mapId = mapDef.id;
     if (mapDef.size && mapDef.size !== CFG.WORLD) CFG.WORLD = mapDef.size;
-    // §4.7 地图尺寸归一化：mapScale = mapDef.size / 300（suburb=1.0 / desert=1.133 / port=0.867）
-    // 在覆写 CFG.WORLD 之后计算并缓存；smartSpawn / Squad / AIBrain 的空间类距离运行时乘此值
-    CFG.mapScale = (mapDef.size || CFG.WORLD) / 300;
+    // §4.7 地图尺寸归一化：mapScale 用于空间类距离（出生扩散/救援半径/散兵线）。
+    // v3.1：小镇图 700~740m 若按 size/300 线性放大（2.3~2.5×），出生会散到 140m 外、救援半径离谱；
+    //       上限锁 1.5（旧 suburb 450 的值），大地图只放大玩法空间，不无限放大交互距离。
+    CFG.mapScale = U.clamp((mapDef.size || CFG.WORLD) / 300, 0.8, 1.5);
     this._detail = this._resolveDetail(mapDef.detail);
+
+    // v3.1 小镇化：在构建地形/道路/建筑前展开外围街区（只改数据，建筑仍走统一管线）
+    if (typeof TownGen !== 'undefined' && TownGen.expand) TownGen.expand(mapDef);
 
     Tex.setupOverrides();
     this.buildEnv(mapDef.env || {});
     this.buildTerrain(mapDef.terrain || {});
     this.buildRoads(mapDef.roads || {});
     this.buildBuildings(mapDef.buildings || []);
+    this.batchStaticBuildings();
     this.buildCover(mapDef.cover || []);
     this.buildRuins(mapDef.ruins || {});
     this.buildProps(mapDef.props || {});
@@ -154,6 +376,8 @@ const World = {
     this.capturePoints = []; this.capMeshes = [];
     this.grid = null; this.terrainH = null; this.minimapStatic = null;
     this.spawns = { blue: [], red: [] };
+    this.sun = null; this.sunTarget = null;
+    this._batchMeshes = [];
     return this;
   },
 
@@ -222,13 +446,25 @@ const World = {
     this._attach(sun.target); // target 必须入场景，否则矩阵不更新
     const sh = s.shadow || {};
     sun.shadow.mapSize.set(sh.mapSize || 2048, sh.mapSize || 2048);
-    const ext = sh.extent || Math.ceil(sz * 0.62); // 300 → 186，覆盖整张地图
+    // v3.1：大图不再整图覆盖阴影（2048 贴图铺 700m 只剩 0.34m/texel），改为跟随玩家 ~170m
+    const ext = sh.extent || 170;
     sun.shadow.camera.left = -ext; sun.shadow.camera.right = ext;
     sun.shadow.camera.top = ext; sun.shadow.camera.bottom = -ext;
-    sun.shadow.camera.far = sh.far || 460;
+    sun.shadow.camera.far = sh.far || 420;
     this._attach(sun);
+    this.sun = sun; this.sunTarget = sun.target; this._sunOff = [120, 160, 80];
     const amb = e.ambient || { color: 0x8899aa, intensity: 0.25 };
     this._attach(new THREE.AmbientLight(amb.color, amb.intensity));
+  },
+
+  /* v3.1：阴影相机跟随玩家（每 ~0.25s 调用一次；小范围=高精度+更少阴影绘制） */
+  updateSun(px, pz) {
+    if (!this.sun || !this.sunTarget) return;
+    const o = this._sunOff || [120, 160, 80];
+    this.sun.position.set(px + o[0], o[1], pz + o[2]);
+    this.sunTarget.position.set(px, 0, pz);
+    this.sunTarget.updateMatrixWorld();
+    if (this.sun.shadow && this.sun.shadow.camera) this.sun.shadow.camera.updateMatrixWorld();
   },
 
   /* ============ 地形：噪声起伏 + 土丘 + 压平区 ============ */
@@ -632,6 +868,7 @@ const World = {
       for (const p of built.platforms) this.platforms.push(p);
       // D-15/T-01：主题染色（material.color × 顶点色，0xffffff=不染色）
       if (b.tint) built.mesh.traverse(o => { if (o.isMesh && o.material && o.material.color) o.material.color.setHex(b.tint); });
+      this._batchMeshes.push({ mesh: built.mesh, tint: b.tint || 0xffffff });
       vis.add(built.mesh);
     } else {
       // 回退：BuildingLib 缺失/数据损坏 → 用一个实心盒占位，保证碰撞与导航仍成立
@@ -658,6 +895,86 @@ const World = {
     this._attach(vis);
     this.glbSlot(b, vis, dim);
     return vis;
+  },
+
+  /* v3.1 静态合批：把每栋建筑的主几何按 180m 空间块合并成少数 chunk。
+   * 渲染层 100+ 建筑 → ~10 个 draw call；tint 烘进顶点色，碰撞/平台/导航完全不动。
+   * 只合批「主几何」，檐口/烟囱等精修仍各自独立（生成建筑已 trim:false）。 */
+  batchStaticBuildings() {
+    const list = this._batchMeshes || [];
+    this._batchMeshes = [];
+    if (!list.length) return;
+    const CHUNK = 180;
+    const groups = new Map();
+    const tmpV = new THREE.Vector3();
+    for (const it of list) {
+      const mesh = it.mesh;
+      if (!mesh || !mesh.geometry) continue;
+      mesh.updateMatrixWorld(true);
+      const geo = mesh.geometry.clone();
+      geo.applyMatrix4(mesh.matrixWorld);
+      const pos = geo.attributes.position;
+      if (!pos) continue;
+      const cnt = pos.count;
+      const tint = new THREE.Color(it.tint || 0xffffff);
+      let col = geo.attributes.color;
+      if (!col) {
+        const arr = new Float32Array(cnt * 3);
+        for (let i = 0; i < cnt; i++) { arr[i * 3] = tint.r; arr[i * 3 + 1] = tint.g; arr[i * 3 + 2] = tint.b; }
+        geo.setAttribute('color', new THREE.BufferAttribute(arr, 3));
+        col = geo.attributes.color;
+      } else {
+        const arr = col.array, is = col.itemSize || 3;
+        for (let i = 0; i < cnt; i++) {
+          arr[i * is] *= tint.r; arr[i * is + 1] *= tint.g; arr[i * is + 2] *= tint.b;
+        }
+      }
+      let idx = geo.index ? geo.index.array : null;
+      if (!idx) {
+        idx = cnt > 65535 ? new Uint32Array(cnt) : new Uint16Array(cnt);
+        for (let i = 0; i < cnt; i++) idx[i] = i;
+      }
+      geo.computeBoundingBox();
+      geo.boundingBox.getCenter(tmpV);
+      const key = Math.floor(tmpV.x / CHUNK) + '_' + Math.floor(tmpV.z / CHUNK);
+      let g = groups.get(key);
+      if (!g) { g = { pos: [], nor: [], col: [], idx: [], v: 0 }; groups.set(key, g); }
+      const p = geo.attributes.position.array;
+      const nrm = geo.attributes.normal ? geo.attributes.normal.array : null;
+      const cl = geo.attributes.color.array;
+      for (let i = 0; i < p.length; i++) g.pos.push(p[i]);
+      if (nrm) for (let i = 0; i < nrm.length; i++) g.nor.push(nrm[i]);
+      else for (let i = 0; i < cnt; i++) g.nor.push(0, 1, 0);
+      for (let i = 0; i < cl.length; i++) g.col.push(cl[i]);
+      for (let i = 0; i < idx.length; i++) g.idx.push(idx[i] + g.v);
+      g.v += cnt;
+      geo.dispose();
+    }
+    // 原始逐栋 mesh 移除（碰撞/平台已独立保存，不受影响）
+    for (const it of list) {
+      const m = it.mesh;
+      if (!m) continue;
+      if (m.parent) m.parent.remove(m);
+      if (m.geometry) m.geometry.dispose();
+      if (m.material && m.material.dispose) m.material.dispose();
+    }
+    const mat = this._batchMat || (this._batchMat = new THREE.MeshLambertMaterial({ vertexColors: true }));
+    let chunks = 0;
+    for (const g of groups.values()) {
+      if (!g.pos.length) continue;
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(g.pos, 3));
+      geo.setAttribute('normal', new THREE.Float32BufferAttribute(g.nor, 3));
+      geo.setAttribute('color', new THREE.Float32BufferAttribute(g.col, 3));
+      const IA = g.v > 65535 ? Uint32Array : Uint16Array;
+      geo.setIndex(new THREE.BufferAttribute(new IA(g.idx), 1));
+      geo.computeBoundingSphere();
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.castShadow = true; mesh.receiveShadow = true;
+      this._attach(mesh);
+      chunks++;
+    }
+    console.log('[Batch] 建筑静态合批 ' + list.length + ' 栋 → ' + chunks + ' 个空间块');
   },
 
   /* 模型建筑尺寸（v1.5 尺寸契约）
@@ -1109,38 +1426,98 @@ function raySphere(origin, dir, center, r) {
   return disc > 0 && (-b - Math.sqrt(disc)) > 0;
 }
 
-/* ---- A* 寻路（4/8 方向，含拐角检查） ---- */
+/* ---- A* 寻路（4/8 方向，含拐角检查）----
+ * v3.1 性能：g/came/seen 与 open 堆全部复用（大图 n≈370 时旧版每次寻路分配 ~1MB，
+ * 20 AI × 1.67 次/秒会产生数十 MB/s 垃圾 → GC 卡顿）。seen 用「代数戳」避免每帧 fill。 */
+const _AStar = {
+  n: 0, g: null, came: null, seen: null, gen: 0, heapP: [], heapV: [], size: 0,
+  ensure(n) {
+    if (this.n === n) return;
+    this.n = n;
+    this.g = new Float32Array(n * n);
+    this.came = new Int32Array(n * n);
+    this.seen = new Uint32Array(n * n);
+    this.gen = 0;
+    this.heapP = []; this.heapV = []; this.size = 0;
+  }
+};
+function _hpPush(A, p, v) {
+  const hp = A.heapP, hv = A.heapV;
+  let i = A.size++;
+  hp[i] = p; hv[i] = v;
+  while (i > 0) {
+    const par = (i - 1) >> 1;
+    if (hp[par] <= hp[i]) break;
+    const tp = hp[par], tv = hv[par];
+    hp[par] = hp[i]; hv[par] = hv[i];
+    hp[i] = tp; hv[i] = tv;
+    i = par;
+  }
+}
+function _hpPop(A) {
+  const hp = A.heapP, hv = A.heapV;
+  const top = hv[0];
+  const lastP = hp[--A.size], lastV = hv[A.size];
+  if (A.size > 0) {
+    let i = 0;
+    for (;;) {
+      const l = i * 2 + 1, r = l + 1;
+      let m = i;
+      if (l < A.size && hp[l] < hp[m]) m = l;
+      if (r < A.size && hp[r] < hp[m]) m = r;
+      if (m === i) break;
+      const tp = hp[m], tv = hv[m];
+      hp[m] = hp[i]; hv[m] = hv[i];
+      hp[i] = tp; hv[i] = tv;
+      i = m;
+    }
+    hp[i] = lastP; hv[i] = lastV;
+  }
+  return top;
+}
 function findPath(wx, wz, tx, tz) {
   const grid = World.grid, n = grid.n;
   const sx = Math.floor(wx / CFG.CELL), sz = Math.floor(wz / CFG.CELL);
   const ex = Math.floor(tx / CFG.CELL), ez = Math.floor(tz / CFG.CELL);
+  if (sx < 0 || sz < 0 || sx >= n || sz >= n || ex < 0 || ez < 0 || ex >= n || ez >= n) return [];
   if (sx === ex && sz === ez) return [];
+  const A = _AStar;
+  A.ensure(n);
+  let gen = ++A.gen;
+  if (A.gen >= 0x7fffffff) { A.seen.fill(0); A.gen = 1; gen = 1; }
+  const g = A.g, came = A.came, seen = A.seen;
   const key = (x, z) => z * n + x;
-  const open = new MinHeap();
-  const g = new Float32Array(n * n).fill(1e9);
-  const came = new Int32Array(n * n).fill(-1);
-  g[key(sx, sz)] = 0;
-  open.push(0, key(sx, sz));
+  const sk = key(sx, sz), ek = key(ex, ez);
+  A.size = 0; A.heapP.length = 0; A.heapV.length = 0;
+  seen[sk] = gen; g[sk] = 0; came[sk] = -1;
+  _hpPush(A, 0, sk);
   const h = (x, z) => Math.abs(x - ex) + Math.abs(z - ez);
   let found = false, expanded = 0;
-  while (open.size && expanded++ < (n * n + 10000)) { // 探索上限：随网格自适应（v2.9 大图 n=255；原固定 40000 会提前放弃）
-    const cur = open.pop();
-    if (cur === key(ex, ez)) { found = true; break; }
+  const cap = Math.min(n * n + 10000, 120000);
+  while (A.size && expanded++ < cap) {
+    const cur = _hpPop(A);
+    if (cur === ek) { found = true; break; }
     const cx = cur % n, cz = Math.floor(cur / n);
+    const gc = g[cur];
     for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
       if (!dx && !dz) continue;
       const nx = cx + dx, nz = cz + dz;
       if (nx < 0 || nz < 0 || nx >= n || nz >= n) continue;
-      if (grid.blocked[key(nx, nz)]) continue;
-      if (dx && dz && (grid.blocked[key(cx + dx, cz)] || grid.blocked[key(cx, cz + dz)])) continue;
-      const ng = g[cur] + (dx && dz ? 1.414 : 1);
       const k2 = key(nx, nz);
-      if (ng < g[k2]) { g[k2] = ng; came[k2] = cur; open.push(ng + h(nx, nz), k2); }
+      if (grid.blocked[k2]) continue;
+      if (dx && dz && (grid.blocked[key(cx + dx, cz)] || grid.blocked[key(cx, cz + dz)])) continue;
+      const ng = gc + (dx && dz ? 1.414 : 1);
+      if (seen[k2] === gen && ng >= g[k2]) continue;
+      seen[k2] = gen; g[k2] = ng; came[k2] = cur;
+      _hpPush(A, ng + h(nx, nz), k2);
     }
   }
   if (!found) return [];
-  const path = []; let cur = key(ex, ez);
-  while (cur !== -1 && cur !== key(sx, sz)) { path.push(cur); cur = came[cur]; }
+  const path = []; let cur = ek;
+  while (cur !== -1 && cur !== sk) {
+    if (seen[cur] !== gen) break;
+    path.push(cur); cur = came[cur];
+  }
   path.reverse();
   // 转世界坐标（格心）并做视线剪枝
   const pts = path.map(k => ({ x: (k % n + 0.5) * CFG.CELL, z: (Math.floor(k / n) + 0.5) * CFG.CELL }));
@@ -1164,31 +1541,4 @@ function gridLineClear(a, b) {
     if (x < 0 || z < 0 || x >= n || z >= n || World.grid.blocked[z * n + x]) return false;
   }
   return true;
-}
-/* 最小堆（A* open 表） */
-class MinHeap {
-  constructor() { this.heap = []; this.size = 0; }
-  push(prio, val) {
-    const h = this.heap; let i = this.size++;
-    h.push([prio, val]);
-    while (i > 0) {
-      const p = (i - 1) >> 1;
-      if (h[p][0] <= h[i][0]) break;
-      const t = h[p]; h[p] = h[i]; h[i] = t; i = p;
-    }
-  }
-  pop() {
-    const h = this.heap, top = h[0], last = h.pop(); this.size--;
-    if (this.size) {
-      h[0] = last; let i = 0;
-      while (true) {
-        const l = i * 2 + 1, r = l + 1; let m = i;
-        if (l < this.size && h[l][0] < h[m][0]) m = l;
-        if (r < this.size && h[r][0] < h[m][0]) m = r;
-        if (m === i) break;
-        const t = h[m]; h[m] = h[i]; h[i] = t; i = m;
-      }
-    }
-    return top[1];
-  }
 }

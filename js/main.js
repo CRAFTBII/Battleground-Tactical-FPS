@@ -139,6 +139,7 @@ function wireMenu() {
 /* ---------- 8. 初始化与主循环 ---------- */
 let renderer, scene, camera, clock, paused = false;
 let perfDowngraded = false, fpsAccum = 0, fpsFrames = 0, fpsSampleT = 0;
+let sunFollowT = 0;
 function init() {
   renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5)); // 上限 1.5，集显友好
@@ -146,7 +147,7 @@ function init() {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   scene = new THREE.Scene();
-  camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 500);
+  camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1200);
   scene.add(camera); // 相机必须入场景图，否则其子节点（第一人称枪）不会被渲染遍历
   clock = new THREE.Clock();
   FX.init(scene);
@@ -220,6 +221,12 @@ function loop() {
       if (typeof WeaponAnim !== 'undefined') WeaponAnim.update(dt);
     }
     perfAutoDowngrade(dt);
+  }
+  // v3.1：阴影相机跟随玩家（4Hz 足够；避免整图 2048 阴影贴图铺 700m 的糊影与全量阴影绘制）
+  sunFollowT += dt;
+  if (sunFollowT >= 0.25) {
+    sunFollowT = 0;
+    if (World && World.updateSun) World.updateSun(camera.position.x, camera.position.z);
   }
   renderer.render(scene, camera);
 }

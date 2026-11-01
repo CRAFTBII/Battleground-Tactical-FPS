@@ -40,18 +40,18 @@
     name: '荒漠前哨',
     desc: '烈日下的沙漠补给站。开阔中庭、绵延沙丘与稀疏残骸，据点相隔近百米——每一次穿越空地都是一次赌博。',
     theme: 'desert',
-    size: 510, // v2.9 地图扩大 ×1.5                // 比城郊大 40m → 转线更慢、更依赖车队式推进与掩护
+    size: 740, // v3.1 小镇化：510 → 740（北侧集市/居住区 + 东侧补给镇）
     detail: 'high',
 
     /* ---------- 环境：暖橙日照 + 远雾（热浪感，保留长视线） ---------- */
     env: {
-      fog: { color: 0xd9b483, near: 180, far: 430 },
+      fog: { color: 0xd9b483, near: 200, far: 620 },
       background: 0xdcbd90,
       hemi: { sky: 0xffe8c4, ground: 0x6d5a3a, intensity: 0.95 },
       sun: {
         color: 0xfff1cc, intensity: 1.65, pos: [150, 190, -110],   // 高角度强日照，短硬阴影
-        target: [170, 170],  // D-05/T-04：size=340 中心，阴影覆盖整图
-        shadow: { mapSize: 2048, extent: 316, far: 780 } // v2.9 地图 ×1.5 阴影放大           // 340×0.62≈211
+        target: [370, 370],  // 新城中心；阴影相机运行时跟随玩家
+        shadow: { mapSize: 2048, extent: 170, far: 420 }
       },
       ambient: { color: 0xc9a878, intensity: 0.3 }
     },
@@ -60,7 +60,7 @@
     terrain: {
       seed: 20261012,
       amp: 7.0,               // 城郊 4.4 → 荒漠 7.0：沙地本体就是掩体
-      seg: 128,
+      seg: 208,               // PlaneGeometry 细分（740m 图）
       colors: [0xc3a56d, 0xb08f55],
       colorMix: 0,
       flattenPad: 5,
@@ -426,7 +426,7 @@
     /* ---------- 出生点（西南 / 东北 对角） ---------- */
     spawns: {
       blue: [[36, 36], [52, 26], [26, 52], [64, 44], [44, 64], [70, 30], [30, 70], [56, 56], [20, 40], [40, 20]],
-      red: [[304, 304], [288, 314], [314, 288], [276, 296], [296, 276], [270, 310], [310, 270], [284, 284], [320, 300], [300, 320]]
+      red: [[690, 690], [674, 700], [700, 674], [660, 685], [685, 660], [655, 668], [670, 704], [704, 670], [650, 696], [696, 650]]
     },
 
     /* ---------- 专属机制：沙暴 + 水塔（v1.2，规格见 design/maps/mechanics.md）----------
@@ -449,16 +449,39 @@
      * ⚠️ 阶段语义：atSec≤t 取最后一个阶段为当前生效；到下一 atSec → warnSec 警示 5s → 2s 收缩。
      */
     zone: {
-      center: { x: 110, z: 140 },
+      center: { x: 370, z: 370 },
       phases: [
-        { atSec: 0,   r: 472, dmgPerSec: 1 },
-        { atSec: 135,  r: 292, dmgPerSec: 3 },
-        { atSec: 315, r: 189, dmgPerSec: 6 },
-        { atSec: 495, r: 123,  dmgPerSec: 10 },
-        { atSec: 675, r: 66,  dmgPerSec: 15 }
+        { atSec: 0,   r: 550, dmgPerSec: 1 },
+        { atSec: 135,  r: 340, dmgPerSec: 3 },
+        { atSec: 315, r: 220,  dmgPerSec: 6 },
+        { atSec: 495, r: 143,  dmgPerSec: 10 },
+        { atSec: 675, r: 77,  dmgPerSec: 15 }
       ],
       warnSec: 5,
       color: 0x4d9bff
+    },
+
+    /* ---------- 小镇化：北侧集市/居住区 + 东侧补给镇 ---------- */
+    town: {
+      seed: 20260805,
+      max: 155,
+      perBlock: 3,
+      margin: 3,
+      styles: {
+        residential: ['house', 'house', 'house', 'house', 'apartment', 'guardhouse', 'container', 'watchtower', 'pillbox'],
+        commercial: ['apartment', 'warehouse', 'guardhouse', 'container', 'pillbox', 'mast'],
+        industrial: ['warehouse', 'warehouse', 'container', 'container', 'bunker', 'hangar', 'tankH', 'tankV', 'mast', 'guardhouse']
+      },
+      palette: {
+        residential: [0xc9b082, 0xd8c49a, 0xb09a70, 0xa8926a],
+        commercial: [0xc9b082, 0xd0b58c, 0xb09a70],
+        industrial: [0xb09a70, 0x9a8560, 0xc9b082, 0x8d7c5c]
+      },
+      districts: [
+        { x0: 0, z0: 505, x1: 735, z1: 735, gw: 82, gd: 70, street: 11, style: 'residential', density: 0.88 },
+        { x0: 500, z0: 0, x1: 735, z1: 500, gw: 96, gd: 82, street: 12, style: 'industrial', density: 0.85 },
+        { x0: 0, z0: 0, x1: 500, z1: 500, gw: 92, gd: 80, street: 11, style: 'commercial', density: 0.38, infill: true }
+      ]
     },
 
     /* ---------- 小地图静态层（沙黄色调） ---------- */

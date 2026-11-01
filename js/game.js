@@ -164,29 +164,43 @@ const Game = {
     // 锚点取象限中心偏外（远离地图中心 → 拉开两军开局距离）；Q1左上/Q2右上/Q3左下/Q4右下
     const anchors = [[mid * 0.5, mid * 0.5], [W - mid * 0.5, mid * 0.5], [mid * 0.5, W - mid * 0.5], [W - mid * 0.5, W - mid * 0.5]];
     const ti = this.teams.indexOf(team);
-    // v2.9.1 3 队也四角覆盖：蓝队 Q1+Q4(对角双象限)、红 Q2、绿 Q3（修 Q4 空置）
-    const quad = (this.teamCount === 2)
-      ? (team === 'blue' ? (idx % 2 === 0 ? 0 : 3) : (idx % 2 === 0 ? 1 : 2))
-      : (this.teamCount === 3 && team === 'blue')
-        ? (idx % 2 === 0 ? 0 : 3)
-        : Math.min(ti, 3); // 4 队：每队一象限（team i → Q i）
-    const cx = anchors[quad][0], cz = anchors[quad][1];
+    // v3.1：优先用地图显式出生点做锚（蓝 SW / 红 NE 等），否则退回象限锚点。
+    // 大图扩到 700 后，几何象限锚点可能落在新区建筑里/离本队其他单位 150m 外。
+    const list = (typeof World !== 'undefined' && World.spawns && World.spawns[team]) || [];
+    const hasList = list.length > 0;
+    const sp = hasList ? list[idx % list.length] : null;
+    // 无显式出生点的队（green/yellow）使用「未被显式出生点占用的象限」，避免 4 队时红/黄同角
+    let quad = -1;
+    if (!hasList) {
+      const used = {};
+      for (const t of this.teams) {
+        const l = (World.spawns && World.spawns[t]) || [];
+        if (!l.length) continue;
+        const p = l[0];
+        used[((p.z < mid ? 0 : 1) * 2 + (p.x < mid ? 0 : 1))] = 1;
+      }
+      const pool = [0, 1, 2, 3].filter(q => !used[q]);
+      quad = pool.length ? pool[ti % pool.length] : Math.min(ti, 3);
+    }
+    const cx = sp ? sp.x : anchors[quad][0], cz = sp ? sp.z : anchors[quad][1];
     const R = CFG.SPAWN_SPREAD * (CFG.mapScale || 1);
     const SEP2 = CFG.SPAWN_SEP * CFG.SPAWN_SEP;
-    // 象限硬约束：采样点必须落在目标象限内（防半径跨界，保证「分象限出生」100% 成立）
+    // 象限硬约束：仅几何锚点需要（显式出生点已经由地图数据决定阵营角落）
     const inQuad = (x, z) => (((z < mid ? 0 : 1) * 2 + (x < mid ? 0 : 1)) === quad);
     for (let tries = 0; tries < 40; tries++) {
       const a = Math.random() * Math.PI * 2;
       const r = Math.sqrt(Math.random()) * R; // sqrt：圆内均匀分布（防内密外疏）
       const x = Math.round(cx + Math.cos(a) * r), z = Math.round(cz + Math.sin(a) * r);
       if (x < 2 || z < 2 || x > W - 2 || z > W - 2) continue;
-      if (!inQuad(x, z)) continue;
+      if (!hasList && !inQuad(x, z)) continue;
       if (!World.walkable(x, z)) continue;
+      const gy = World.heightAt(x, z);
+      if (gy > 0.8) continue; // 不生在货柜顶/屋顶/桥面（y=0 地坪才安全）
       let ok = true;
       for (const e of existing) {
         if (e && U.dist2(x, z, e.pos.x, e.pos.z) < SEP2) { ok = false; break; }
       }
-      if (ok) return { x, z, y: World.heightAt(x, z) };
+      if (ok) return { x, z, y: gy };
     }
     // 兜底：象限锚点（多队下 green/yellow 无 World.spawns 配置，不能依赖 pickSpawn）
     return { x: Math.round(cx), z: Math.round(cz), y: World.heightAt(Math.round(cx), Math.round(cz)) };

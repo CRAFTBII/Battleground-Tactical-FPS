@@ -50,18 +50,18 @@
     name: '夜港工业区',
     desc: '冷雨夜的集装箱码头。窄街密掩体、三处可攀屋顶制高点，视线被厂房与货柜切成碎片，遭遇战一触即发。',
     theme: 'port',
-    size: 390, // v2.9 地图扩大 ×1.5                // 比城郊小 40m → 转线更快、遭遇更密
+    size: 620, // v3.1 小镇化：390 → 620（北侧堆场 + 东侧工人街区）
     detail: 'high',
 
     /* ---------- 环境：冷蓝夜景 + 近雾（压缩交战距离，逼近身） ---------- */
     env: {
-      fog: { color: 0x16212c, near: 60, far: 200 },
+      fog: { color: 0x16212c, near: 90, far: 470 },
       background: 0x121a23,
       hemi: { sky: 0x2c4358, ground: 0x14181c, intensity: 0.6 },
       sun: {
         color: 0x9fc0ff, intensity: 0.62, pos: [-90, 150, -70],   // 月光/冷色，低强度长影
-        target: [130, 130],  // D-05/T-04：size=260 中心，阴影覆盖整图
-        shadow: { mapSize: 2048, extent: 241, far: 690 } // v2.9 地图 ×1.5 阴影放大          // 260×0.62≈161
+        target: [310, 310],  // 新城中心；阴影相机运行时跟随玩家
+        shadow: { mapSize: 2048, extent: 170, far: 420 }
       },
       ambient: { color: 0x4a6076, intensity: 0.46 }               // 夜景保底可视度（低于此值近战会瞎）
     },
@@ -70,7 +70,7 @@
     terrain: {
       seed: 20260906,
       amp: 1.6,               // 城郊 4.4 → 港区 1.6：硬化地坪，走位不被地形干扰
-      seg: 96,
+      seg: 176,
       colors: [0x2f3940, 0x39434a],
       colorMix: 0,
       flattenPad: 3,
@@ -464,7 +464,7 @@
     /* ---------- 出生点（西南 / 东北 对角） ---------- */
     spawns: {
       blue: [[26, 26], [42, 22], [22, 42], [58, 32], [32, 58], [60, 58], [18, 60], [60, 18], [40, 40], [44, 64]],
-      red: [[234, 234], [218, 238], [238, 218], [202, 228], [228, 202], [200, 200], [242, 200], [200, 242], [220, 220], [216, 196]]
+      red: [[580, 580], [564, 590], [590, 564], [550, 575], [575, 550], [545, 558], [560, 594], [594, 560], [540, 586], [586, 540]]
     },
 
     /* ---------- 专属机制：探照灯 + 断电（v1.2，规格见 design/maps/mechanics.md）----------
@@ -495,16 +495,39 @@
      * ⚠️ 阶段语义：atSec≤t 取最后一个阶段为当前生效；到下一 atSec → warnSec 警示 5s → 2s 收缩。
      */
     zone: {
-      center: { x: 165, z: 150 },
+      center: { x: 310, z: 310 },
       phases: [
-        { atSec: 0,   r: 345, dmgPerSec: 1 },
-        { atSec: 135,  r: 214, dmgPerSec: 3 },
-        { atSec: 315, r: 138,  dmgPerSec: 6 },
-        { atSec: 495, r: 90,  dmgPerSec: 10 },
-        { atSec: 675, r: 48,  dmgPerSec: 15 }
+        { atSec: 0,   r: 460, dmgPerSec: 1 },
+        { atSec: 135,  r: 284, dmgPerSec: 3 },
+        { atSec: 315, r: 184,  dmgPerSec: 6 },
+        { atSec: 495, r: 120,  dmgPerSec: 10 },
+        { atSec: 675, r: 65,  dmgPerSec: 15 }
       ],
       warnSec: 5,
       color: 0x4d9bff
+    },
+
+    /* ---------- 小镇化：北侧堆场 + 东侧工人街区 ---------- */
+    town: {
+      seed: 20260906,
+      max: 160,
+      perBlock: 4,
+      margin: 3,
+      styles: {
+        residential: ['house', 'house', 'house', 'apartment', 'guardhouse', 'container', 'watchtower'],
+        commercial: ['apartment', 'warehouse', 'guardhouse', 'container', 'pillbox'],
+        industrial: ['warehouse', 'warehouse', 'container', 'container', 'bunker', 'hangar', 'tankH', 'tankV', 'mast', 'guardhouse']
+      },
+      palette: {
+        residential: [0x6e7880, 0x7d8a94, 0x8a9396, 0x5f6a72],
+        commercial: [0x7d8a94, 0x8a9396, 0x6e7880],
+        industrial: [0x66727a, 0x7d8a94, 0x556068, 0x8a9396]
+      },
+      districts: [
+        { x0: 0, z0: 385, x1: 615, z1: 615, gw: 96, gd: 82, street: 12, style: 'industrial', density: 0.88 },
+        { x0: 385, z0: 0, x1: 615, z1: 380, gw: 78, gd: 68, street: 11, style: 'residential', density: 0.9 },
+        { x0: 0, z0: 0, x1: 380, z1: 380, gw: 90, gd: 78, street: 11, style: 'commercial', density: 0.4, infill: true }
+      ]
     },
 
     /* ---------- 小地图静态层（冷蓝夜色） ---------- */

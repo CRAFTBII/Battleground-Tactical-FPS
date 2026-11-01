@@ -45,8 +45,9 @@ report('E 拾取：+50HP / +30% 弹药', picked === true && s.crates.length === 
   }
   const all8 = hits.every(h => Math.abs(h.ringR - 8) < 1);
   report('警示圈半径=爆炸半径 8m（修复项）', all8, 'ringR=' + hits.map(h => h.ringR.toFixed(1)).join(','));
-  const allInZone = hits.every(h => Math.sqrt(U.dist2(h.x, h.z, 150, 150)) <= 28.5);
-  report('落点在 zone(r28) 内随机', allInZone, 'pts=' + hits.map(h => '(' + h.x.toFixed(0) + ',' + h.z.toFixed(0) + ')').join(' '));
+  const az = s.arty.zones[0];
+  const allInZone = hits.every(h => Math.sqrt(U.dist2(h.x, h.z, az.x, az.z)) <= az.r + 0.5);
+  report('落点在 zone(r' + az.r + ') 内随机', allInZone, 'pts=' + hits.map(h => '(' + h.x.toFixed(0) + ',' + h.z.toFixed(0) + ')').join(' '));
   const distinct = new Set(hits.map(h => h.x.toFixed(1) + ',' + h.z.toFixed(1))).size > 1;
   report('落点非固定 center（随机性）', distinct, '不同落点数=' + new Set(hits.map(h => h.x.toFixed(1) + ',' + h.z.toFixed(1))).size + '/5');
 }
@@ -63,20 +64,21 @@ report('E 拾取：+50HP / +30% 弹药', picked === true && s.crates.length === 
   report('落弹中心 60 伤害（100→40）', Game.player.hp <= 40, 'hp=' + Game.player.hp.toFixed(1) + ' @警示点(' + posBefore.x.toFixed(1) + ',' + posBefore.z.toFixed(1) + ')');
 }
 
-/* ---------- 4. 掩体可挡炮击（修复项 wallBlock=true，确定性：强制落点=广场中心 150,150） ---------- */
+/* ---------- 4. 掩体可挡炮击（修复项 wallBlock=true，确定性：强制落点=炮击圈中心） ---------- */
 {
   // 目标 A：开阔 5m（应受伤）；目标 B：墙后 5m（应被挡）
   const uA = Game.units.find(u => u.ai) || Game.player;
   const uB = Game.units.find(u => u.ai && u !== uA) || Game.player;
+  const az0 = s.arty.zones[0], cx = az0.x, cz = az0.z;
   // Round 1：开阔
-  s.arty.warn = { x: 150, z: 150, r: 8 }; s.arty.warnT = 0.01;
-  uA.pos.set(155, 0, 150); uA.hp = 100; uA.alive = true;
+  s.arty.warn = { x: cx, z: cz, r: 8 }; s.arty.warnT = 0.01;
+  uA.pos.set(cx + 5, 0, cz); uA.hp = 100; uA.alive = true;
   for (let i = 0; i < 260; i++) M.tick(0.016);
   report('开阔位仍受伤（wallBlock 不误伤开阔）', uA.hp < 100, '开阔 hp=' + uA.hp.toFixed(1) + '（5m 应 ≈77）');
   // Round 2：墙遮挡
-  s.arty.warn = { x: 150, z: 150, r: 8 }; s.arty.warnT = 0.01;
-  uB.pos.set(155, 0, 150); uB.hp = 100; uB.alive = true;
-  World.colliders.push({ min: new THREE.Vector3(152.5, 0, 140), max: new THREE.Vector3(153.5, 3, 160) }); // 中心(150,150)与目标(155,150)之间
+  s.arty.warn = { x: cx, z: cz, r: 8 }; s.arty.warnT = 0.01;
+  uB.pos.set(cx + 5, 0, cz); uB.hp = 100; uB.alive = true;
+  World.colliders.push({ min: new THREE.Vector3(cx + 2.5, 0, cz - 10), max: new THREE.Vector3(cx + 3.5, 3, cz + 10) }); // 中心与目标之间
   for (let i = 0; i < 260; i++) M.tick(0.016);
   World.colliders.pop();
   report('掩体可挡炮击（修复项：墙后无伤）', uB.hp === 100, '墙后 hp=' + uB.hp.toFixed(1) + '（应 100，被 rayBlocked 挡）');

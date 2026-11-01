@@ -31,29 +31,25 @@ const W = CFG.WORLD, mid = W / 2;
 // 象限编号与 scatteredSpawn 一致：Q1左上 / Q2右上 / Q3左下 / Q4右下
 const quadOf = (x, z) => ((z < mid ? 0 : 1) * 2 + (x < mid ? 0 : 1));
 
-/* ============ 1. 蓝队出生全在 Q1∪Q4（左上+右下） ============ */
+/* ============ 1. 蓝队出生集中在 Q1（西南营地） ============ */
 console.log('\n[1] 蓝队象限分布');
 const blueAI = Game.units.filter(u => u.ai && u.team === 'blue');
-let badB = blueAI.filter(u => ![0, 3].includes(quadOf(u.pos.x, u.pos.z)));
-R('蓝队 AI 全在 Q1∪Q4', badB.length === 0, badB.length ? '越界: ' + badB.map(u => u.name + '(' + Math.round(u.pos.x) + ',' + Math.round(u.pos.z) + ')q' + quadOf(u.pos.x, u.pos.z)).join(';') : '');
-R('玩家在 Q1（左上）', quadOf(p.pos.x, p.pos.z) === 0, '玩家在 q' + quadOf(p.pos.x, p.pos.z) + ' @(' + Math.round(p.pos.x) + ',' + Math.round(p.pos.z) + ')');
-const bQ1 = blueAI.filter(u => quadOf(u.pos.x, u.pos.z) === 0).length;
-const bQ4 = blueAI.filter(u => quadOf(u.pos.x, u.pos.z) === 3).length;
-R('蓝队两象限都有人（Q1=' + bQ1 + ' Q4=' + bQ4 + '）', bQ1 >= 2 && bQ4 >= 2, 'Q1=' + bQ1 + ' Q4=' + bQ4);
+let badB = blueAI.filter(u => quadOf(u.pos.x, u.pos.z) !== 0);
+R('蓝队 AI 全在 Q1（显式出生点 SW）', badB.length === 0, badB.length ? '越界: ' + badB.map(u => u.name + '(' + Math.round(u.pos.x) + ',' + Math.round(u.pos.z) + ')q' + quadOf(u.pos.x, u.pos.z)).join(';') : '');
+R('玩家在 Q1（西南营地）', quadOf(p.pos.x, p.pos.z) === 0, '玩家在 q' + quadOf(p.pos.x, p.pos.z) + ' @(' + Math.round(p.pos.x) + ',' + Math.round(p.pos.z) + ')');
+R('蓝队至少 8 人成建制', blueAI.length >= 8, 'n=' + blueAI.length);
 
-/* ============ 2. 红队出生全在 Q2∪Q3（右上+左下） ============ */
+/* ============ 2. 红队出生集中在 Q4（东北营地） ============ */
 console.log('\n[2] 红队象限分布');
 const redAI = Game.units.filter(u => u.ai && u.team === 'red');
-const badR = redAI.filter(u => ![1, 2].includes(quadOf(u.pos.x, u.pos.z)));
-R('红队 AI 全在 Q2∪Q3', badR.length === 0, badR.length ? '越界: ' + badR.map(u => u.name + '(' + Math.round(u.pos.x) + ',' + Math.round(u.pos.z) + ')q' + quadOf(u.pos.x, u.pos.z)).join(';') : '');
-const rQ2 = redAI.filter(u => quadOf(u.pos.x, u.pos.z) === 1).length;
-const rQ3 = redAI.filter(u => quadOf(u.pos.x, u.pos.z) === 2).length;
-R('红队两象限都有人（Q2=' + rQ2 + ' Q3=' + rQ3 + '）', rQ2 >= 2 && rQ3 >= 2, 'Q2=' + rQ2 + ' Q3=' + rQ3);
+const badR = redAI.filter(u => quadOf(u.pos.x, u.pos.z) !== 3);
+R('红队 AI 全在 Q4（显式出生点 NE）', badR.length === 0, badR.length ? '越界: ' + badR.map(u => u.name + '(' + Math.round(u.pos.x) + ',' + Math.round(u.pos.z) + ')q' + quadOf(u.pos.x, u.pos.z)).join(';') : '');
+R('红队至少 8 人成建制', redAI.length >= 8, 'n=' + redAI.length);
 
-/* ============ 3. 全图四角都有人（无出生真空区） ============ */
-console.log('\n[3] 四角覆盖');
+/* ============ 3. 对角覆盖：Q1 与 Q4 都有人（两军隔城对峙） ============ */
+console.log('\n[3] 对角覆盖');
 const all = [p, ...blueAI, ...redAI];
-for (const q of [0, 1, 2, 3]) {
+for (const q of [0, 3]) {
   const n = all.filter(u => quadOf(u.pos.x, u.pos.z) === q).length;
   R('Q' + (q + 1) + ' 有人（' + n + '）', n >= 1, 'q' + q + ' n=' + n);
 }
@@ -82,16 +78,18 @@ const minRBm = Math.sqrt(minRB), avgRB = sumRB / cntRB;
 R('红蓝最近距离 ' + minRBm.toFixed(0) + 'm（≥ SPAWN_SEP 不贴脸）', minRBm >= CFG.SPAWN_SEP, 'min=' + minRBm.toFixed(0));
 R('红蓝平均距离 ' + avgRB.toFixed(0) + 'm（对角分离，> ' + Math.round(mid * 0.5) + 'm）', avgRB > mid * 0.5, 'avg=' + avgRB.toFixed(0));
 
-/* ============ 6. 三图 mapScale 回归：象限锚点在任何缩放下都成立 ============ */
-console.log('\n[6] mapScale 回归');
+/* ============ 6. 三图出生锚点回归：显式出生点优先（蓝 SW Q1 / 红 NE Q4） ============ */
+console.log('\n[6] 出生锚点回归');
 const scaleBackup = CFG.mapScale;
-for (const [name, scale] of [['suburb', 1.0], ['port', 0.867], ['desert', 1.133]]) {
+for (const [name, scale] of [['suburb', 1.0], ['port', 0.867], ['desert', 1.5]]) {
   CFG.mapScale = scale;
   const s0 = Game.scatteredSpawn('blue', 0, []), s1 = Game.scatteredSpawn('blue', 1, []);
   const r0 = Game.scatteredSpawn('red', 0, []), r1 = Game.scatteredSpawn('red', 1, []);
   const inW = q => q.x >= 2 && q.z >= 2 && q.x <= W - 2 && q.z <= W - 2;
-  const ok = quadOf(s0.x, s0.z) === 0 && quadOf(s1.x, s1.z) === 3 && quadOf(r0.x, r0.z) === 1 && quadOf(r1.x, r1.z) === 2 && inW(s0) && inW(s1) && inW(r0) && inW(r1);
-  R(name + '(scale=' + scale + '): 蓝Q1/Q4 红Q2/Q3 且不出界', ok, 'b0=q' + quadOf(s0.x, s0.z) + ' b1=q' + quadOf(s1.x, s1.z) + ' r0=q' + quadOf(r0.x, r0.z) + ' r1=q' + quadOf(r1.x, r1.z));
+  // v3.1：地图显式出生点（蓝 SW / 红 NE）优先于几何象限锚点
+  const ok = quadOf(s0.x, s0.z) === 0 && quadOf(s1.x, s1.z) === 0 &&
+    quadOf(r0.x, r0.z) === 3 && quadOf(r1.x, r1.z) === 3 && inW(s0) && inW(s1) && inW(r0) && inW(r1);
+  R(name + '(scale=' + scale + '): 蓝Q1 / 红Q4 且不出界', ok, 'b0=q' + quadOf(s0.x, s0.z) + ' b1=q' + quadOf(s1.x, s1.z) + ' r0=q' + quadOf(r0.x, r0.z) + ' r1=q' + quadOf(r1.x, r1.z));
 }
 CFG.mapScale = scaleBackup;
 

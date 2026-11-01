@@ -92,10 +92,10 @@ function measureRate(x, z, secs) {
  * ================================================================ */
 console.log('\n=== ① 三图 zone 数据契约 ===');
 const DESIGN = {
-  // v2.9 地图扩图 ×1.5 后的现行数值（atSec 同步拉长）
-  suburb: { center: { x: 150, z: 150 }, r: [330, 204, 132, 85, 46], atSec: [0, 135, 315, 495, 675], dmg: [1, 3, 6, 10, 15] },
-  port:   { center: { x: 165, z: 150 }, r: [345, 214, 138, 90, 48], atSec: [0, 135, 315, 495, 675], dmg: [1, 3, 6, 10, 15] },
-  desert: { center: { x: 110, z: 140 }, r: [472, 292, 189, 123, 66], atSec: [0, 135, 315, 495, 675], dmg: [1, 3, 6, 10, 15] }
+  // v3.1 小镇化扩图后的现行数值
+  suburb: { center: { x: 350, z: 350 }, r: [520, 321, 208, 135, 73], atSec: [0, 135, 315, 495, 675], dmg: [1, 3, 6, 10, 15] },
+  port:   { center: { x: 310, z: 310 }, r: [460, 284, 184, 120, 65], atSec: [0, 135, 315, 495, 675], dmg: [1, 3, 6, 10, 15] },
+  desert: { center: { x: 370, z: 370 }, r: [550, 340, 220, 143, 77], atSec: [0, 135, 315, 495, 675], dmg: [1, 3, 6, 10, 15] }
 };
 for (const id of ['suburb', 'port', 'desert']) {
   loadMap(id);
@@ -131,18 +131,18 @@ console.log('\n=== ② 阶段推进 + 收缩平滑 ===');
 {
   loadMap('suburb');
   const z = Mechanics.zone;
-  report('阶段推进：开局 P0（dmg=1, curR=330）', z.phaseIdx === 0 && z.dmgPerSec === 1 && Math.abs(z.curR - 330) < 0.5, 'phase=' + z.phaseIdx + ' dmg=' + z.dmgPerSec + ' curR=' + z.curR);
-  // 收缩中段观测：推进到 P1 收缩的 1s 处，curR 应处于 330→204 中间
+  report('阶段推进：开局 P0（dmg=1, curR=520）', z.phaseIdx === 0 && z.dmgPerSec === 1 && Math.abs(z.curR - 520) < 0.5, 'phase=' + z.phaseIdx + ' dmg=' + z.dmgPerSec + ' curR=' + z.curR);
+  // 收缩中段观测：推进到 P1 收缩的 1s 处，curR 应处于 520→321 中间
   z.elapsed = z.phases[1].atSec - 0.5; // 停在 P1 前 0.5s（warn 已过）
   z.shrinking = false; z._builtR = 999; // 强制后续重建
   Mechanics.tick(0.5); // 触发收缩
   if (z.phaseIdx === 1 && z.shrinking) {
     Mechanics.tick(1.0); // 收缩 1s 后
     const mid = z.curR;
-    report('收缩过渡 2s lerp（1s 中段≈267）', Math.abs(mid - 267) < 8, 'curR@1s=' + mid.toFixed(1) + '（330→204 线性中段≈267）');
-  } else report('收缩过渡 2s lerp（1s 中段≈267）', false, 'phase=' + z.phaseIdx + ' shrinking=' + z.shrinking);
+    report('收缩过渡 2s lerp（1s 中段≈420）', Math.abs(mid - 420.5) < 8, 'curR@1s=' + mid.toFixed(1) + '（520→321 线性中段≈420.5）');
+  } else report('收缩过渡 2s lerp（1s 中段≈420）', false, 'phase=' + z.phaseIdx + ' shrinking=' + z.shrinking);
   Mechanics.tick(1.0); // 收缩完成
-  report('收缩完成到目标半径（curR≈204, shrinking=false）', Math.abs(z.curR - 204) < 0.5 && !z.shrinking, 'curR=' + z.curR.toFixed(2) + ' shrinking=' + z.shrinking);
+  report('收缩完成到目标半径（curR≈321, shrinking=false）', Math.abs(z.curR - 321) < 0.5 && !z.shrinking, 'curR=' + z.curR.toFixed(2) + ' shrinking=' + z.shrinking);
   report('伤害即时切换 P1=3HP/s', z.dmgPerSec === 3, 'dmg=' + z.dmgPerSec);
   // warn 时序：elapsed 尚未到 P2 atSec-5 时不发 warn banner；到点发
   z.elapsed = z.phases[2].atSec - z.warnSec + 0.1;
@@ -163,7 +163,7 @@ console.log('\n=== ③ 圈外伤害速率逐档 ===');
   loadMap('suburb');
   const z = Mechanics.zone;
   const RATES = [1, 3, 6, 10, 15];
-  const RADII = [330, 204, 132, 85, 46];
+  const RADII = [520, 321, 208, 135, 73];
   const cx = z.center.x, cz = z.center.z;
   for (let i = 0; i < 5; i++) {
     if (!fastForwardZone(z, i)) { report('P' + i + ' 推进到稳态', false, '超时'); continue; }
@@ -356,11 +356,16 @@ console.log('\n=== ⑦ 共存 ===');
   fastForwardZone(z, 1); // dmgPerSec=3
   Game.phase = 'playing'; // 长时间 fast-forward 可能已判负进 ended；applyDamage 只在 playing 结算
   mech.state.storm = true; mech.state.t = 0; // 强制风暴
-  // 找一个圈外且非庇护的空地点
+  // 找一个圈外且非庇护的空地点（大图 curR 可能接近半张图，不能只往 +x 找）
   let spot = null;
-  for (const dx of [30, 50, 80, 110, 140]) {
-    const px = z.center.x + z.curR + dx, pz = z.center.z + 30;
-    if (World.walkable(px, pz) && !mech._inShelter(px, pz)) { spot = { x: px, z: pz }; break; }
+  const W = CFG.WORLD;
+  for (const dir of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]) {
+    for (const extra of [20, 40, 70, 100, 140]) {
+      const px = z.center.x + dir[0] * (z.curR + extra), pz = z.center.z + dir[1] * (z.curR + extra);
+      if (px < 8 || pz < 8 || px > W - 8 || pz > W - 8) continue;
+      if (World.walkable(px, pz) && !mech._inShelter(px, pz) && z.isOutside(px, pz)) { spot = { x: px, z: pz }; break; }
+    }
+    if (spot) break;
   }
   report('⑦-1a 找到圈外非庇护测试点（前提）', !!spot, spot ? '(' + spot.x.toFixed(0) + ',' + spot.z.toFixed(0) + ')' : '未找到');
   if (spot) {
@@ -368,8 +373,14 @@ console.log('\n=== ⑦ 共存 ===');
     u.hp = 100; u.armor = 0;
     z.dmgT = 0.5; mech.state.stormTickT = 0.5;
     const hp0 = u.hp;
+    // 隔离：只保留被测单位，避免前面测试残留的濒死单位在风暴/圈伤里死亡触发结算 → phase=ended 后伤害被拦
+    const savedUnits = Game.units;
+    Game.units = [u];
+    Game.phase = 'playing';
     Mechanics.tick(0.5); Mechanics.tick(0.5); // 1s：圈 3 + 风暴 4 = 7
     const lost = hp0 - u.hp;
+    Game.units = savedUnits;
+    Game.phase = 'playing';
     report('⑦-1b 双压 1s ≈ 7HP/s（圈3+沙暴4）', lost >= 5.5 && lost <= 8.5, '1s 损失 ' + lost.toFixed(2) + '（期望≈7，单圈仅3）');
     const idx = Game.units.indexOf(u); if (idx >= 0) Game.units.splice(idx, 1);
   }
