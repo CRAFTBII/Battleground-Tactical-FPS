@@ -877,7 +877,10 @@ const PC = {
             const rt = Game.findReviveTargetForPlayer();
             if (rt) {
               // hold-to-revive：房主/单机直接开始；客户端发 revive_req 由房主裁决
-              if (Net.connected && !Net.isHost) Net.sendState({ t: 'revive_req', target: rt.id });
+              // v2.9 修复「联机松开 E 不取消」：客户端本地不持有 playerReviveTarget（那由房主侧填写），
+              // 旧代码 keyup 读 Game.playerReviveTarget 恒为 null → 从不发 revive_cancel，
+              // 房主上倒地者的 reviver 锁永久残留，之后谁都不许再救。
+              if (Net.connected && !Net.isHost) { Game.clientReviveTarget = rt; Net.sendState({ t: 'revive_req', target: rt.id }); }
               else if (!Game.startRevive(Game.player, rt)) UI.toast('医疗包不足，无法救援！'); // v2.4 救援耗包
             } else {
               // 处决倒地敌人（T2 补刀，不耗弹药；优先级高于机制交互/搜刮）
@@ -899,7 +902,7 @@ const PC = {
           }
           break;
         }
-        // 背包开合（仓库互通；仅对局中）
+        // 背包开合（仅对局中）
         case 'inventory': if (Game.phase === 'playing' && !Game.player.dead && typeof UI !== 'undefined') UI.toggleInventory(); break;
         // 对讲机命令（蓝队指挥）：集合 / 自由 / 进攻 / 防守（浏览器 F1-F4 被系统占用）
         case 'cmdGroup': Game.squadCommand('group'); break;
@@ -916,9 +919,9 @@ const PC = {
       if (!a) return;
       // 释放 交互键 → 取消救援（hold-to-revive，§2.2）
       if (a === 'interact') {
-        const t = Game.playerReviveTarget;
+        const t = Game.playerReviveTarget || Game.clientReviveTarget;
         if (t) {
-          if (Net.connected && !Net.isHost) Net.sendState({ t: 'revive_cancel', target: t.id });
+          if (Net.connected && !Net.isHost) { Game.clientReviveTarget = null; Net.sendState({ t: 'revive_cancel', target: t.id }); }
           else Game.cancelRevive(Game.player, t);
         }
       }

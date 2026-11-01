@@ -20,6 +20,7 @@ const Game = {
   // 复活机制状态（design/maps/respawn-rework.md §8.3）
   playerRespawnPt: null,    // 玩家最终死亡时预计算的智能落点（§5.2）【v2.1 无重生后停用，保留字段防回归】
   playerReviveTarget: null, // 玩家当前正在救援的倒地单位（E 键 hold-to-revive）
+  clientReviveTarget: null, // v2.9 联机客户端：本地记录的救援请求目标（仅用于松开 E 时发 revive_cancel）
   _revLast: null,           // 玩家救援移动中断检测（上一帧位置）
   spectator: null,          // v2.1 吃鸡制观战：{ target, idx }；null = 未在观战
 
@@ -69,7 +70,7 @@ const Game = {
     this.time = CFG.MATCH_TIME; this.mortarMode = false; this.mortarShots = CFG.MORTAR_MAX; this.mortarCd = 0;
     this.destroyMortarMesh(); this.destroyMortarMarker();
     this.aiMortarCd = 25; this.dead = false;
-    this.playerRespawnPt = null; this.playerReviveTarget = null; this._revLast = null;
+    this.playerRespawnPt = null; this.playerReviveTarget = null; this.clientReviveTarget = null; this._revLast = null;
     this.spectator = null;
     this.caps = [];
     Projectiles.list.slice().forEach(p => { World.scene.remove(p.mesh); });
@@ -411,7 +412,11 @@ const Game = {
     const p = this.player;
     if (!p || p.dead || p.down) return null;
     const R2 = CFG.REVIVE_RANGE * CFG.REVIVE_RANGE;
-    const dirX = Math.sin(p.yaw), dirZ = Math.cos(p.yaw);
+    // v2.9 修复「救不了队员」：玩家朝向向量取反了。
+    // 相机 rotation.y=yaw（YXZ 序）下视线正前方是 (-sin yaw, -cos yaw)（见 mg.js:120 / PC.update 移动分解），
+    // 旧代码用 (+sin, +cos) 当"前方"→ 判定的是玩家背后 ±30° 的锥体：
+    // 队友站在脸上也找不到救援目标，E 键永远走不进 startRevive。处决目标（findExecTargetForPlayer）同一处错误。
+    const dirX = -Math.sin(p.yaw), dirZ = -Math.cos(p.yaw);
     let best = null, bestD = R2;
     for (const u of this.units) {
       if (!u || u === p || u.team !== 'blue') continue;
@@ -430,7 +435,7 @@ const Game = {
     const p = this.player;
     if (!p || p.dead || p.down) return null;
     const R2 = CFG.REVIVE_RANGE * CFG.REVIVE_RANGE;
-    const dirX = Math.sin(p.yaw), dirZ = Math.cos(p.yaw);
+    const dirX = -Math.sin(p.yaw), dirZ = -Math.cos(p.yaw); // v2.9 同 findReviveTargetForPlayer：朝向向量取反修复
     let best = null, bestD = R2;
     for (const u of this.units) {
       if (!u || u === p || u.team === p.team) continue;
@@ -475,7 +480,11 @@ const Game = {
   startRevive(reviver, downed) {
     if (!reviver || !downed || !downed.down || downed.life !== 'down') return false;
     if (downed.reviver && downed.reviver !== reviver) return false; // 已被他人锁定
-    const hasKit = (reviver === this.player) ? (PlayerGun.medkits > 0) : !!(reviver.ai && reviver.ai.medkits > 0);
+    // v2.9 修复「联机救不了人」：远端玩家是 hostAddRemote 建的 Unit，ai === null，
+    // 旧判断 !!(reviver.ai && reviver.ai.medkits > 0) 恒为 false → startRevive 永远返回 false，
+    // 客户端按 E 之后房主侧静默失败（无提示、无进度）。人控单位（无 ai）视为自带医疗包，由客户端自管。
+    const hasKit = (reviver === this.player) ? (PlayerGun.medkits > 0)
+      : (reviver.ai ? reviver.ai.medkits > 0 : true);
     if (!hasKit) return false; // 没医疗包不能救人（v2.4）
     const d = Math.sqrt(U.dist2(reviver.pos.x, reviver.pos.z, downed.pos.x, downed.pos.z));
     if (d > CFG.REVIVE_RANGE) return false;
@@ -524,18 +533,23 @@ const Game = {
       // T3 流血致死（救援读条中也会死：T3 与 T5 竞争，§9.1 边例 3）
       u.bleedT -= dt;
       if (u.bleedT <= 0) { this.toDead(u, null, 'bleed'); continue; }
-      // 玩家救援进度（AI 救援由 AIBrain.tryRevive 驱动，避免双推进）
-      if (u.reviver === this.player) {
-        const p = this.player;
+      // 人控救援进度（AI 救援由 AIBrain.tryRevive 驱动，避免双推进）
+      // v2.9 修复：原条件只认 this.player → 联机远端玩家的读条永远停在 0，房主侧永不结算，
+      // 表现就是"队友按住 E 半天救不起来"。改为「任何无 ai 的救援者」都推进。
+      const rv = u.reviver;
+      if (rv && !rv.ai) {
         let cancel = false;
-        if (p.dead || p.down || !p.alive) cancel = true;                       // 救援者倒地/死亡
-        const dMoved = this._revLast ? U.dist(this._revLast.x, this._revLast.z, p.pos.x, p.pos.z) : 0;
-        this._revLast = { x: p.pos.x, z: p.pos.z };
-        if (dMoved > 0.2 * dt) cancel = true;                                  // 救援者移动 >0.2m/s（§2.1 中断①）
-        else if (U.dist(p.pos.x, p.pos.z, u.pos.x, u.pos.z) > CFG.REVIVE_RANGE + 0.5) cancel = true; // 离开范围（中断⑤）
-        if (cancel) { this.cancelRevive(p, u); continue; }
+        if (rv.dead || rv.down || !rv.alive) cancel = true;   // 救援者倒地/死亡
+        else if (U.dist(rv.pos.x, rv.pos.z, u.pos.x, u.pos.z) > CFG.REVIVE_RANGE + 0.5) cancel = true; // 离开范围（中断⑤）
+        if (rv === this.player && !cancel) {
+          // 本地玩家额外判"移动即中断"；远端玩家位置由快照驱动，不能用位移判中断（否则每帧都断）
+          const dMoved = this._revLast ? U.dist(this._revLast.x, this._revLast.z, rv.pos.x, rv.pos.z) : 0;
+          this._revLast = { x: rv.pos.x, z: rv.pos.z };
+          if (dMoved > 0.2 * dt) cancel = true;               // 救援者移动 >0.2m/s（§2.1 中断①）
+        }
+        if (cancel) { this.cancelRevive(rv, u); continue; }
         u.reviveT += dt;
-        if (u.reviveT >= CFG.REVIVE_TIME) this.completeRevive(p, u);
+        if (u.reviveT >= CFG.REVIVE_TIME) this.completeRevive(rv, u);
       }
     }
     if (!this.playerReviveTarget) this._revLast = null;
@@ -609,7 +623,7 @@ const Game = {
     this.dead = false; PC.vy = 0;
     if (this.mortarMode) { this.mortarMode = false; UI.mortarUI(false); document.getElementById('aimRing').style.display = 'none'; }
     // 死亡惩罚（v2.8）：死后不再回复弹药——弹匣清零（尸体掉了），备弹保留死前数量；
-    // 护甲仅恢复 30%（剩余靠搜刮尸体/仓库护甲包补）
+    // 护甲仅恢复 30%（剩余靠搜刮尸体/护甲包补）
     for (const w in WEAPONS) PlayerGun.mags[w] = 0;
     PlayerGun.armor = Math.min(PlayerGun.armor, 30);
     UI.armorBar(PlayerGun.armor);

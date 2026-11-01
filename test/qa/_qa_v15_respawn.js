@@ -103,8 +103,10 @@ try {
   report('T2 处决 → 最终死亡', target.life === 'dead' && target.down === false, 'life=' + target.life + ' down=' + target.down);
   report('T2 处决计分（击杀+1/比分+1/死亡+1）', shooter.kills === kills0 + 1 && Game.score.blue === score0 + 1 && target.deaths === deaths0 + 1,
     'kills=' + (shooter.kills - kills0) + ' scoreΔ=' + (Game.score.blue - score0) + ' deathsΔ=' + (target.deaths - deaths0));
-  report('T2 处决产 loot（AI 掉落）', !!(target.loot && target.loot.ammo), '');
-  report('T2 AI 复活计时只在最终死亡设置', target.respawnT > 0, 'respawnT=' + (target.respawnT || 0).toFixed(2));
+  // v2.3 战利品规则：处决只结算击杀分，不产箱子（只有流血致死才掉箱）
+  report('T2 处决不产 loot（v2.3 规则）', !target.loot, '');
+  // v2.1 淘汰制：AI 最终死亡后不重生，不再设置 respawnT
+  report('T2 复活计时已移除（v2.1 淘汰制）', !target.respawnT, 'respawnT=' + (target.respawnT || 0));
   // T3 流血致死
   const bleeder = Game.units.find(x => x.ai && x.alive && x.team === 'red');
   bleeder.pos.set(140, 0, 140); bleeder.hp = 1; bleeder.armor = 0;
@@ -275,10 +277,10 @@ try {
   mate.pos.set(200, 0, 200);
   medic.pos.set(180, 0, 200); // 20m
   report('⑦ 医疗兵 20m（>8m）仍可找到（60m×mapScale 半径）', medic.ai.findReviveTarget() === mate, '');
-  // 非医疗兵：20m 找不到（8m 固定）
+  // 红队非医疗兵：超出 60m×0.5×mapScale 半径找不到（v2.2 红队全兵种救援，范围仍小于医疗兵）
   const assault = Game.squads.red.members.find(m => m.ai.role === 'assault' && m !== mate);
-  assault.pos.set(220, 0, 220);
-  report('⑦ 非医疗兵 20m 找不到（8m 固定半径）', assault.ai.findReviveTarget() !== mate, '');
+  assault.pos.set(300, 0, 300);
+  report('⑦ 红队非医疗兵超出 30m 半径找不到', assault.ai.findReviveTarget() !== mate && U.dist2(assault.pos.x, assault.pos.z, mate.pos.x, mate.pos.z) > 35 * 35, '');
   // AI 实际救援路径：读条完成 → completeRevive
   const medic2 = Game.squads.blue.members.find(m => m.ai.role === 'medic');
   const downedBlue = Game.squads.blue.members.find(m => m.ai.role === 'assault');

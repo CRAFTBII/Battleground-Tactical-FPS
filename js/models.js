@@ -1006,7 +1006,7 @@ const BuildingLib = {
 
   // dims = {w,d,h}：仅对 GLB 新类型生效 —— 按摆放尺寸缩放几何/碰撞/平台
   //        （设计契约「碰撞箱按 SCAD 源码编写」：CONFIGS 本地坐标逐构件抄写 battle_*.scad，
-  //          运行时按 dims（= REAL_DIMS×scale）等比缩放，地图不手写 w/d/h；见 docs/building-dimensions-spec.md §5.4）
+  //          运行时按 dims（= REAL_DIMS×scale）等比缩放，地图不手写 w/d/h；见 docs/architecture/building-dimensions-spec.md §5.4）
   // 几何朝向：GLB 由 OpenSCAD(Z-up) 直出、无节点旋转 → 模型 y=深、z=高；
   //          这里对几何 rotateX(-90°) 使其「高朝上」，与 CONFIGS 碰撞约定（y=深→世界z, z=高→世界y）对齐。
   // v1.6 程序化主题类型（PROC_GEOS）：与内联数据同一契约（角点原点 + Y-up + 顶点色），

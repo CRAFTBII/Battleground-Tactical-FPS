@@ -57,7 +57,8 @@ report('E 拾取：+50HP / +30% 弹药', picked === true && s.crates.length === 
   M.tick(0.02);
   const w = s.arty.warn;
   const posBefore = { x: w.x, z: w.z };
-  Game.player.pos.set(w.x, 0, w.z); Game.player.hp = 100; Game.player.alive = true; Game.player.dead = false; Game.dead = false;
+  // v2.5 起护甲吸收 60%：清零护甲，直接验 60 点爆炸伤害入血
+  Game.player.pos.set(w.x, 0, w.z); Game.player.hp = 100; Game.player.armor = 0; Game.player.alive = true; Game.player.dead = false; Game.dead = false;
   for (let i = 0; i < 260; i++) M.tick(0.016);
   report('落弹中心 60 伤害（100→40）', Game.player.hp <= 40, 'hp=' + Game.player.hp.toFixed(1) + ' @警示点(' + posBefore.x.toFixed(1) + ',' + posBefore.z.toFixed(1) + ')');
 }

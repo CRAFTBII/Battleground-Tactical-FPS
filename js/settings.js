@@ -30,7 +30,7 @@ const Settings = (() => {
     jump: '跳跃', sprint: '疾跑', prone: '潜伏',
     leanLeft: '向左侧身', leanRight: '向右侧身',
     reload: '换弹', interact: '交互 / 救援', discard: '丢弃武器', melee: '近战 / 刺刀',
-    grenade: '投掷手雷', smoke: '投掷烟雾', mortar: '迫击炮', inventory: '背包（仓库）',
+    grenade: '投掷手雷', smoke: '投掷烟雾', mortar: '迫击炮', inventory: '背包',
     slot1: '槽位1 · 手枪', slot2: '槽位2 · 步枪', slot3: '槽位3 · 狙击', slot4: '槽位4 · 霰弹',
     slot5: '槽位5 · 医疗包', slot6: '槽位6 · 护甲包', slot7: '槽位7 · 手雷', slot8: '槽位8 · 烟雾',
     cmdGroup: '对讲机 · 集合', cmdFree: '对讲机 · 自由', cmdAttack: '对讲机 · 进攻', cmdDefend: '对讲机 · 防守',

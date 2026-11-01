@@ -27,8 +27,8 @@
 | 目标 | 说明 | 约束来源 |
 |------|------|----------|
 | 数据驱动 | 一张地图 = 一份数据定义（mapDef）+ 通用构建器（`World.load`）。新增地图只需写数据文件，不动 `world.js`。 | ADR-001 |
-| 离线即玩 | `file://` 双击 `index.html` 必须可玩；禁止运行时 fetch 本地 JSON（浏览器 CORS/opaque origin 拒绝）。 | ADR-002 |
-| GLB 可选 | 外部 `.glb` 是 opt-in 插槽；默认纯程序化几何+程序化纹理，零外部资源。 | ADR-003 |
+| 服务即玩 | 必须 `node server.js`，由 HTTP 提供 `models/*.glb`；`file://` 直接打开会显示明确的启动提示。 | 去内联改造（cd45815） |
+| GLB 运行时资源 | 士兵/武器/建筑模型是标准 `.glb`，经自写 `js/glb.js` 解析；缺失时回退程序化几何并在页面顶部报错。 | 去内联改造（cd45815） |
 | 玩法不变 | 据点占领、碰撞、A* 导航、出生点、小地图、单机与联机全部保留，数值与规则不改。 | 用户硬约束 |
 | 性能可控 | 精修细节用合批 + 共享材质，避免 draw call 爆炸；支持 `?detail=` 降 LOD。 | 性能预算 |
 
@@ -176,7 +176,7 @@ else { this.colliders.push(box); this.walls.push(box); }  // 下层墙：挡走�
 
 > 注：门洞本身 (`opts.doorH≈2.6`) 生成的墙段 `baseY=0`，落入 `colliders` 之外（门区间是空段）；只有 `f>=1` 楼层上方的墙段 `baseY>=3.0` 自然进入 `overhead`。
 
-**`model` 建筑（BuildingLib）的碰撞箱**：不经过 `addWall` 扫描线，而是由 `CONFIGS[key].colliders` 直接提供——**碰撞盒按 SCAD 源码逐构件编写**（见 `docs/building-dimensions-spec.md` §5.4）：外墙/门楣/楼板/平台的本地坐标直接抄 SCAD 对应 cube，`build()` 按 `scale` 等比缩放。门洞可通行语义与 proc 相同：门楣 `min.y≥2.6` 进 `overhead` 逻辑（nav 网格跳过、只挡弹道）；门洞净宽 ≥6m 保证 ≥3 个 nav 格净空。
+**`model` 建筑（BuildingLib）的碰撞箱**：不经过 `addWall` 扫描线，而是由 `CONFIGS[key].colliders` 直接提供——**碰撞盒按 SCAD 源码逐构件编写**（见 `docs/architecture/building-dimensions-spec.md` §5.4）：外墙/门楣/楼板/平台的本地坐标直接抄 SCAD 对应 cube，`build()` 按 `scale` 等比缩放。门洞可通行语义与 proc 相同：门楣 `min.y≥2.6` 进 `overhead` 逻辑（nav 网格跳过、只挡弹道）；门洞净宽 ≥6m 保证 ≥3 个 nav 格净空。
 
 ---
 
@@ -281,7 +281,7 @@ true  ← 其余（在线 + 已引入 GLTFLoader）
 3. **`index.html` 顺序**：`registry.js` → 各地图 `*.js` → `world.js`，不得颠倒（否则 `World.init` 取不到图）。
 4. **绝不 fetch 本地 JSON** 加载地图；新地图 = 一个 `js/maps/xxx.js` 调 `MapRegistry.register({...})`。
 5. **建筑精修是纯视觉**：任何精修细节（窗框/檐口/栏杆/烟囱）**不得**向 `colliders` 推盒；碰撞只来自 `BuildingLib` 数据或 `buildBuilding` 的 `addWall`。
-6. **碰撞箱按 SCAD 源码编写**（v1.8 强制）：`BuildingLib.CONFIGS[key].colliders/platforms` 的本地坐标逐构件抄写对应 `battle_*.scad`（外墙/门楣/楼板/平台直接对 cube）；禁止凭空编造或按地图 `w/d/h` 反推。改 SCAD 必须同步改 CONFIGS（见 building-dimensions-spec §5.4）。
+6. **碰撞箱按 SCAD 源码编写**（v1.8 强制）：`BuildingLib.CONFIGS[key].colliders/platforms` 的本地坐标逐构件抄写对应 `battle_*.scad`（外墙/门楣/楼板/平台直接对 cube）；禁止凭空编造或按地图 `w/d/h` 反推。改 SCAD 必须同步改 CONFIGS（见 `docs/architecture/building-dimensions-spec.md` §5.4）。
 7. **精修细节必须合批**：收集进 `det[]` 后 `_mergeBoxes` 一次性生成；材质走 `sharedMat` 共享，禁止逐细节 `new Mesh`。
 8. **门洞可通行**：下层墙（`baseY<OVERHEAD_Y`）入 `colliders`；门楣/上层墙（`baseY>=OVERHEAD_Y`）只入 `overhead`。不要动 `OVERHEAD_Y=2.2` 阈值除非重测碰撞。`model` 建筑门楣 `min.y` 同理需 ≥2.6（nav 跳过阈值，含 `sink` 修正）。
 9. **GLB 是 opt-in**：设 `glb` 字段时，碰撞/导航仍由程序化数据提供；GLB 失败必须静默回退（不许抛异常中断构建）。

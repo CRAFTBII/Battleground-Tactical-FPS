@@ -171,7 +171,7 @@ for (const id of ['suburb', 'port', 'desert']) {
   }
 }
 
-console.log('\n=== ④ stairs 落地（实体阻挡 + 顶平台可站 y≈6） ===');
+console.log('\n=== ④ stairs 落地（实体阻挡 + 顶层平台可站，与桥面 10m 差 0.5m 可跨） ===');
 for (const id of ['suburb', 'port', 'desert']) {
   loadMap(id);
   const def = MapRegistry.get(id);
@@ -180,9 +180,10 @@ for (const id of ['suburb', 'port', 'desert']) {
   const st = stairs[0];
   const bb = BuildingLib.build('stairs', st.x, st.z, st.ry || 0, { w: st.w, d: st.d, h: st.h });
   const footOk = bb.colliders.some(c => c.min.y < 0.01); // 底部实体
-  const platform = bb.platforms[0];
-  report(id + ' stairs 底部实体 + 顶平台 y≈6（与桥面同高衔接）', footOk && Math.abs(platform.y - 6) < 0.5,
-    '平台 y=' + platform.y.toFixed(2) + ' 底部实体=' + footOk);
+  // v1.5 起的阶梯塔有 4 层平台（0.5/3.5/6.5/9.5），顶层 9.5 与桥面 10.0 衔接
+  const platform = bb.platforms[bb.platforms.length - 1];
+  report(id + ' stairs 底部实体 + 顶层平台 y≈9.5（与桥面 10m 衔接）', footOk && Math.abs(platform.y - 9.5) < 0.5,
+    '顶层平台 y=' + platform.y.toFixed(2) + ' 底部实体=' + footOk);
 }
 
 console.log('\n=== ⑤ 桥梯后密度回归（三图 A* 120/120 + 出生点零重叠 + 主街端到端） ===');

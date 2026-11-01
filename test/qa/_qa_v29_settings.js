@@ -64,7 +64,11 @@ const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 ok(!html.includes('id="sensInp"') && !html.includes('id="volInp"'), '旧暂停面板滑块已移除');
 const sIdx = html.indexOf('js/settings.js'), cIdx = html.indexOf('js/combat.js');
 ok(sIdx !== -1 && cIdx !== -1 && sIdx < cIdx, 'settings.js 在 combat.js 之前引入');
-ok(/^#settings\{[^}]*z-index:70/m.test(html), '设置面板层级 z-index:70（高于菜单 50）');
+// 设置面板样式已抽到 css/panels.css，不能再只查 index.html
+const cssDir = path.join(ROOT, 'css');
+const cssText = fs.readdirSync(cssDir).filter(f => f.endsWith('.css'))
+  .map(f => fs.readFileSync(path.join(cssDir, f), 'utf8')).join('\n');
+ok(/^#settings\{[^}]*z-index:70/m.test(cssText), '设置面板层级 z-index:70（高于菜单 50）');
 
 /* ---- combat.js 完整性 ---- */
 console.log('\n[combat.js]');

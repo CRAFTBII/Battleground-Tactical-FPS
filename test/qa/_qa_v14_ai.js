@@ -82,10 +82,23 @@ try {
   const aiU = Game.units.find(x => x.ai && x.alive);
   report('① 沙暴庇护: desert 图可取得 AI 单位', !!aiU, aiU ? aiU.name : '');
   if (aiU) {
-    // base 地标南侧开阔地（footprint x[59.5,84.5] z[159.5,178.5]，外扩 0.5）
-    aiU.pos.set(72, World.heightAt(72, 186), 186);
-    aiU.alive = true; aiU.hp = 100;
     const M = Mechanics.state;
+    // 动态取一个真实庇护矩形外侧 3m 的可走点（地图布局多次调整，硬编码 base 坐标会失效）
+    const rects = (M.footprints || []).concat(M.shelter || [])
+      .filter(r => (r.x1 - r.x0) > 4 && (r.z1 - r.z0) > 4);
+    let spot = null;
+    for (const r of rects) {
+      const cx = (r.x0 + r.x1) / 2, cz = (r.z0 + r.z1) / 2;
+      for (const [x, z] of [[r.x1 + 3, cz], [r.x0 - 3, cz], [cx, r.z1 + 3], [cx, r.z0 - 3]]) {
+        if (x < 1 || z < 1 || x > CFG.WORLD - 1 || z > CFG.WORLD - 1) continue;
+        if (!World.walkable(x, z) || Mechanics._inShelter(x, z)) continue;
+        spot = { x, z }; break;
+      }
+      if (spot) break;
+    }
+    report('① 前置：找到庇护区外侧可走点', !!spot, spot ? '(' + spot.x.toFixed(1) + ',' + spot.z.toFixed(1) + ')' : 'null');
+    if (spot) aiU.pos.set(spot.x, World.heightAt(spot.x, spot.z), spot.z);
+    aiU.alive = true; aiU.hp = 100;
     M.storm = true;                    // 强制风暴期
     Mechanics.exposedIds.add(aiU.id);  // 暴露
     const sd = aiU.ai.shelterDest();

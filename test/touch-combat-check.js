@@ -85,7 +85,6 @@ vm.runInContext([
   'var Items = { update:function(){}, init:function(){} };',
   'if (typeof Ticker === "undefined") { globalThis.Ticker = { init:function(){}, radio:function(){}, kill:function(){} }; }',
   'var Settings = { key:function(a){ return a === "interact" ? "KeyE" : a; }, actionByCode:function(){ return null; } };',
-  'var Accounts = {};',
   'var Engine = { tick:function(){} };'
 ].join('\n'), win, { filename: '(stubs)' });
 

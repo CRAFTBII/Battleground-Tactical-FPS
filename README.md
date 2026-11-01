@@ -1,6 +1,6 @@
 # 战地突击 · Battleground Tactical FPS
 
-> 当前稳定版本 **v1.11.11** · 零构建（无需 `npm install`/打包，但**必须起服务**）
+> 当前稳定版本 **v1.13.3** · 零构建（无需 `npm install`/打包，但**必须起服务**）
 >
 > ⚠ **运行方式已变更**：模型改为标准 `.glb`，由服务器通过 HTTP 提供，因此**不再支持双击 `index.html`**。
 > 请执行 `node server.js`，然后浏览器打开 <http://localhost:8080>（根路径就是游戏本体）。
@@ -57,30 +57,30 @@ battlegame/
 │   ├── smoke.js      # 无头冒烟测试（DOM 桩驱动真实代码）
 │   ├── server-test.js # 服务端协议回归（握手/建房/加入/state 路由/事件广播）
 │   ├── port-density-probe.js / v13-zone-bridge-probe.js / audio-probe.js / probe_slot.js # 探针
-│   ├── qa/           # 24 个逐版本质量门禁套件（_qa_v12_* … _qa_v29_*，含共用 _qa_v12_stub）
+│   ├── qa/           # 20 个逐版本质量门禁套件（_qa_v12_* … _qa_v30_*，含共用 _qa_v12_stub）
 │   ├── debug/        # 一次性排障脚本（_dbg_*，保留作历史参考，非门禁）
 │   └── scratch/      # 临时探测脚本（_tmp_* / _probe_*，非门禁）
 ├── design/
 │   └── maps/         # 设计规格（mechanics.md 机制契约 + zone-br.md 缩圈定稿 + port/desert/suburb GDD）
 ├── docs/
-│   ├── architecture/ # 地图架构说明 + ADR-001/002/003 + mechanics-architecture.md + zone-architecture.md
-│   ├── quality/      # 质量门控报告（maps-qa-2026-08-06 / maps-qa-v12 / maps-qa-v13）
-│   └── release/      # 发布清单 / 变更日志配套（v1.1 / v1.2 / v1.3）
+│   ├── architecture/ # 架构说明 + ADR-001/002/003 + map/mechanics/zone/ai-tactics/respawn 架构 + building-dimensions-spec.md
+│   ├── quality/      # 质量门控报告（maps-qa / v12–v29 各版本逐特性门禁）
+│   └── release/      # 发布清单 / 变更日志配套（v1.1 / v1.2 / v1.3 / v1.11.11）
 ├── art/              # 美术约定（建筑精修 / 主题氛围 / 纹理 / GLB 插槽 / mechanics-visual.md / zone-visual.md / model-integration.md）
 └── package.json / README.md
 ```
 
 > 角色模型说明：士兵 6 部件（头/躯干/左右臂/左右腿）+ 枪，以关节为 pivot，几何存放于 **`models/soldier.glb`**（标准 glTF，节点层级即关节层级，`gun` 是 `armR` 的子节点），
-> 游戏内做程序化走路动画（摆臂摆腿+弹跳）。**运行时零 fetch / 零 GLB 加载**（ADR-003），双击 `index.html` 即可离线游玩；
-> URL 加 `?legacy=1` 可强制方块人。`soldier_parts.glb` / `soldier.glb` 仅为构建期源素材，不参与运行。
+> 游戏内做程序化走路动画（摆臂摆腿+弹跳）。**运行时由 `server.js` 通过 HTTP 提供 `models/*.glb`**，浏览器用自写 `js/glb.js` 解析，不再有内联数据；
+> URL 加 `?legacy=1` 可强制方块人。`models/` 下的 GLB 是运行资源，不要删。
 
 ## 发布版本
 
-当前版本 **1.11.11**（见 `package.json` 与 `CHANGELOG.md`）。本项目为**零构建静态 Web 游戏**：无需 `npm install`、无需打包。
+当前版本 **1.13.3**（见 `package.json` 与 `CHANGELOG.md`）。本项目为**零构建 Web 游戏**：无需 `npm install`、无需打包，但必须起 `server.js` 提供 `models/*.glb`。
 
-- **发布包**：`battlegame-1.11.11.zip`（约 1.9 MB）——解压即用。剔除 `node_modules`、测试套件、设计文档、美术源素材等开发文件，仅保留运行所需最小文件集（`index.html` + `js/` + `libs/three.min.js` + `models/` 内联数据 + `sounds/` 3 个 mp3 + `server.js`/`startService.bat`）。
 - **本地运行**：`node server.js` 后浏览器打开 <http://localhost:8080>；局域网联机见下方。
-- **发布清单**：`docs/release/release-checklist-v111-2026-08-08.md`。
+- **分发**：仓库不附带二进制 zip。拷贝最小运行集即可：`index.html` + `css/` + `js/` + `libs/three.min.js` + `models/` + `sounds/` + `server.js` + `startService.bat`。
+- **历史发布清单**：`docs/release/`（v1.1 / v1.2 / v1.3 / v1.11.11，仅作历史参考）。
 
 ## 快速开始
 
@@ -102,14 +102,14 @@ node server.js            # 零依赖直接跑，默认 8080 端口
 ```bash
 node server.js      # 零依赖直接跑！优先用 ws（若 npm install 过），否则内置 RFC6455 实现
 ```
-1. 房主：打开 `index.html` → 「创建联机房间」→ 进入**大厅**等待队友加入 → 人齐后点「⚔ 开始对战」
-2. 队友：打开 `index.html` → 输入房主机器 IP（如 `ws://192.168.1.8:8080`）→ 刷新列表 → 点击房间加入 → 进入大厅等待房主开始
+1. 房主：浏览器打开 <http://localhost:8080> → 「创建联机房间」→ 进入**大厅**等待队友加入 → 人齐后点「⚔ 开始对战」
+2. 队友：浏览器打开 `http://房主IP:8080` → 输入房主机器 IP（如 `ws://192.168.1.8:8080`）→ 刷新列表 → 点击房间加入 → 进入大厅等待房主开始
 3. 房主（listen-server 模型）承担权威模拟：AI、伤害、状态广播。房主掉线则房间解散
 4. 大厅内可实时看到成员列表（房主/队员标记、蓝红队伍）；任一方点「离开房间」回到主菜单
 
 > 可选 `npm install` 安装 ws（更健壮的传输层）；不装也能跑。调试开关：`FORCE_INLINE_WS=1 node server.js` 强制内置实现。
 > 浏览器必须能直连房主/服务器的 8080 端口。Windows 首次需放行防火墙。
-> 想快速确认服务器是否在跑：浏览器打开 `http://房主IP:8080` 可看到**实时服务器列表页**（服务器状态 + 当前房间 + 联机指引，每 3 秒自动刷新）。
+> 想快速确认服务器是否在跑：浏览器打开 `http://房主IP:8080/status` 可看到**实时服务器列表页**（服务器状态 + 当前房间 + 联机指引，每 3 秒自动刷新）。
 
 ### 回归测试
 ```bash

@@ -7,6 +7,47 @@
 
 ---
 
+## [1.13.3] - 2026-10-17 · 修复救援机制（救不了队员）
+
+### 修复（用户实测反馈"我救不了队员"）
+- **玩家永远找不到救援目标（根因）**：`js/game.js` `findReviveTargetForPlayer()` 把玩家朝向向量写反了。
+  相机是 `rotation.y = yaw`（YXZ 序），视线正前方是 `(-sin yaw, -cos yaw)`——`PC.update()` 的移动分解、
+  `mg.js` 的准星射线、小地图朝向全都用这个约定；只有救援/处决这两处用了 `(+sin, +cos)`。
+  结果：判定锥体被翻到玩家**背后** ±30°，倒地队友站在脸上也锁不到，按 E 永远走不进 `startRevive`。
+  `findExecTargetForPlayer()` 同一处错误（处决倒地敌人也失效）一并修正。
+- **联机时救不了人（两处）**：
+  - `startRevive()` 用 `reviver.ai && reviver.ai.medkits > 0` 判医疗包，而远端玩家是 `hostAddRemote()`
+    建的 `Unit`，`ai === null` → 恒判 false，客户端按 E 后房主侧静默失败（没提示、没读条）。
+    人控单位（无 `ai`）现视为自带医疗包，由各自客户端自管。
+  - `tickDown()` 只推进 `u.reviver === this.player` 的读条，远端救援者的进度永远停在 0、房主侧永不结算。
+    改为任何「无 `ai` 的人控救援者」都推进；"移动即中断"只对本地玩家判定（远端位置由快照驱动，
+    用它判位移会每帧误断）。
+- **联机松开 E 不取消**：客户端本地不持有 `playerReviveTarget`（那由房主侧填写），
+  `keyup` 恒读到 `null` → 从不发 `revive_cancel`，房主侧倒地者的 `reviver` 锁永久残留、之后谁都救不了。
+  新增 `Game.clientReviveTarget` 记录本地请求目标，松开即发取消。
+
+### 测试
+- 新增 `test/qa/_qa_v30_revive.js`（13 断言）：8 方位朝向锥体正向/反向、距离与状态过滤、
+  E 键全链路（找到 → `startRevive` → 双向锁定）、静止读条至被救起（`REVIVE_HP` / 扣包）、
+  联机远端救援者（无 `ai`）的开始/推进/完成。
+- 回归：v2.1 淘汰制 28、v2.2 仇恨 12、v2.4 医疗包 16、v2.5 hp 防御 13、v2.6 出生 17、
+  v2.7 任务 20、v2.8 多队 19 全 PASS；v1.5/v1.4/v1.3/v2.9 的失败项经 `git show HEAD` 基线比对
+  为**改动前既存**（数量一致或更少），与本次无关。
+- `test/smoke.js` 适配 v3.0「移除账号/个人仓库」：删除 `Accounts` / `UI.transfer` / `storeTakeAll`
+  残留断言，改测 `Backpack.resetToDefault` 初始物资与 `useArmorPack`。另修两处测试状态污染：
+  联机快照会按房间成员清理本地 AI（`Net.applyStates`），注入后重开单机局；固定 AI 的
+  engage/感知节流状态，避免缩圈、倒地残留导致手雷/烟雾断言误报。冒烟现全绿。
+- `test/qa/_qa_v29_settings.js`：设置面板样式已抽到 `css/panels.css`，z-index 断言改为扫描
+  `css/*.css`，不再只查 `index.html`。
+- 文档同步：README 版本号/运行方式/账号系统描述更新；`docs/architecture/map-architecture.md`
+  的「离线双击即玩」约束改为「必须起服务」。
+- 清理历史 QA 与新规则的偏差（只改断言，不改玩法数值）：护甲吸收 60%（v2.5）、
+  处决不产箱（v2.3）、红队全兵种救援半径（v2.2）、缩圈半径/时间（v2.9 扩图 ×1.5）、
+  阶梯塔 4 层平台（v1.5）、按 band 计据点人数（v2.9）、沙暴雾 22/70 与 180/430。
+  同时修复测试自身状态污染（敌人可见时 engage 优先、fast-forward 后比赛已 ended、
+  圈心距离与塔圈几何关系）。三图 QA 全绿。
+
+---
 ## [1.13.2] - 2026-10-17 · 修复触控开火/瞄准/换弹 + 移动端掉帧
 
 ### 修复（用户实测反馈）

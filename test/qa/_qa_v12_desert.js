@@ -12,16 +12,16 @@ const s = M.state;
 /* ---------- 0. 数值核对（回归） ---------- */
 report('desert kind=sandstorm', M.kind === 'sandstorm', 'kind=' + M.kind);
 report('desert 周期 storm30/calm90', s.dur === 30 && s.interval === 90, 'dur=' + s.dur + ' interval=' + s.interval);
-report('desert 雾 15/70 ↔ 120/430；exposeDmg=4；水塔 r10 heal5 @(152,132)',
-  s.stormFog.near === 15 && s.stormFog.far === 70 && s.calmFog.near === 120 && s.calmFog.far === 430 &&
-  s.exposeDmg === 4 && s.tower && s.tower.x === 152 && s.tower.z === 132 && s.tower.r === 10 && s.tower.heal === 5,
+report('desert 雾 22/70 ↔ 180/430；exposeDmg=4；水塔 r15 heal5 @(152,132)',
+  s.stormFog.near === 22 && s.stormFog.far === 70 && s.calmFog.near === 180 && s.calmFog.far === 430 &&
+  s.exposeDmg === 4 && s.tower && s.tower.x === 152 && s.tower.z === 132 && s.tower.r === 15 && s.tower.heal === 5,
   'fog(' + s.stormFog.near + ',' + s.stormFog.far + ') tower r=' + (s.tower ? s.tower.r : 'n/a') + ' heal=' + (s.tower ? s.tower.heal : 'n/a'));
 
 /* ---------- 1. 风暴触发 + 雾 + 灼伤（回归） ---------- */
 s.t = s.interval - 0.05; M.tick(0.1);
 report('风暴在平静 90s 后触发', s.storm === true, 'storm=' + s.storm);
 for (let i = 0; i < 200 && s.fade < 1; i++) M.tick(0.016);
-report('风暴雾插值 near≈15 far≈70', Math.abs(World.scene.fog.near - 15) < 5 && Math.abs(World.scene.fog.far - 70) < 8,
+report('风暴雾插值 near≈22 far≈70', Math.abs(World.scene.fog.near - 22) < 5 && Math.abs(World.scene.fog.far - 70) < 8,
   'near=' + World.scene.fog.near.toFixed(1) + ' far=' + World.scene.fog.far.toFixed(1));
 function openSpot() {
   for (let x = 10; x < 330; x += 12) for (let z = 10; z < 330; z += 12) {
@@ -135,7 +135,7 @@ report('水塔不进 Game.caps（id 不与 A/B/C 冲突）', Game.caps.length ==
 s.storm = true; s.t = s.dur - 0.05; s.fade = 1;
 M.tick(0.1);
 for (let i = 0; i < 250 && s.fade > 0; i++) M.tick(0.016);
-report('风暴后雾恢复 near≈120 far≈430', Math.abs(World.scene.fog.near - 120) < 10 && Math.abs(World.scene.fog.far - 430) < 25,
+report('风暴后雾恢复 near≈180 far≈430', Math.abs(World.scene.fog.near - 180) < 10 && Math.abs(World.scene.fog.far - 430) < 25,
   'near=' + World.scene.fog.near.toFixed(1) + ' far=' + World.scene.fog.far.toFixed(1));
 
 finish();

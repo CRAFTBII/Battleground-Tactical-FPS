@@ -13,15 +13,15 @@ const { loadMap, report, finish } = S;
   const blue2 = Game.units.find(u => u.ai && u.team === 'blue' && u !== blue);
   blue.pos.set(capA.x, 0, capA.z); blue.alive = true;
   blue2.pos.set(capA.x + 2, 0, capA.z); blue2.alive = true;
-  for (const u of Game.units) { if (u !== blue && u !== blue2) { u.pos.set(8, 0, 8); } }
+  for (const u of Game.units) { if (u !== blue && u !== blue2) { u.pos.set(8, 0, capA.z + capA.r + 60); } }
   const sc0 = Game.score.blue + Game.score.red;
   for (let i = 0; i < 50; i++) { Game.updateCaps(0.016); Mechanics.tick(0.016); }
   const prog = Game.caps.find(c => c.id === 'A').progress;
   report('风暴激活下据点推进不回归', prog > 0, 'A progress=' + prog.toFixed(1));
   report('风暴环境伤害不产分', Game.score.blue + Game.score.red === sc0, 'score=' + Game.score.blue + ':' + Game.score.red);
-  // 普通伤害在机制激活下仍生效
+  // 普通伤害在机制激活下仍生效（v2.5 起护甲吸收 60%，这里清零护甲只验伤害管线）
   const tgt = Game.units.find(u => u.ai && u.team === 'red');
-  tgt.hp = 100; tgt.alive = true;
+  tgt.hp = 100; tgt.armor = 0; tgt.alive = true;
   Game.applyDamage(tgt, 30, Game.player, false);
   report('机制激活下 applyDamage 正常', tgt.hp === 70, 'hp=' + tgt.hp);
 }

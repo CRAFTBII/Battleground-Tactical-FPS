@@ -408,18 +408,18 @@ try {
   if (!hasRemote) failures.push('远端玩家未创建');
 } catch (e) { failures.push('联机注入崩溃: ' + e.stack.split('\n').slice(0, 3).join(' | ')); }
 
-/* ---- 4.4 物品系统断言（账号仓库 / 死亡不补弹 / 护甲 / 搜刮 / AI 随机） ---- */
+/* 联机快照会按房间成员清理本地 AI（Net.applyStates 的 valid 集合），
+ * 后面的单机断言需要完整编成 → 重开一局，避免「找不到 AI 单位」的假失败 */
+try { Game.startSingle(); } catch (e) { failures.push('重开单机对局失败: ' + e.message); }
+
+/* ---- 4.4 物品系统断言（v3.0 初始物资 / 死亡不补弹 / 护甲 / 搜刮 / AI 随机） ---- */
 try {
-  // 账号注册 + 登录 + 仓库持久化
-  const reg = Accounts.register('tester', 'pass1234');
-  if (!reg.ok) failures.push('账号注册失败: ' + reg.msg);
-  if (Accounts.current !== 'tester') failures.push('注册后未自动登录');
-  const st = Accounts.storage();
-  if (!st || st.ammo.rifle <= 0) failures.push('默认仓库弹药缺失');
-  // 仓库持久化（重新 load）
-  Accounts.data['tester'].st.ammo.rifle = 55;
-  Accounts.save(); Accounts.load();
-  if (Accounts.storage().ammo.rifle !== 55) failures.push('仓库持久化失败');
+  // v3.0 无账号系统：开局由 Backpack.resetToDefault 统一发放，重复调用结果固定
+  Backpack.resetToDefault();
+  if (!(PlayerGun.mags.rifle > 0) || !(PlayerGun.reserves.rifle > 0)) failures.push('开局初始弹药缺失');
+  if (PlayerGun.armor !== 100) failures.push('开局护甲应为 100: ' + PlayerGun.armor);
+  if (PlayerGun.medkits !== CFG.PLAYER_START_MEDKITS) failures.push('开局医疗包异常: ' + PlayerGun.medkits);
+  if (PlayerGun.grenades !== 3 || PlayerGun.smokes !== 2) failures.push('开局投掷物异常: 手雷=' + PlayerGun.grenades + ' 烟雾=' + PlayerGun.smokes);
   // 死亡不补弹药：备弹扣光后死亡→重生→备弹仍为死前值（不回满）
   PlayerGun.reserves.rifle = 10; PlayerGun.mags.rifle = 0;
   Game.player.hp = 0; Game.player.alive = false;
@@ -456,12 +456,15 @@ try {
     if (du2.loot !== null) failures.push('搜刮后 loot 未清空');
   }
   // AI 武器随机：spawnAI 生成的单位武器应多样化（角色编成 → 突击步枪+狙击+霰弹，20 个至少 2 种）
+  // 注意：spawnAI 会整体替换 squads[team].members；旧红队单位若留在 Game.units 会成为
+  // 「不在任何小队里的孤儿 AI」，后续 v1.4 战术断言会挑到它并拿到错误的 squad 参数 → 先移除
+  Game.units = Game.units.filter(u => u.team !== 'red');
   const wset = {};
   const squad = Game.spawnAI('red', 20, []);
   for (const u of squad) wset[u.weapon] = 1;
   const wcount = Object.keys(wset).length;
   if (wcount < 2) failures.push('AI 武器随机不足: ' + wcount + ' 种（spawnAI 应随机分配）');
-  console.log('物品系统断言 | 账号✓ 仓库持久化✓ 死亡不补弹✓ 护甲吸收✓ 搜刮✓ AI随机(' + wcount + '种武器)✓');
+  console.log('物品系统断言 | 初始物资✓ 死亡不补弹✓ 护甲吸收✓ 搜刮✓ AI随机(' + wcount + '种武器)✓');
 } catch (e) { failures.push('物品系统断言崩溃: ' + e.stack.split('\n').slice(0, 3).join(' | ')); }
 
 /* ---- 4.45 Hotbar 物品栏断言（掉落/拾取/丢弃/医疗包/AI自愈/滚轮） ---- */
@@ -523,8 +526,8 @@ try {
   ab.fireT = 0; ab.burst = 1;
   ab.tryShoot(0.016);
   if (ab.mag !== 0) failures.push('换弹停顿中仍开火: mag=' + ab.mag);
-  // 5.1s 后补满（先清目标避免补弹后立即开枪）
-  ab.reloading = 0.05; ab.target = null; ab.canSee = false;
+  // 5.1s 后补满（先清目标避免补弹后立即开枪；losT 拉高跳过本帧感知，否则 perceive 会重新锁敌）
+  ab.reloading = 0.05; ab.target = null; ab.canSee = false; ab.losT = 999;
   ab.update(0.1, Game.squads[aiUnit.team]);
   if (ab.mag !== WEAPONS[aw].mag) failures.push('换弹完成后未补满弹匣: mag=' + ab.mag + ' 应 ' + WEAPONS[aw].mag);
 
@@ -532,8 +535,13 @@ try {
   const rb2 = ab.reserveMap[aw] || 0, mb2 = ab.medkits;
   const box = Items.spawnLootbox(aiUnit.pos.x, aiUnit.pos.y, aiUnit.pos.z, { ammo: {}, medkit: 1, armor: 20 });
   box.loot.ammo[aw] = 30;
+  // 拾取只在「无敌可打」的 advance 分支执行；固定本帧状态，避免 perceive 抢走目标
+  ab.state = 'advance'; ab.target = null; ab.canSee = false; ab.losT = 999; ab._tacDest = null;
+  const zoneWasActive = Mechanics.zone ? Mechanics.zone.active : false;
+  if (Mechanics.zone) Mechanics.zone.active = false;
   ab.lootTarget = box;
   ab.update(0.1, Game.squads[aiUnit.team]);
+  if (Mechanics.zone) Mechanics.zone.active = zoneWasActive;
   if ((ab.reserveMap[aw] || 0) !== rb2 + 30) failures.push('AI 拾取盒子弹药未生效: ' + ((ab.reserveMap[aw] || 0) - rb2));
   if (ab.medkits !== mb2 + 1) failures.push('AI 拾取盒子医疗包未生效');
   if (Items.list.includes(box)) failures.push('AI 拾取后盒子未移除');
@@ -610,40 +618,22 @@ try {
   Game.phase = 'playing'; PC.locked = false; PC.prone = false;
 } catch (e) { failures.push('潜伏/刺刀断言崩溃: ' + e.stack.split('\n').slice(0, 3).join(' | ')); }
 
-/* ---- 4.47 背包/仓库分离断言（Minecraft 式格子） ---- */
+/* ---- 4.47 随身背包断言（v3.0：无账号/个人仓库，只有局内背包） ---- */
 try {
-  Accounts.load();
-  if (Accounts.current !== 'tester') { const r = Accounts.register('tester', 'pass1234'); if (!r.ok) failures.push('账号重注册失败: ' + r.msg); }
-  const st = Accounts.storage();
-  st.ammo.rifle = 30; st.medkits = 3; PlayerGun.reserves.rifle = 10; PlayerGun.medkits = 2;
-  // 转移：背包弹药→仓库（点击步枪弹格）
-  UI.transfer('ammo-rifle');
-  if (PlayerGun.reserves.rifle !== 0 || st.ammo.rifle !== 40) failures.push('背包→仓库 转移失败: bag=' + PlayerGun.reserves.rifle + ' store=' + st.ammo.rifle + '（应 0/40）');
-  // 转移：仓库→背包（再点一次，取 min(store,120)）
-  UI.transfer('ammo-rifle');
-  if (PlayerGun.reserves.rifle !== 40 || st.ammo.rifle !== 0) failures.push('仓库→背包 转移失败: bag=' + PlayerGun.reserves.rifle + ' store=' + st.ammo.rifle + '（应 40/0）');
-  // 120 发/组上限：仓库 150 → 取出 120，仓库剩 30
-  st.ammo.rifle = 150; PlayerGun.reserves.rifle = 0;
-  UI.transfer('ammo-rifle');
-  if (PlayerGun.reserves.rifle !== 120 || st.ammo.rifle !== 30) failures.push('120/组堆叠失败: bag=' + PlayerGun.reserves.rifle + ' store=' + st.ammo.rifle + '（应 120/30）');
-  // 医疗包转移：背包 2 个 → 仓库
-  UI.transfer('medkit');
-  if (PlayerGun.medkits !== 0 || st.medkits !== 5) failures.push('医疗包转移失败: bag=' + PlayerGun.medkits + ' store=' + st.medkits);
-  // 全部取出（120 堆叠上限）：先清空背包 → 取出 30（背包 30）→ 再存回测试上限保护
-  PlayerGun.reserves.rifle = 0;
-  UI.storeTakeAll(true);
-  if ((st.ammo.rifle || 0) !== 0 || PlayerGun.reserves.rifle !== 30) failures.push('全部取出异常: bag=' + PlayerGun.reserves.rifle + ' store=' + (st.ammo.rifle || 0) + '（应 30/0）');
-  // 背包满 120 时全部取出不超上限（仓库 200 → 背包保持 120，仓库剩 200）
-  PlayerGun.reserves.rifle = 120; st.ammo.rifle = 200;
-  UI.storeTakeAll(true);
-  if (PlayerGun.reserves.rifle > 120) failures.push('全部取出超堆叠上限: ' + PlayerGun.reserves.rifle);
-  if ((st.ammo.rifle || 0) !== 200) failures.push('堆叠上限保护异常: 背包满时仓库不应被清空, store=' + st.ammo.rifle);
-  // 渲染不崩（DOM 桩：invBag/invStore 是 fakeEl）
+  // 统一初始物资：resetToDefault 可重复执行且结果固定
+  PlayerGun.reserves.rifle = 0; PlayerGun.medkits = 0; PlayerGun.armor = 20; PlayerGun.armorkits = 0;
+  Backpack.resetToDefault();
+  if (PlayerGun.reserves.rifle !== WEAPONS.rifle.reserve) failures.push('resetToDefault 备弹未回满: ' + PlayerGun.reserves.rifle);
+  if (PlayerGun.mags.rifle !== WEAPONS.rifle.mag) failures.push('resetToDefault 弹匣未回满: ' + PlayerGun.mags.rifle);
+  if (PlayerGun.armor !== 100) failures.push('resetToDefault 护甲未回满: ' + PlayerGun.armor);
+  if (PlayerGun.medkits !== CFG.PLAYER_START_MEDKITS) failures.push('resetToDefault 医疗包异常: ' + PlayerGun.medkits);
+  // 护甲包：1 包 = 25 甲；满甲拒绝使用且不扣包
+  PlayerGun.armor = 50; PlayerGun.armorkits = 2;
+  if (!Backpack.useArmorPack() || PlayerGun.armor !== 75 || PlayerGun.armorkits !== 1) failures.push('护甲包修复异常: armor=' + PlayerGun.armor + ' kits=' + PlayerGun.armorkits);
+  if (!Backpack.useArmorPack() || PlayerGun.armor !== 100 || PlayerGun.armorkits !== 0) failures.push('护甲包第二次修复异常: armor=' + PlayerGun.armor + ' kits=' + PlayerGun.armorkits);
+  if (Backpack.useArmorPack()) failures.push('满护甲仍消耗护甲包');
+  // 渲染不崩（DOM 桩：invBag 是 fakeEl）
   UI.inventory();
-  // 护甲包单位统一（个↔个，修复诡异消失）：背包 2 个 → 仓库
-  PlayerGun.armorkits = 2; st.armorkits = 0;
-  UI.transfer('armorkit');
-  if (PlayerGun.armorkits !== 0 || st.armorkits !== 2) failures.push('护甲包转移异常: bag=' + PlayerGun.armorkits + ' store=' + st.armorkits + '（应 0/2）');
   // 手雷消耗（修复 0 也能扔）：0 个时 throwGrenade 不产生投射物
   PlayerGun.grenades = 0; const pr0 = Projectiles.list.length;
   PlayerGun.gCd = 0; PlayerGun.throwGrenade();
@@ -651,8 +641,8 @@ try {
   PlayerGun.grenades = 2;
   PlayerGun.throwGrenade();
   if (Projectiles.list.length !== pr0 + 1 || PlayerGun.grenades !== 1) failures.push('手雷消耗异常: n=' + PlayerGun.grenades + '（应扔1次剩1）');
-  console.log('背包仓库断言 | 分离转移✓ 弹药0/40→40/0✓ 医疗包✓ 全部取出+120上限✓ 护甲包单位✓ 手雷消耗✓ 渲染✓');
-} catch (e) { failures.push('背包仓库断言崩溃: ' + e.stack.split('\n').slice(0, 3).join(' | ')); }
+  console.log('随身背包断言 | 初始物资✓ 护甲包✓ 渲染✓ 手雷消耗✓');
+} catch (e) { failures.push('随身背包断言崩溃: ' + e.stack.split('\n').slice(0, 3).join(' | ')); }
 
 /* ---- 4.48 战利品盒断言（PUBG 式：击杀掉一个盒子，含全部 loot，一次拾取） ---- */
 try {
@@ -970,8 +960,10 @@ try {
   {
     World.load(scene, MapRegistry.get('suburb'));
     const mech = M({ type: 'airdrop', intervalSec: 99, drops: [], crate: {}, arty: { intervalSec: 0.01, zone: { x: 150, z: 150, r: 6 }, warnSec: 0.05, dmg: 60, radius: 8 } });
-    const u = Game.units.find(x => x.ai) || Game.player;
-    u.pos.set(150, 0, 150); u.alive = true;
+    const u = Game.units.find(x => x.ai && x.alive && !x.down && x.hp > 0) || Game.player;
+    u.pos.set(150, 0, 150);
+    // 前面的倒地/处决断言可能把单位留在 down/dead 残留状态；炮击只对活体结算 → 先复位
+    u.alive = true; u.down = false; u.life = 'alive'; u.hp = 100;
     const hp0 = u.hp;
     for (let i = 0; i < 6; i++) mech.tick(0.016); // 触发警示
     if (!(mech.state.arty && mech.state.arty.warn)) failures.push('arty 未进入警示期');
@@ -1146,9 +1138,12 @@ try {
   {
     World.load(scene, MapRegistry.get('port'));
     Game.buildCoverPts();
-    const aiU = Game.units.find(x => x.ai && x.alive);
+    const aiU = Game.units.find(x => x.ai && x.alive && !x.down) || Game.units.find(x => x.ai && x.alive);
     if (!aiU) failures.push('v1.4 ② 无可用 AI 单位');
     else {
+      // 复位可能被前面断言留下的倒地/闪避/救援状态，保证 update 走 engage 分支
+      aiU.down = false; aiU.life = 'alive'; aiU.alive = true; aiU.hp = 100;
+      aiU.ai.reviveTarget = null; aiU.ai.execTarget = null; aiU.ai.lastDmgT = -99;
       const s = Mechanics.state;
       const realLights = s.lights;
       s.power = true;
@@ -1166,6 +1161,8 @@ try {
       const eT = { id: 't_pwr_enemy', team: aiU.team === 'blue' ? 'red' : 'blue', alive: true, pos: new THREE.Vector3(130, 0, 143), hp: 100, ai: null, isPlayer: false }; // 7m 远
       aiU.pos.set(130, 0, 150);
       aiU.ai.target = eT; aiU.ai.canSee = true; aiU.ai.grenadeCd = 0; aiU.ai._prevTarget = eT;
+      // 绕过感知节流并固定状态：否则 perceive() 可能因射线被挡把 canSee 改回 false → 走 advance 分支
+      aiU.ai.losT = 999; aiU.ai.state = 'engage';
       const pBefore = Projectiles.list.filter(p => p.type === 'grenade').length;
       aiU.ai.update(0.016, Game.squads[aiU.team]);
       const pAfter = Projectiles.list.filter(p => p.type === 'grenade').length;
@@ -1207,9 +1204,12 @@ try {
   {
     World.load(scene, MapRegistry.get('desert'));
     Game.buildCoverPts();
-    const sm = Game.units.find(x => x.ai && x.alive);
+    const sm = Game.units.find(x => x.ai && x.alive && !x.down) || Game.units.find(x => x.ai && x.alive);
     if (!sm) failures.push('v1.4 ④ 无可用 AI 单位');
     else {
+      // 复位倒地/闪避/救援状态，保证 update 走 engage → maybeThrowSmoke 分支
+      sm.down = false; sm.life = 'alive'; sm.alive = true; sm.hp = 100;
+      sm.ai.reviveTarget = null; sm.ai.execTarget = null; sm.ai.lastDmgT = -99;
       const savedUnits = Game.units;
       Projectiles.list = []; // 清掉前面段的烟雾/手雷，保证断言干净
       const eTeam = sm.team === 'blue' ? 'red' : 'blue';
@@ -1218,7 +1218,8 @@ try {
       Game.units = [Game.player, fakeMe, eEnemy];
       sm.pos.set(170, 0, 170);
       sm.ai._prevTarget = null; sm.ai.smokes = 1; sm.ai.smokeCd = 0; sm.ai._smokeT = 0;
-      sm.ai.target = null; sm.ai.canSee = false; sm.ai.losT = 0; // 清视线节流，强制本帧重算
+      // 直接锁定目标并固定 engage：避免 perceive() 因地图遮挡清空 target，导致走不到投烟分支
+      sm.ai.target = eEnemy; sm.ai.canSee = true; sm.ai.state = 'engage'; sm.ai.losT = 999; sm.ai.burst = 0;
       const origRandom = Math.random;
       Math.random = () => 0; // 触发概率 0.5 → 必定触发（同时固定 U.rand）
       sm.ai.update(0.016, Game.squads[sm.team]);

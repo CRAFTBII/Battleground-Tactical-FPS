@@ -92,9 +92,10 @@ function measureRate(x, z, secs) {
  * ================================================================ */
 console.log('\n=== ① 三图 zone 数据契约 ===');
 const DESIGN = {
-  suburb: { center: { x: 150, z: 150 }, r: [220, 136, 88, 57, 31], atSec: [0, 90, 210, 330, 450], dmg: [1, 3, 6, 10, 15] },
-  port:   { center: { x: 165, z: 150 }, r: [230, 143, 92, 60, 32], atSec: [0, 90, 210, 330, 450], dmg: [1, 3, 6, 10, 15] },
-  desert: { center: { x: 110, z: 140 }, r: [315, 195, 126, 82, 44], atSec: [0, 90, 210, 330, 450], dmg: [1, 3, 6, 10, 15] }
+  // v2.9 地图扩图 ×1.5 后的现行数值（atSec 同步拉长）
+  suburb: { center: { x: 150, z: 150 }, r: [330, 204, 132, 85, 46], atSec: [0, 135, 315, 495, 675], dmg: [1, 3, 6, 10, 15] },
+  port:   { center: { x: 165, z: 150 }, r: [345, 214, 138, 90, 48], atSec: [0, 135, 315, 495, 675], dmg: [1, 3, 6, 10, 15] },
+  desert: { center: { x: 110, z: 140 }, r: [472, 292, 189, 123, 66], atSec: [0, 135, 315, 495, 675], dmg: [1, 3, 6, 10, 15] }
 };
 for (const id of ['suburb', 'port', 'desert']) {
   loadMap(id);
@@ -114,11 +115,13 @@ for (const id of ['suburb', 'port', 'desert']) {
     }
   }
   report(id + ' 阶段数值（atSec/r/dmgPerSec 逐项）', phaseOk, phaseOk ? 'P0~P4 全对' : detail);
-  report(id + ' 初始圈半径覆盖全图（r0 ≥ 圈心到最远角）', exp.r[0] >= Math.max(
-    Math.hypot(exp.center.x, exp.center.z),
-    Math.hypot(exp.center.x, CFG.WORLD - exp.center.z),
-    Math.hypot(CFG.WORLD - exp.center.x, exp.center.z),
-    Math.hypot(CFG.WORLD - exp.center.x, CFG.WORLD - exp.center.z)), 'r0=' + exp.r[0]);
+  report(id + ' 初始圈覆盖所有出生点与据点', (function () {
+    const md = MapRegistry.get(id);
+    const pts = [].concat(md.spawns ? (md.spawns.blue || []) : [], md.spawns ? (md.spawns.red || []) : [],
+      (md.capturePoints || []).map(c => [c.x, c.z]));
+    const maxD = pts.reduce((m, p) => Math.max(m, Math.hypot(p[0] - exp.center.x, p[1] - exp.center.z)), 0);
+    return exp.r[0] >= maxD;
+  })(), 'r0=' + exp.r[0]);
 }
 
 /* ================================================================
@@ -128,18 +131,18 @@ console.log('\n=== ② 阶段推进 + 收缩平滑 ===');
 {
   loadMap('suburb');
   const z = Mechanics.zone;
-  report('阶段推进：开局 P0（dmg=1, curR=220）', z.phaseIdx === 0 && z.dmgPerSec === 1 && Math.abs(z.curR - 220) < 0.5, 'phase=' + z.phaseIdx + ' dmg=' + z.dmgPerSec + ' curR=' + z.curR);
-  // 收缩中段观测：推进到 P1 收缩的 1s 处（elapsed≈91），curR 应处于 220→136 中间
+  report('阶段推进：开局 P0（dmg=1, curR=330）', z.phaseIdx === 0 && z.dmgPerSec === 1 && Math.abs(z.curR - 330) < 0.5, 'phase=' + z.phaseIdx + ' dmg=' + z.dmgPerSec + ' curR=' + z.curR);
+  // 收缩中段观测：推进到 P1 收缩的 1s 处，curR 应处于 330→204 中间
   z.elapsed = z.phases[1].atSec - 0.5; // 停在 P1 前 0.5s（warn 已过）
   z.shrinking = false; z._builtR = 999; // 强制后续重建
-  Mechanics.tick(0.5); // elapsed=90 → 触发收缩
+  Mechanics.tick(0.5); // 触发收缩
   if (z.phaseIdx === 1 && z.shrinking) {
     Mechanics.tick(1.0); // 收缩 1s 后
     const mid = z.curR;
-    report('收缩过渡 2s lerp（1s 中段≈178）', Math.abs(mid - 178) < 8, 'curR@1s=' + mid.toFixed(1) + '（220→136 线性中段≈178）');
-  } else report('收缩过渡 2s lerp（1s 中段≈178）', false, 'phase=' + z.phaseIdx + ' shrinking=' + z.shrinking);
+    report('收缩过渡 2s lerp（1s 中段≈267）', Math.abs(mid - 267) < 8, 'curR@1s=' + mid.toFixed(1) + '（330→204 线性中段≈267）');
+  } else report('收缩过渡 2s lerp（1s 中段≈267）', false, 'phase=' + z.phaseIdx + ' shrinking=' + z.shrinking);
   Mechanics.tick(1.0); // 收缩完成
-  report('收缩完成到目标半径（curR≈136, shrinking=false）', Math.abs(z.curR - 136) < 0.5 && !z.shrinking, 'curR=' + z.curR.toFixed(2) + ' shrinking=' + z.shrinking);
+  report('收缩完成到目标半径（curR≈204, shrinking=false）', Math.abs(z.curR - 204) < 0.5 && !z.shrinking, 'curR=' + z.curR.toFixed(2) + ' shrinking=' + z.shrinking);
   report('伤害即时切换 P1=3HP/s', z.dmgPerSec === 3, 'dmg=' + z.dmgPerSec);
   // warn 时序：elapsed 尚未到 P2 atSec-5 时不发 warn banner；到点发
   z.elapsed = z.phases[2].atSec - z.warnSec + 0.1;
@@ -160,7 +163,7 @@ console.log('\n=== ③ 圈外伤害速率逐档 ===');
   loadMap('suburb');
   const z = Mechanics.zone;
   const RATES = [1, 3, 6, 10, 15];
-  const RADII = [220, 136, 88, 57, 31];
+  const RADII = [330, 204, 132, 85, 46];
   const cx = z.center.x, cz = z.center.z;
   for (let i = 0; i < 5; i++) {
     if (!fastForwardZone(z, i)) { report('P' + i + ' 推进到稳态', false, '超时'); continue; }
@@ -191,7 +194,7 @@ console.log('\n=== ④ AI 进圈 ===');
   for (const u of Game.units) { u.alive = true; u.hp = CFG.PLAYER_HP; u.armor = 0; if (u.ai) u.ai.reset(); }
   loadMap('suburb');
   const z = Mechanics.zone;
-  fastForwardZone(z, 4); // 最终圈 r31，多数出生点圈外
+  fastForwardZone(z, 4); // 最终圈 r46，多数出生点圈外
   for (const u of Game.units) { u.alive = true; u.hp = CFG.PLAYER_HP; u.armor = 0; if (u.ai) { u.ai.reset(); u.ai.repathT = -1; } }
   const squad = Game.squads.red;
   const u = squad.members.find(m => m.ai && m.alive);
@@ -238,12 +241,21 @@ console.log('\n=== ④ AI 进圈 ===');
   report('④-3a 最终圈下存在圈外出生点（前提）', !!spawnOut, spawnOut ? '出生点圈外' : '无圈外出生点');
   if (spawnOut) {
     const sx = Array.isArray(spawnOut) ? spawnOut[0] : spawnOut.x, sz = Array.isArray(spawnOut) ? spawnOut[1] : spawnOut.z;
+    // 本用例只验「无敌人时的进圈优先级」；先把所有敌对单位挪远，避免 perceive 命中后走 engage（设计上 engage 优先）
+    for (const e of Game.units) {
+      if (e !== u && e.team !== u.team) e.pos.set(10, 0, 10);
+    }
     u.pos.set(sx, 0, sz); u.alive = true; ai.reset(); ai.repathT = -1;
+    ai.target = null; ai.canSee = false; ai.losT = 999;
     squad.objective = null;
     ai.update(0.05, squad); // 复活后第一帧：应奔圈
     const lw = ai.path[ai.path.length - 1];
+    const zdDbg = ai.zoneDest();
     report('④-3b 复活圈外 → 首帧即奔圈内', !!lw && U.dist2(lw.x, lw.z, z.center.x, z.center.z) <= z.curR * z.curR + 2,
-      lw ? 'path终=(' + lw.x.toFixed(1) + ',' + lw.z.toFixed(1) + ')' : '无路径');
+      (lw ? 'path终=(' + lw.x.toFixed(1) + ',' + lw.z.toFixed(1) + ')' : '无路径') +
+      ' state=' + ai.state + ' canSee=' + ai.canSee + ' pathN=' + ai.path.length +
+      ' zd=' + (zdDbg ? '(' + zdDbg.x.toFixed(1) + ',' + zdDbg.z.toFixed(1) + ')' : 'null') +
+      ' walkable=' + World.walkable(u.pos.x, u.pos.z) + ' pos=(' + u.pos.x.toFixed(1) + ',' + u.pos.z.toFixed(1) + ')');
   }
 }
 
@@ -342,6 +354,7 @@ console.log('\n=== ⑦ 共存 ===');
   const z = Mechanics.zone;
   const mech = Mechanics;
   fastForwardZone(z, 1); // dmgPerSec=3
+  Game.phase = 'playing'; // 长时间 fast-forward 可能已判负进 ended；applyDamage 只在 playing 结算
   mech.state.storm = true; mech.state.t = 0; // 强制风暴
   // 找一个圈外且非庇护的空地点
   let spot = null;
@@ -360,11 +373,16 @@ console.log('\n=== ⑦ 共存 ===');
     report('⑦-1b 双压 1s ≈ 7HP/s（圈3+沙暴4）', lost >= 5.5 && lost <= 8.5, '1s 损失 ' + lost.toFixed(2) + '（期望≈7，单圈仅3）');
     const idx = Game.units.indexOf(u); if (idx >= 0) Game.units.splice(idx, 1);
   }
-  // ⑦-2 desert：水塔回血圈外仍生效（5HP/s 不与圈伤耦合）
-  fastForwardZone(z, 4); // 最终圈 r44
+  // ⑦-2 desert：水塔回血与圈外伤害解耦（5HP/s）
+  fastForwardZone(z, 4); // 最终圈 r66
+  Game.phase = 'playing';
   const tw = mech.state.tower;
   tw.progress = 100; tw.owner = 'blue';
-  // 塔圈边缘点：塔心(152,132) + 向远离圈心方向 9m（r10 内、圈外）
+  // v2.9 扩图后圈心距塔心 42.8m、塔半径 15m，最终圈 r66 完全罩住水塔 → 「塔边点在圈外」几何上不可达。
+  // 临时压圈到 30m 制造圈外条件，验证回血不依赖圈内/外；测完恢复。
+  const curRSave = z.curR;
+  z.curR = 30;
+  // 塔圈边缘点：塔心(152,132) + 向远离圈心方向 9m（r15 内、圈外）
   const tcx = 152, tcz = 132;
   const dirX = (tcx - z.center.x), dirZ = (tcz - z.center.z);
   const nd = Math.hypot(dirX, dirZ) || 1;
@@ -375,12 +393,13 @@ console.log('\n=== ⑦ 共存 ===');
   z.dmgPerSec = 0; // 隔离回血（仅测水塔；圈伤速率已在③逐档验证）
   const u2 = new Unit('blue', { x: px, y: 0, z: pz, weapon: 'rifle' });
   u2.alive = true; u2.hp = 50; u2.armor = 0; Game.units.push(u2);
-  tw.towerTickT = 0.5;
+  mech.state.towerTickT = 0.5;
   const hpB = u2.hp;
   Mechanics.tick(0.5); Mechanics.tick(0.5);
   const healed = u2.hp - hpB;
   report('⑦-2b 水塔回血圈外仍生效（≈5HP/s）', healed >= 3 && healed <= 8, '圈外回血 +' + healed.toFixed(1) + 'HP/1s（设计 5HP/s）');
   z.dmgPerSec = zDmgSave;
+  z.curR = curRSave;
   const i2 = Game.units.indexOf(u2); if (i2 >= 0) Game.units.splice(i2, 1);
   mech.state.storm = false;
   // ⑦-3 suburb：空投/炮击在缩圈下不回归
