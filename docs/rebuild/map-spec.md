@@ -1,5 +1,8 @@
 # MapSpec 数据规范
 
+## Schema 文件
+结构校验定义位于 [map-spec.schema.json](map-spec.schema.json)。Schema 负责静态字段和类型校验；资产引用、ID 唯一、地图边界、NAV/COL 一致性和路径连通由语义 validator 负责。
+
 ## 单一事实源
 每张地图使用 `data/maps/<mapId>.map.json`。它描述 bounds、terrain、资产实例、区域语义、导航连接、出生点、目标点和地图机制锚点。渲染、碰撞、导航、小地图和 AI 目标从同一个 MapSpec 读取。TownGen 只生成这个 schema 的 JSON，不直接创建 Three.js 或 Rapier 对象。
 

@@ -1,26 +1,12 @@
 #!/usr/bin/env node
 /* ============================================================
- * tools/export_assets.cjs — 内联 base64 几何 → 标准 glTF 2.0 二进制 .glb
+ * tools/export_assets.cjs — 游戏角色 / 武器 GLB 生成器
  *
- * 这是 tools/split-glb.js / glb2data.js / glb2bldg.js 的**逆过程**：
- *   把 models/*.js 里 base64 内联的顶点几何还原成浏览器可直接 fetch 的 .glb。
+ * v4 仅保留本工具负责的角色、枪身与枪栓导出。
+ * 建筑必须在 Blender 中完成几何、尺寸、原点、VIS/COL/NAV/ANCHOR 节点，
+ * 再由独立 v4 管线导出并经 Catalog 验收。
  *
- * 产物（严格按 backup/deinline-spec.md 第二章「数据契约」）：
- *   models/soldier.glb                   ← SOLDIER_DATA（7 部件，真节点层级，gun 挂 armR）
- *   models/guns/<key>.glb                ← WEAPONS_DATA（POSITION/NORMAL/TEXCOORD_0 + Uint16）
- *   models/guns/<key>_bolt.glb           ← GUN_GLB_DATA[key].bolt（POSITION/COLOR_0 + Uint16，
- *                                          顶层 extras 带 boltRest/boltTravel/zExt）
- *   models/buildings/<key>.glb           ← BUILDINGS_DATA ∪ BUILDINGS_OUT（POSITION/NORMAL/COLOR_0 + Uint16）
- *   models/.building-groups.json         ← 建筑来源分组提示（gen_manifest.cjs 据此填 manifest.buildingGroups，
- *                                          legacy 5 型不参与 dims 缩放，分组错了建筑会被非等比拉伸）
- *
- * ⚠ 与规格 §2.2 字面表述的唯一差异（有据可查，非随意偏离）：
- *   §2.2 写「枪身带 COLOR_0」，但去内联前 js/models.js#buildWeaponMesh 读的是 WEAPONS_DATA
- *   （POSITION/NORMAL/TEXCOORD_0，无顶点色；材质用 WEAPON_COLOR 常量色；makeBasis 定向留在运行时），
- *   而 GUN_GLB_DATA 在运行时只贡献 .bolt（§2.3）。若把枪身改喂 GUN_GLB_DATA.body（带 COLOR_0），
- *   第一人称枪身会换成 trimesh 拼装的那份几何——models.js 注释记录了那次回归
- *   （「之前把整枪换成 trimesh 拼的 GLB，看起来像拆散的方块」）。故枪身严格对应 WEAPONS_DATA，
- *   COLOR_0 只出现在枪栓（§2.3）与建筑（§2.4）产物上。规格 §2.2 的 COLOR_0 措辞待 Lead 校正。
+ * 本脚本不得生成 models/buildings/*.glb，也不得写入建筑分组或旧尺寸表。
  *
  * 硬性约定：
  *   1) 零第三方依赖、纯 CommonJS、只读 models/*.js 原始内联数据（不删不改）；

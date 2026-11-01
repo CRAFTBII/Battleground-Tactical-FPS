@@ -257,6 +257,27 @@ function fatalShow(msg) {
       '然后浏览器打开 http://localhost:8080 （直接双击 index.html 已不再支持）');
     return;
   }
+  // The v4 branch intentionally stops booting until the replacement map runtime exists.
+  let mapModule;
+  try {
+    mapModule = await import('/js/world/index.js');
+  } catch (err) {
+    document.body.classList.add('bootFail');
+    fatalShow('地图 v4 入口加载失败：' + (err && err.message || err) +
+      '。请检查 js/world/index.js，并参照 docs/rebuild/README.md。');
+    return;
+  }
+  if (!mapModule || mapModule.WORLD_V4_IMPLEMENTED !== true) {
+    document.body.classList.add('bootFail');
+    fatalShow('地图 v4 重建工作区：运行时尚未实现。请按 docs/rebuild/implementation-plan.md 完成资产、碰撞、导航和地图阶段。');
+    return;
+  }
+  if (mapModule.ready) await mapModule.ready;
+  if (typeof World === 'undefined' || typeof MapRegistry === 'undefined') {
+    document.body.classList.add('bootFail');
+    fatalShow('地图 v4 入口尚未提供 World / MapRegistry 兼容接口。请参照 docs/rebuild/architecture.md。');
+    return;
+  }
   try {
     await AssetLoader.preload();
   } catch (err) {
