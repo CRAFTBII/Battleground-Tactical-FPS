@@ -32,6 +32,15 @@
 
 ### 性能
 - suburb 203 栋：draw call 37、渲染三角 98.9k、碰撞 3058、平台 3709；600 帧战斗平均 0.98ms/最坏 11.4ms。
+
+### 修复（用户反馈"为什么还是老建筑"）
+- 根因：`AssetLoader._fetchBuffer()` 用了 `fetch(url, { cache: 'force-cache' })`，浏览器会永久复用旧
+  `manifest.json` / `*.glb`；即使服务器文件已替换，页面仍渲染旧模型。
+- 改为 `cache: 'no-store'` + 所有资源 URL 追加 `v=ASSET_VER`（3.2-20261101）；
+  `server.js` 对 `.html/.js/.json/.glb` 全部 `Cache-Control: no-store`，换模型后普通刷新即可生效。
+- 主菜单标题下显示 `v1.15.0 · assets 3.2`；控制台资源日志追加 `建筑29（自描述12）`，可直接确认新资产已加载。
+- 注意：container/watchtower/stairs/bridge/wall/ruins/hangar/tankH/tankV/mast/tower/megatower/stadium/refinery/complex
+  未被外部包覆盖，仍使用旧模型（玩法需要）；house/apartment/warehouse/guardhouse/bunker/base/cover 已全部换新。
 - 阴影跟随、A* 零分配、180m 空间块静态合批继续生效。
 
 ---

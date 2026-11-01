@@ -9,7 +9,10 @@
  * **不再静默回退方块人**（用户明确要求去掉内联，就不该再假装能离线跑）。
  * ============================================ */
 
+const ASSET_VER = '3.2-20261101'; // 模型/清单缓存破坏版本：替换资产后改这里
+
 const AssetLoader = {
+  version: ASSET_VER,
   base: 'models/',          // 资源根，相对站点根
   manifestUrl: 'models/manifest.json',
   manifest: null,
@@ -36,8 +39,11 @@ const AssetLoader = {
       throw new Error('运行环境没有 fetch，无法加载模型资源');
     }
     let res;
+    const reqUrl = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'v=' + ASSET_VER;
     try {
-      res = await fetch(url, { cache: 'force-cache' });
+      // v3.2：之前是 force-cache，换模型后浏览器会一直拿旧 GLB/manifest（用户看到老建筑）；
+      // 现在 no-store + 版本参数，保证每次更新都能拿到新资产。
+      res = await fetch(reqUrl, { cache: 'no-store' });
     } catch (e) {
       throw new Error('请求 ' + url + ' 失败（' + (e && e.message || e) + '）——服务器没启动？');
     }
@@ -106,12 +112,14 @@ const AssetLoader = {
 
     this.ready = true;
     this.stats.ms = Math.round(((typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()) - t0);
+    const metaN = Object.keys(this.cache.buildings).filter(k => !!this.buildingMeta(k)).length;
     console.log('[Assets] 模型资源就绪：' + this.stats.files + ' 个文件 / ' +
       (this.stats.bytes / 1024).toFixed(0) + ' KB / ' + this.stats.ms + ' ms' +
-      '（士兵' + (this.cache.soldier ? '✓' : '✗') +
+      '（资产 ' + ASSET_VER + '；士兵' + (this.cache.soldier ? '✓' : '✗') +
       ' 武器' + Object.keys(this.cache.weapons).length +
       ' 枪栓' + Object.keys(this.cache.bolts).length +
-      ' 建筑' + Object.keys(this.cache.buildings).length + '）');
+      ' 建筑' + Object.keys(this.cache.buildings).length +
+      '（自描述 ' + metaN + '））');
     return this;
   },
 

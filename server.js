@@ -98,7 +98,8 @@ function serveStatic(req, res, urlPath) {
 
   const ext = path.extname(abs).toLowerCase();
   const etag = 'W/"' + stat.size.toString(16) + '-' + Math.floor(stat.mtimeMs).toString(16) + '"';
-  const cacheable = ext !== '.html' && ext !== '.htm';
+  // v3.2：游戏代码/清单/GLB 全部禁用强缓存（本地开发频繁换模型；旧版 force-cache 会一直看到老建筑）
+  const cacheable = ['.html', '.htm', '.js', '.mjs', '.json', '.glb'].indexOf(ext) === -1;
   const headers = {
     'Content-Type': MIME[ext] || 'application/octet-stream',
     'Content-Length': stat.size,
