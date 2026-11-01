@@ -40,24 +40,23 @@ for (const k of Object.keys(CONFIGS)) {
 const placements = [];
 for (const map of ['desert', 'port', 'suburb']) {
   const src = fs.readFileSync(R('js/maps/' + map + '.js'), 'utf8');
-  const re = /type:\\s*'model',\\s*key:\\s*'(\\w+)'/g;
+  const re = /type:\s*'model',\s*key:\s*'(\w+)'/g;
   let m;
   while ((m = re.exec(src))) {
     const start = m.index;
-    const nextObj = src.indexOf('\\n      {', start + 1);
-    const nextEnd = src.indexOf('\\n    ],', start + 1);
-    const end = [nextObj, nextEnd].filter(n => n >= 0).sort((a,b)=>a-b)[0] ?? src.length;
+    const next = src.indexOf('\n      {', start + 1);
+    const end = next < 0 ? src.length : next;
     const block = src.slice(start, end);
     const num = name => {
-      const hit = block.match(new RegExp('\\\\b' + name + ':\\\\s*([+-]?(?:\\\\d+\\\\.?\\\\d*|\\\\.\\\\d+))'));
+      const hit = block.match(new RegExp('\\b' + name + ':\\s*([+-]?(?:\\d+\\.?\\d*|\\.\\d+))'));
       return hit ? Number(hit[1]) : null;
     };
     const key = m[1], t = dims[key];
     const scale = num('scale');
     let w = num('w'), d = num('d'), h = num('h');
     if (scale !== null && t && !t.legacy) { w = t.w * scale; d = t.d * scale; h = t.h * scale; }
-    if (w === null || d === null || h === null) continue;
-    placements.push({ map, key, w, d, h, scale, legacy: !!(t && t.legacy) });
+    if (w !== null && d !== null && h !== null)
+      placements.push({ map, key, w, d, h, scale, legacy: !!(t && t.legacy) });
   }
 }
 
