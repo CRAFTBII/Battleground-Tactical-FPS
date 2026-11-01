@@ -1,6 +1,6 @@
 # 战地突击 · Battleground Tactical FPS
 
-> 当前稳定版本 **v1.14.0** · 零构建（无需 `npm install`/打包，但**必须起服务**）
+> 当前稳定版本 **v1.15.0** · 零构建（无需 `npm install`/打包，但**必须起服务**）
 >
 > ⚠ **运行方式已变更**：模型改为标准 `.glb`，由服务器通过 HTTP 提供，因此**不再支持双击 `index.html`**。
 > 请执行 `node server.js`，然后浏览器打开 <http://localhost:8080>（根路径就是游戏本体）。
@@ -37,7 +37,7 @@ battlegame/
 ├── models/           # 【运行时资源区】标准 glTF 2.0 二进制，由 server.js 通过 HTTP 提供
 │   ├── soldier.glb   # 士兵（7 部件节点树：torso/head/armL/armR/legL/legR/gun，gun 挂在 armR 下）
 │   ├── guns/         # <key>.glb 枪身 + <key>_bolt.glb 枪栓（extras 带 boltRest/boltTravel/zExt）
-│   ├── buildings/    # 24 个建筑 GLB（POSITION + COLOR_0 顶点色）
+│   ├── buildings/    # 29 个建筑 GLB（POSITION + COLOR_0；extras.battlegame 自描述尺寸/碰撞/平台/门洞）
 │   ├── manifest.json # 资源清单（AssetLoader 据此加载）
 │   └── buildings_dims.json  # 建筑真实尺寸表（构建期/审计用）
 ├── assets/           # 【源素材区】构建期才用，运行时永不加载（原先散在 model/ 与 models/ 下）
@@ -49,9 +49,11 @@ battlegame/
 │   ├── buildings/disabled/  # 停用建筑 SCAD
 │   └── raw/model/           # 早期单数 model/ 目录整体归档（OBJ/贴图/转换脚本，含 346MB 历史素材）
 ├── tools/            # 构建/转换脚本
-│   ├── export_assets.cjs  # 内联 base64 → 标准 .glb（33 个产物，自检逐值一致）
+│   ├── export_assets.cjs  # 内联 base64 → 标准 .glb（38 个产物，自检逐值一致）
 │   ├── gen_manifest.cjs   # 生成 models/manifest.json
 │   └── （其余为历史转换/审计脚本）
+├── scripts/import_buildings.cjs # 外部建筑包 → 单 mesh GLB + extras.battlegame 元数据
+├── import_glbs/      # 外部建筑源包（导入器输入；产物在 models/buildings/）
 ├── server.js         # Node WebSocket 服务端（薄中继 + 房间管理）
 ├── test/             # 测试与探测
 │   ├── smoke.js      # 无头冒烟测试（DOM 桩驱动真实代码）
@@ -200,13 +202,15 @@ node test/server-test.js        # 服务端协议回归：握手/建房/加入/s
 
 | id | 名称 | 尺寸 | 玩法差异 |
 |----|------|------|----------|
-| `suburb` | 城郊战场 | 700×700 | 小镇基准图：旧核心（十字干道 + 中央广场）+ 北侧住宅街区 + 东侧商业/工业街区（程序化 157 栋，总 203 栋） · **专属机制：空投 + 炮击** · **缩圈：心(350,350) r520→73** |
-| `port` | 夜港工业区 | 620×620 | 夜港小镇：旧港区 + 北侧堆场 + 东侧工人街区（程序化 116 栋，总 168 栋），冷蓝夜景、近雾、探照灯 · **专属机制：探照灯 + 断电** · **缩圈：心(310,310) r460→65** |
-| `desert` | 荒漠前哨 | 740×740 | 荒漠小镇：旧前哨 + 北侧集市/居住区 + 东侧补给镇（程序化 155 栋，总 198 栋），暖橙远雾、沙丘与长视线 · **专属机制：沙暴 + 水塔** · **缩圈：心(370,370) r550→77** |
+| `suburb` | 城郊战场 | 700×700 | 小镇基准图：旧核心（十字干道 + 中央广场）+ 北侧住宅街区 + 东侧商业/工业街区（程序化 156 栋，总 203 栋） · **专属机制：空投 + 炮击** · **缩圈：心(350,350) r520→73** |
+| `port` | 夜港工业区 | 620×620 | 夜港小镇：旧港区 + 北侧堆场 + 东侧工人街区（程序化 117 栋，总 170 栋），冷蓝夜景、近雾、探照灯 · **专属机制：探照灯 + 断电** · **缩圈：心(310,310) r460→65** |
+| `desert` | 荒漠前哨 | 740×740 | 荒漠小镇：旧前哨 + 北侧集市/居住区 + 东侧补给镇（程序化 155 栋，总 199 栋），暖橙远雾、沙丘与长视线 · **专属机制：沙暴 + 水塔** · **缩圈：心(370,370) r550→77** |
 
-> **v3.1 小镇化**：`World.load` 前由 `TownGen`（`js/world.js`）按街区网格程序化补齐外围建筑/街道/地形压平/小地图道路；自动避让手写建筑、道路、据点与出生区，不会改动旧核心。三图总建筑 168~203 栋、A* 120/120 全连通。
+> **v3.1 小镇化**：`World.load` 前由 `TownGen`（`js/world.js`）按街区网格程序化补齐外围建筑/街道/地形压平/小地图道路；自动避让手写建筑、道路、据点与出生区，不会改动旧核心。三图总建筑 170~203 栋、A* 120/120 全连通。
 
-> **v3.1 性能**：建筑主几何按 180m 空间块静态合批（203 栋 → 16 个 chunk，suburb 实机 draw call 66→38、渲染三角 42.8k→86.4k）；阴影相机改为跟随玩家（170m/2048，4Hz），不再整图铺 700m；A* 的 `g/came/seen` 与 open 堆全部复用（旧版每次寻路分配约 1MB）。无头 600 帧战斗：平均约 1.0ms/帧、最坏 26ms（阈值 8 / 80）。
+> **v3.2 外部模型接入**：`scripts/import_buildings.cjs` 把 Tactical FPS 建筑包合并为单 mesh，烘焙顶点色，并把 dims/colliders/platforms/doors 写进 GLB `extras.battlegame`。运行时 `AssetLoader.buildingMeta()` 读取，`BuildingLib` 不再依赖手写 CONFIGS；门洞会清空 2m nav 栅格，小门 AI 也能进。已替换 `house/apartment/warehouse/guardhouse/bunker/base/cover`，新增 `house_small/farmhouse/workshop/pumpstation/estate`；未覆盖类型（container/watchtower/stairs/bridge 等）保留原模型。
+
+> **v3.1/3.2 性能**：建筑主几何按 180m 空间块静态合批（203 栋 → 16 chunk；suburb 实机 draw call 66→37、渲染三角 42.8k→98.9k）；阴影相机跟随玩家（170m/2048，4Hz）；A* 的 `g/came/seen` 与 open 堆零分配复用。无头 600 帧战斗：平均约 1.0ms/帧、最坏 12ms（阈值 8 / 80）。
 
 ### 地图选择
 

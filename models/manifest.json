@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-17T05:28:27.445Z",
+  "generatedAt": "2026-11-01T12:47:18.701Z",
   "soldier": "soldier.glb",
   "weapons": {
     "pistol": "guns/pistol.glb",
@@ -23,12 +23,16 @@
     "container": "buildings/container.glb",
     "cover": "buildings/cover.glb",
     "crane": "buildings/crane.glb",
+    "estate": "buildings/estate.glb",
+    "farmhouse": "buildings/farmhouse.glb",
     "guardhouse": "buildings/guardhouse.glb",
     "hangar": "buildings/hangar.glb",
     "house": "buildings/house.glb",
+    "house_small": "buildings/house_small.glb",
     "mast": "buildings/mast.glb",
     "megatower": "buildings/megatower.glb",
     "pillbox": "buildings/pillbox.glb",
+    "pumpstation": "buildings/pumpstation.glb",
     "refinery": "buildings/refinery.glb",
     "ruins": "buildings/ruins.glb",
     "stadium": "buildings/stadium.glb",
@@ -38,21 +42,29 @@
     "tower": "buildings/tower.glb",
     "wall": "buildings/wall.glb",
     "warehouse": "buildings/warehouse.glb",
-    "watchtower": "buildings/watchtower.glb"
+    "watchtower": "buildings/watchtower.glb",
+    "workshop": "buildings/workshop.glb"
   },
   "buildingGroups": {
     "out": [
+      "apartment",
       "base",
       "bridge",
       "bunker",
       "complex",
       "container",
+      "cover",
       "crane",
+      "estate",
+      "farmhouse",
       "guardhouse",
       "hangar",
+      "house",
+      "house_small",
       "mast",
       "megatower",
       "pillbox",
+      "pumpstation",
       "refinery",
       "ruins",
       "stadium",
@@ -60,14 +72,11 @@
       "tankH",
       "tankV",
       "tower",
-      "wall"
-    ],
-    "legacy": [
-      "apartment",
-      "cover",
-      "house",
+      "wall",
       "warehouse",
-      "watchtower"
-    ]
+      "watchtower",
+      "workshop"
+    ],
+    "legacy": []
   }
 }

@@ -7,6 +7,34 @@
 
 ---
 
+## [1.15.0] - 2026-11-01 · 外部建筑模型全量接入 + 碰撞元数据自描述
+
+### 模型（用户提供 Tactical FPS 建筑包 + large_combat_base + large_house）
+- 新增导入器 `scripts/import_buildings.cjs`：按构件组切分 / 合并为单 mesh、烘焙顶点色、
+  Z-up + 西南角原点 + 地面 z=0，尺寸/碰撞/平台/门洞写入 GLB `extras.battlegame`。
+- 替换：`house`←House_B、`apartment`←Apartment_E、`warehouse`←Warehouse、`guardhouse`←Guard_Shack、
+  `bunker`←Bunker_G、`base`←large_combat_base、`cover`←混凝土墙+沙袋+护栏组合。
+- 新增：`house_small`←House_A、`farmhouse`←Farmhouse_C、`workshop`←Workshop_D、
+  `pumpstation`←PumpStation_F、`estate`←large_house（三图各放一处，scale 0.7）。
+- 旧模型文件已被覆盖/删除；地图里失效的 `assets/buildings/out/*.glb` 死引用全部清理。
+- `base` 改为最终尺寸 86.55×66.68×11.8、scale 1（不再用 223×184×65×0.4）。
+
+### 碰撞/元数据（用户要求：不要弄错碰撞箱）
+- `js/models.js` 的 `BuildingLib` 优先读取 GLB extras；`World.syncBuildingMeta()` 同步 REAL_DIMS/CONFIGS；
+  `dimsFor()/modelDims()` 全部走模型自描述尺寸，TownGen/地图/实际构建三方一致。
+- 碰撞箱按构件生成：墙/窗玻璃/窗台/门框/立柱/护栏/大门/卷帘/室内结构为实心盒；
+  楼板/屋顶/平台为可行走平台（≥2.6m 再带薄碰撞盒）；楼梯按踏步生成平台；
+  门楣不碰撞但记录门洞，`buildNavGrid` 清空对应 2m 栅格（小门 AI 也能通过）。
+  聚合大件（base 内外墙/围墙、estate 围栏、货柜/户外掩体）不再用整体 AABB 填实，
+  改为按三角边 0.4m 栅格化后贪心合并，保留门窗与通道。
+- 新增 `test/qa/_qa_v31_models.js`：12 个模型 bbox=元数据、碰撞/平台在 footprint 内、
+  门洞宽度与无遮挡、三图门洞中心可走/无碰撞、抽样 40 个门洞两侧 A* 连通、全部建筑走 inline 分支。
+
+### 性能
+- suburb 203 栋：draw call 37、渲染三角 98.9k、碰撞 3058、平台 3709；600 帧战斗平均 0.98ms/最坏 11.4ms。
+- 阴影跟随、A* 零分配、180m 空间块静态合批继续生效。
+
+---
 ## [1.14.0] - 2026-11-01 · 三图小镇化扩图 + 大地图性能
 
 ### 地图（用户指令：地图增大，每一个都是一个小镇）

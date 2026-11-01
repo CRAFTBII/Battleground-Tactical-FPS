@@ -121,6 +121,11 @@ const AssetLoader = {
   bolt(key) { return this.cache.bolts[key] || null; },
   building(key) { return this.cache.buildings[key] || null; },
   hasBuilding(key) { return !!this.cache.buildings[key]; },
+  /** v3.2：建筑自描述元数据（GLB extras.battlegame）——dims/colliders/platforms/doors */
+  buildingMeta(key) {
+    const g = this.building(key);
+    return (g && g.json && g.json.extras && g.json.extras.battlegame) || null;
+  },
   /** 建筑是否来自「新类型」（原 BUILDINGS_OUT 那批）——现在按清单分组判断 */
   buildingSource(key) {
     if (!this.manifest) return 'missing';

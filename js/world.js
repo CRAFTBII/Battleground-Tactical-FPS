@@ -107,9 +107,9 @@ const TownGen = {
     if (!b) return null;
     if (b.w && b.d) return { w: b.w, d: b.d, h: b.h || 4 };
     const lib = (typeof BuildingLib !== 'undefined') ? BuildingLib : null;
-    if (lib && lib.REAL_DIMS && lib.REAL_DIMS[b.key]) {
-      const k = b.scale || 1, r = lib.REAL_DIMS[b.key];
-      return { w: r.w * k, d: r.d * k, h: r.h * k };
+    if (lib && lib.dimsFor) {
+      const d = lib.dimsFor(b.key, b.scale || 1);
+      if (d) return d;
     }
     return null;
   },
@@ -301,7 +301,7 @@ const TownGen = {
 
 const World = {
   scene: null, colliders: [], walls: [], platforms: [], overhead: [], grid: null,
-  terrainH: null, minimapStatic: null, spawns: { blue: [], red: [] },
+  terrainH: null, minimapStatic: null, spawns: { blue: [], red: [] }, navDoors: [],
   capturePoints: [], capMeshes: [],
   objects: [],            // 本图创建的场景根级对象（用于换图卸载）
   mapDef: null, mapId: null,
@@ -338,7 +338,9 @@ const World = {
     CFG.mapScale = U.clamp((mapDef.size || CFG.WORLD) / 300, 0.8, 1.5);
     this._detail = this._resolveDetail(mapDef.detail);
 
-    // v3.1 小镇化：在构建地形/道路/建筑前展开外围街区（只改数据，建筑仍走统一管线）
+    // v3.2 模型自描述元数据：GLB extras 为唯一事实源，运行时同步到 BuildingLib（REAL_DIMS/CONFIGS）
+    this.syncBuildingMeta();
+    // v3.2 小镇化：在构建地形/道路/建筑前展开外围街区（只改数据，建筑仍走统一管线）
     if (typeof TownGen !== 'undefined' && TownGen.expand) TownGen.expand(mapDef);
 
     Tex.setupOverrides();
@@ -362,6 +364,20 @@ const World = {
     return this;
   },
 
+  /* v3.2：把每个 GLB 的 extras.battlegame 同步进 BuildingLib（尺寸 + 碰撞/平台/门洞）。
+   * 没有 extras 的旧模型保持手写 CONFIGS（container/watchtower 等未替换类型）。 */
+  syncBuildingMeta() {
+    if (typeof AssetLoader === 'undefined' || !AssetLoader.buildingMeta) return;
+    const lib = (typeof BuildingLib !== 'undefined') ? BuildingLib : null;
+    if (!lib) return;
+    for (const k of Object.keys(AssetLoader.cache.buildings || {})) {
+      const m = AssetLoader.buildingMeta(k);
+      if (!m) continue;
+      if (m.dims) lib.REAL_DIMS[k] = m.dims;
+      lib.CONFIGS[k] = { colliders: m.colliders || [], platforms: m.platforms || [], doors: m.doors || [] };
+    }
+  },
+
   /* 卸载当前地图（换图用）：移除场景对象 + 清空空间数据 */
   unload() {
     this._gen++;
@@ -376,6 +392,7 @@ const World = {
     this.capturePoints = []; this.capMeshes = [];
     this.grid = null; this.terrainH = null; this.minimapStatic = null;
     this.spawns = { blue: [], red: [] };
+    this.navDoors = [];
     this.sun = null; this.sunTarget = null;
     this._batchMeshes = [];
     return this;
@@ -857,6 +874,15 @@ const World = {
       // D-03：绕角点旋转 colliders/platforms（与 ry 视觉对齐；当前数据全为 90° 倍数 → 精确）
       this.rotateColliders(b, built.colliders);
       this.rotatePlatforms(b, built.platforms);
+      // v3.2：门洞矩形（nav 网格打通）；随建筑 ry 旋转
+      if (built.doors && built.doors.length) {
+        const rad = (b.ry || 0) * Math.PI / 180;
+        for (const d of built.doors) {
+          const box = { min: new THREE.Vector3(d.x0, 0, d.z0), max: new THREE.Vector3(d.x1, 0, d.z1) };
+          if (rad) this._rotateAABB(box, b.x, b.z, rad);
+          this.navDoors.push({ x0: box.min.x, z0: box.min.z, x1: box.max.x, z1: box.max.z });
+        }
+      }
       for (const c of built.colliders) {
         // v1.3（design §7.3 + QA BLOCKER）：bridge 高空结构（桥面/栏杆 min.y≥OVERHEAD_Y）分流进
         // World.overhead —— 只挡弹道、不进移动碰撞，桥下地面可通行（A* 与移动双绿）。
@@ -867,8 +893,13 @@ const World = {
       }
       for (const p of built.platforms) this.platforms.push(p);
       // D-15/T-01：主题染色（material.color × 顶点色，0xffffff=不染色）
-      if (b.tint) built.mesh.traverse(o => { if (o.isMesh && o.material && o.material.color) o.material.color.setHex(b.tint); });
-      this._batchMeshes.push({ mesh: built.mesh, tint: b.tint || 0xffffff });
+      // v3.2：新导入模型已自带材质色（顶点色），整幅 tint 会把颜色压暗；向白色混合 60% 保留主题但不过曝变黑。
+      let tintHex = b.tint || 0xffffff;
+      if (b.tint && typeof AssetLoader !== 'undefined' && AssetLoader.buildingMeta && AssetLoader.buildingMeta(b.key)) {
+        tintHex = new THREE.Color(b.tint).lerp(new THREE.Color(0xffffff), 0.6).getHex();
+      }
+      if (tintHex !== 0xffffff) built.mesh.traverse(o => { if (o.isMesh && o.material && o.material.color) o.material.color.setHex(tintHex); });
+      this._batchMeshes.push({ mesh: built.mesh, tint: tintHex });
       vis.add(built.mesh);
     } else {
       // 回退：BuildingLib 缺失/数据损坏 → 用一个实心盒占位，保证碰撞与导航仍成立
@@ -982,6 +1013,12 @@ const World = {
    * 等比推导从根上消除了「地图手写尺寸与真实几何比例不符 → 建筑被拉伸/压扁」这一类错误。 */
   modelDims(b) {
     const lib = (typeof BuildingLib !== 'undefined') ? BuildingLib : null;
+    // v3.2：模型自描述尺寸优先（GLB extras.battlegame.dims）；地图只写 uniform scale
+    const meta = (typeof AssetLoader !== 'undefined' && AssetLoader.buildingMeta) ? AssetLoader.buildingMeta(b.key) : null;
+    if (meta && meta.dims) {
+      const k = (typeof b.scale === 'number' && b.scale > 0) ? b.scale : 1;
+      return { w: meta.dims.w * k, d: meta.dims.d * k, h: meta.dims.h * k };
+    }
     if (lib && lib.REAL_DIMS && lib.REAL_DIMS[b.key]) {
       if (b.scale || !(b.w && b.d && b.h)) return lib.dimsFor(b.key, b.scale);
       const dev = lib.aspectDeviation(b.key, b);
@@ -1247,6 +1284,14 @@ const World = {
       // 墙体/低掩体/桥墩（min.y < 2.6，从地面起）照常 block —— 地面通行语义不变。
       if (c.min.y >= 2.6) continue;
       block(c.min, c.max);
+    }
+    // v3.2：门洞打通（1.2~1.8m 小门在 2m 栅格里会被相邻墙格堵死）→ 按 GLB 门洞矩形清空格子
+    for (const d of (this.navDoors || [])) {
+      const x0 = Math.max(0, Math.floor((d.x0 - 0.1) / CFG.CELL));
+      const x1 = Math.min(n - 1, Math.floor((d.x1 + 0.1) / CFG.CELL));
+      const z0 = Math.max(0, Math.floor((d.z0 - 0.1) / CFG.CELL));
+      const z1 = Math.min(n - 1, Math.floor((d.z1 + 0.1) / CFG.CELL));
+      for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) this.grid.blocked[z * n + x] = 0;
     }
     // 出生区外沿护栏
   },

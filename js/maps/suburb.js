@@ -112,7 +112,8 @@
         [85.3, 276.3, 10.6, 8.6],    // 民居 house(80,272)（西南角）
         [255.3, 219.3, 10.6, 8.6],   // 民居 house(250,215)（竞技场北）
         [188, 256, 16, 12],          // 公寓 apartment(180,250)（红侧公寓）
-        [208.1, 234.2, 16.2, 8.4]    // 货柜 container(200,230)（红侧推进掩体）
+        [208.1, 234.2, 16.2, 8.4],   // 货柜 container(200,230)（红侧推进掩体）
+        [428, 421, 56, 42]           // 庄园 estate(400,400) scale 0.7
       ],
       // 道路/广场/据点/出生区压平（显式矩形）
       flatten: [
@@ -230,10 +231,10 @@
       /* ============ v1.7 岗亭（27→31 栋）：广场四角 + 街坊门岗 ============
        * GH1/GH2 立 A 点广场南/东沿（守卫感 + 街景）；GH3 蓝侧居住街坊门岗；
        * GH4 竞技场区门岗。程序化岗亭（PROC_GEOS），不堵干道/出生点/据点。 */
-      { type: 'model', key: 'guardhouse', x: 150, z: 178, ry: 0, scale: 1, tint: 0xb7b0a4, trim: false, glb: 'assets/buildings/out/suburb_guardhouse.glb' }, // GH1
-      { type: 'model', key: 'guardhouse', x: 122, z: 150, ry: 0, scale: 1, tint: 0xb7b0a4, trim: false, glb: 'assets/buildings/out/suburb_guardhouse.glb' }, // GH2（广场西门岗）
-      { type: 'model', key: 'guardhouse', x: 30, z: 90, ry: 0, scale: 1, tint: 0xb7b0a4, trim: false, glb: 'assets/buildings/out/suburb_guardhouse.glb' },   // GH3
-      { type: 'model', key: 'guardhouse', x: 254, z: 196, ry: 0, scale: 1, tint: 0xb7b0a4, trim: false, glb: 'assets/buildings/out/suburb_guardhouse.glb' }, // GH4（v1.8 挪离 stadium 东门洞出口）
+      { type: 'model', key: 'guardhouse', x: 150, z: 178, ry: 0, scale: 1, tint: 0xb7b0a4, trim: false }, // GH1
+      { type: 'model', key: 'guardhouse', x: 122, z: 150, ry: 0, scale: 1, tint: 0xb7b0a4, trim: false }, // GH2（广场西门岗）
+      { type: 'model', key: 'guardhouse', x: 30, z: 90, ry: 0, scale: 1, tint: 0xb7b0a4, trim: false },   // GH3
+      { type: 'model', key: 'guardhouse', x: 254, z: 196, ry: 0, scale: 1, tint: 0xb7b0a4, trim: false }, // GH4（v1.8 挪离 stadium 东门洞出口）
 
       /* ============ v1.8 紧凑布局（31→46 栋）：四象限填空 ============
        * 用户要求「布局再紧凑一些」—— 填补各象限空隙，建筑间距拉近到 8~20m，
@@ -300,7 +301,9 @@
        * 角点 (180,150) → 占地 x[180,246] z[150,216]：东邻主街、A 点东南 30m，不堵干道（桥下可通行）。
        * BuildingLib 新类型 key:'stadium'：工程注册前 → placeModelBuilding 回退占位盒（碰撞=w/d/h，安全）；
        * GLB 插槽 'assets/buildings/out/battle_stadium.glb'：离线/未接 GLTFLoader 休眠（ADR-003），不崩。 */
-      { type: 'model', key: 'stadium', x: 180, z: 150, ry: 0, scale: 0.3, tint: 0x8c97a3, trim: false, glb: 'assets/buildings/out/battle_stadium.glb' }
+      { type: 'model', key: 'stadium', x: 180, z: 150, ry: 0, scale: 0.3, tint: 0x8c97a3, trim: false },
+      /* 庄园地标（外部 large_house 模型） */
+      { type: 'model', key: 'estate', x: 400, z: 400, ry: 0, scale: 0.7, trim: false }
     ],
 
     /* ---------- 掩体 ---------- */
@@ -412,9 +415,9 @@
       perBlock: 3,
       margin: 3,
       styles: {
-        residential: ['house', 'house', 'house', 'house', 'apartment', 'guardhouse', 'container', 'watchtower'],
-        commercial: ['apartment', 'warehouse', 'guardhouse', 'container', 'pillbox'],
-        industrial: ['warehouse', 'warehouse', 'container', 'container', 'bunker', 'hangar', 'tankH', 'tankV', 'mast', 'guardhouse']
+        residential: ['house', 'house', 'house', 'house', 'house_small', 'house_small', 'apartment', 'guardhouse', 'container', 'watchtower', 'farmhouse'],
+        commercial: ['apartment', 'warehouse', 'workshop', 'guardhouse', 'container', 'pillbox', 'pumpstation'],
+        industrial: ['warehouse', 'warehouse', 'workshop', 'container', 'container', 'bunker', 'hangar', 'tankH', 'tankV', 'mast', 'pumpstation', 'guardhouse']
       },
       palette: {
         residential: [0x8a8f86, 0xb7b0a4, 0xd8c49a, 0xa9a29a],

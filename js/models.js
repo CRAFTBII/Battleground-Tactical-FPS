@@ -249,19 +249,17 @@ function u16FromB64(b64) {
  *       模型轴: x=宽(w) y=深(d) z=高(h)  →  世界轴: x→x, y→z(深), z→y(高)
  * ============================================ */
 const BuildingLib = {
-  /* v1.5 尺寸契约（models/buildings_dims.json 的运行时副本）——「真实几何尺寸」单一事实源。
-   * 背景：build() 用 sx=w/rw、sy=h/rh、sz=d/rd 三轴独立缩放；地图若手写的 w/d/h 与真实几何比例不一致，
-   *       建筑就会被非等比拉伸/压扁（此前 stairs h 写 6（真 13）→ 压成 46%、tower h 写 8（真 100）→ 压成 8%）。
-   * 约定：地图只写 scale（等比系数，缺省 1.0），w/d/h 由 REAL_DIMS×scale 推导 → 结构上杜绝拉伸。
-   *       仍支持显式 w/d/h（老数据兼容），但比例偏差 >5% 会告警。
-   * 注：legacy 5 型（apartment/house/warehouse/watchtower/cover）几何不参与缩放，其值仅供导航/精修对齐。 */
+  /* v3.2 尺寸契约：GLB extras.battlegame.dims 是单一事实源（AssetLoader.buildingMeta）。
+   * 本表为「无 extras 的旧模型」回退值；World.syncBuildingMeta() 会在加载时用 GLB 元数据覆盖。
+   * 约定：地图只写 scale（等比系数，缺省 1.0）→ 结构上杜绝非等比拉伸。 */
   REAL_DIMS: {
-    apartment: { w: 16, d: 12, h: 19.1 },
-    house: { w: 10.6, d: 8.6, h: 4.3 },
-    warehouse: { w: 22, d: 14, h: 9.7 },
+    apartment: { w: 12.4, d: 11.02, h: 7.58 },
+    house: { w: 10.8, d: 8.59, h: 6.32 },
+    house_small: { w: 8.38, d: 7.38, h: 3.57 },
+    warehouse: { w: 14.34, d: 10.7, h: 6.14 },
     watchtower: { w: 4.2, d: 4.2, h: 8.5 },
-    cover: { w: 14.5, d: 6.3, h: 2.75 },
-    bunker: { w: 18, d: 14, h: 8 },
+    cover: { w: 14.15, d: 5.74, h: 2.1 },
+    bunker: { w: 12.4, d: 7.58, h: 4.49 },
     hangar: { w: 40, d: 24, h: 12 },
     pillbox: { w: 12, d: 12, h: 5 },
     tower: { w: 18.6, d: 18.6, h: 100 },
@@ -270,7 +268,7 @@ const BuildingLib = {
     stairs: { w: 12, d: 12, h: 13 },
     container: { w: 16.2, d: 8.4, h: 5 },
     ruins: { w: 33, d: 16, h: 28.5 },
-    base: { w: 223, d: 184, h: 65 },
+    base: { w: 86.55, d: 66.68, h: 11.8 },
     refinery: { w: 193, d: 184.5, h: 45.5 },
     stadium: { w: 220, d: 220, h: 32 },
     megatower: { w: 36, d: 36, h: 145.48 },
@@ -280,14 +278,19 @@ const BuildingLib = {
     tankH: { w: 20, d: 9, h: 8 },          // 卧式油罐（炼油区/补给站）
     tankV: { w: 10, d: 10, h: 12 },        // 立式油罐（储油区）
     mast: { w: 6, d: 6, h: 20 },           // 桁架天线塔（荒漠信号/观察）
-    guardhouse: { w: 5, d: 5, h: 4.5 }     // 岗亭（小区门岗/检查站）
+    guardhouse: { w: 4.18, d: 3.98, h: 3.35 }, // 岗亭（导入 Kit）
+    farmhouse: { w: 10.45, d: 10.04, h: 6.22 },
+    workshop: { w: 14.65, d: 11.54, h: 6.3 },
+    pumpstation: { w: 11.29, d: 8.45, h: 5.51 },
+    estate: { w: 80, d: 60, h: 8.5 }
   },
 
   /* 按等比系数取摆放尺寸；key 未登记则返回 null */
   dimsFor(key, scale) {
-    const r = this.REAL_DIMS[key];
-    if (!r) return null;
     const k = (typeof scale === 'number' && scale > 0) ? scale : 1;
+    const m = (typeof AssetLoader !== 'undefined' && AssetLoader.buildingMeta) ? AssetLoader.buildingMeta(key) : null;
+    const r = (m && m.dims) || this.REAL_DIMS[key];
+    if (!r) return null;
     return { w: r.w * k, d: r.d * k, h: r.h * k };
   },
 
@@ -1018,6 +1021,8 @@ const BuildingLib = {
       const fromOut = !!glb && (!AssetLoader.manifest || AssetLoader.buildingSource(key) !== 'legacy');
       const fromLegacy = !!glb && !fromOut;
       const fromProc = !glb && this.PROC_GEOS && this.PROC_GEOS[key];
+      // v3.2：模型自描述碰撞/平台/门洞（GLB extras.battlegame）。旧 GLB 无 extras 时回退手写 CONFIGS。
+      const bmeta = (glb && glb.json && glb.json.extras && glb.json.extras.battlegame) || null;
       let geo = null;
       if (glb) {
         geo = GLB.firstGeometry(glb);
@@ -1047,8 +1052,8 @@ const BuildingLib = {
 
       // 碰撞盒：模型坐标 [x0, y0(深), z0(高), x1, y1(深), z1(高)] → 世界 (x, 高y, 深z)
       // 缩放：x→sx(宽), y(深)→sz, z(高)→sy
-      const cfg = this.CONFIGS[key];
-      const colliders = [], platforms = [];
+      const cfg = (bmeta && bmeta.colliders) ? bmeta : this.CONFIGS[key];
+      const colliders = [], platforms = [], doors = [];
       // v1.5 sink：模型 z=sink 才是地坪（base 因卧式油罐伸到 z=-6 被整体抬高）→ 碰撞/平台整体下移
       const sink = (cfg && cfg.sink) || 0;
       const sinkY = sink * sy;
@@ -1062,8 +1067,11 @@ const BuildingLib = {
         for (const p of cfg.platforms || []) {
           platforms.push({ x0: x + p.x0 * sx, x1: x + p.x1 * sx, z0: z + p.y0 * sz, z1: z + p.y1 * sz, y: (p.y - sink) * sy });
         }
+        for (const d of (cfg.doors || [])) {
+          doors.push({ x0: x + d[0] * sx, z0: z + d[1] * sz, x1: x + d[2] * sx, z1: z + d[3] * sz });
+        }
       }
-      return { mesh, colliders, platforms, sinkY, src: fromOut ? 'inline' : (fromProc ? 'proc' : 'legacy') };
+      return { mesh, colliders, platforms, doors, sinkY, src: fromOut ? 'inline' : (fromProc ? 'proc' : 'legacy') };
     } catch (e) {
       console.warn('[BuildingLib] ' + key + ' 构建失败: ' + e.message);
       return null;
@@ -1081,3 +1089,4 @@ const BuildingLib = {
     return out;
   }
 };
+

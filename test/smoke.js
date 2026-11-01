@@ -739,15 +739,18 @@ try {
   if (throughWindow !== null) failures.push('D-01 上层窗洞被墙填死（射线应穿过窗洞）');
   if (throughWall === null) failures.push('D-02 上层墙段丢失（射线应被墙挡）');
   console.log('精修断言 D-01/02 | 上层窗洞可穿行 ✓（窗洞不挡 / 墙段挡）');
-  // ② D-03：placeModelBuilding 对 ry≠0 建筑绕角点旋转碰撞（用测试 house ry:90 验证机制；
-  //    suburb 数据已统一 ry:0，视觉归位压平垫 —— 机制由本断言守护，未来 ry≠0 图可复用）
-  World.placeModelBuilding({ type: 'model', key: 'house', x: 30, z: 280, ry: 90, w: 10, d: 8, h: 4.3, trim: false });
-  // house 10×8 旋转 +90°（THREE 约定 x'=dz, z'=−dx）绕角点 (30,280) → footprint x[30,38]·z[270,280]
-  const inRotated = World.colliders.some(c => 34 > c.min.x && 34 < c.max.x && 276 > c.min.z && 276 < c.max.z && c.max.y > 0.6);
-  const inOld = World.colliders.some(c => 34 > c.min.x && 34 < c.max.x && 284 > c.min.z && 284 < c.max.z && c.max.y > 0.6);
-  if (!inRotated) failures.push('D-03 ry=90 碰撞未旋转到视觉 footprint（(34,276) 应被挡）');
-  if (inOld) failures.push('D-03 ry=90 碰撞旋转错误（(34,284) 不应有碰撞）');
-  console.log('精修断言 D-03 | ry=90 建筑视觉/碰撞对齐 ✓（旋转 footprint 命中，旧位无残留）');
+  // ② D-03：placeModelBuilding 对 ry≠0 建筑绕角点旋转碰撞（guardhouse 小体量，碰撞盒在四壁）
+  const beforeD3 = World.colliders.length;
+  World.placeModelBuilding({ type: 'model', key: 'guardhouse', x: 30, z: 280, ry: 90, trim: false });
+  const addedD3 = World.colliders.slice(beforeD3);
+  const inRotated = addedD3.some(c => {
+    const cx = (c.min.x + c.max.x) / 2, cz = (c.min.z + c.max.z) / 2;
+    return cx > 30 && cx < 34.5 && cz > 274 && cz < 280 && c.max.y > 0.6;
+  });
+  const inOld = addedD3.some(c => ((c.min.z + c.max.z) / 2) > 281 && c.max.y > 0.6);
+  if (!inRotated) failures.push('D-03 ry=90 碰撞未旋转到视觉 footprint（guardhouse 旋转区应有墙）');
+  if (inOld) failures.push('D-03 ry=90 碰撞旋转错误（未旋转区不应有墙）');
+  console.log('精修断言 D-03 | ry=90 建筑视觉/碰撞对齐 ✓（guardhouse 旋转 footprint 命中）');
   // ③ D-05：阴影相机改为跟随玩家（大图不再整图覆盖），只验跟随半径合理
   const sun = World.objects.find(o => o && o.isDirectionalLight);
   if (!sun) failures.push('D-05 场景无 DirectionalLight');
@@ -810,7 +813,7 @@ try {
   }
   const status = BuildingLib.status();
   for (const k of NEW_KEYS) if (status[k] !== 'inline') failures.push('BuildingLib.status[' + k + '] = ' + status[k] + '（应 inline）');
-  for (const k of ['apartment', 'house', 'warehouse', 'watchtower', 'cover']) if (status[k] !== 'legacy') failures.push('旧类型 ' + k + ' 数据源异常: ' + status[k] + '（应 legacy 不变）');
+  for (const k of ['apartment', 'house', 'warehouse', 'watchtower', 'cover']) if (status[k] !== 'inline') failures.push('建筑 ' + k + ' 数据源异常: ' + status[k] + '（v3.2 起全部 GLB 自描述 inline）');
   // 每类型按地图常见尺寸构建（含缩放），必须产出 mesh + 碰撞
   const dimsOf = { bunker: [10, 8, 3.5], hangar: [20, 14, 5], pillbox: [6, 6, 3.5], tower: [4, 4, 8], wall: [8, 1.5, 2.5], bridge: [30, 7, 10], stairs: [6, 6, 6], container: [6, 6, 5.2], ruins: [10, 8, 4] };
   for (const k of NEW_KEYS) {

@@ -126,7 +126,8 @@
         [89.3, 228.3, 10.6, 8.6],      // 民居 house(84,224)（北民居）
         [92.1, 204.2, 16.2, 8.4],      // 货柜 container(84,200)（北货柜）
         [248.1, 172.2, 16.2, 8.4],     // 货柜 container(240,168)（东货柜）
-        [89.3, 132.3, 10.6, 8.6]       // 民居 house(84,128)（南民居，避开控制楼/次街）
+        [89.3, 132.3, 10.6, 8.6],      // 民居 house(84,128)（南民居，避开控制楼/次街）
+        [448, 441, 56, 42]             // 庄园 estate(420,420) scale 0.7
       ],
       // 街网 / 装卸场 / 据点 / 出生区 / 屋顶坡道基座 压平
       flatten: [
@@ -189,8 +190,7 @@
         floors: 3, floorH: 3.5, thick: 0.5, windows: 2,
         doors: [[[6, 9]], [[5, 8]], [], []],
         wallTex: 'concrete', detailTex: 'rust',   // C3：接线 rust —— 塔吊钢构锈蚀（art/theme §2.4）
-        balconySide: 1, chimney: false, detail: 'high',
-        glb: 'assets/buildings/out/port_cranetower.glb'     // 占位插槽（proc 需引擎补 hook）
+        balconySide: 1, chimney: false, detail: 'high'     // 占位插槽（proc 需引擎补 hook）
       },
       /* B7 西泵房（制高点·俯瞰据点 B） */
       {
@@ -217,7 +217,6 @@
         type: 'model', key: 'warehouse', x: 30, z: 108, ry: 0, scale: 1,
         trim: { top: 9.7, cornice: true, pilaster: true },  // D-06：top=实测 9.70
         tint: 0x8fa0ad,                                      // T-01：冷灰蓝压暖砖（art/theme §2.4）
-        glb: 'assets/buildings/out/port_warehouse.glb'
       },
       /* B4 红侧堆场仓库（街区 x[191,260] z[137,159]） */
       {
@@ -229,8 +228,7 @@
       {
         type: 'model', key: 'apartment', x: 96, z: 104, ry: 0, scale: 1,
         trim: { top: 19.1, cornice: true, pilaster: true, bands: [4, 8, 12] }, // D-06：top=实测 19.10
-        tint: 0x8c97a3,
-        glb: 'assets/buildings/out/port_office.glb'
+        tint: 0x8c97a3
       },
       /* B6 船员宿舍楼（近 A 东北角，与 B5 对称夹住中场；西沿距装卸场 1m 不吃据点圈） */
       {
@@ -295,13 +293,13 @@
        * CR1 龙门吊横跨货柜通道（CT8 堆场）→ 装卸区地标，一眼认出集装箱码头；
        * TK1/TK2 卧式油罐 + refinery 组成「炼油厂油罐场」；TK3 立式油罐在西仓储区；
        * GH1/GH2 蓝红出生区门岗。全部离街 ≥1m、不压出生点/据点/桥梯。 */
-      { type: 'model', key: 'crane', x: 140, z: 40, ry: 0, scale: 1, tint: 0x8a6a4a, trim: false, glb: 'assets/buildings/out/port_crane.glb' },        // CR1
+      { type: 'model', key: 'crane', x: 140, z: 40, ry: 0, scale: 1, tint: 0x8a6a4a, trim: false },        // CR1
       { type: 'model', key: 'container', x: 160, z: 52, ry: 0, scale: 1, tint: 0xa8603a, trim: false },   // CT8
-      { type: 'model', key: 'tankH', x: 210, z: 78, ry: 0, scale: 1, tint: 0x9aa4a8, trim: false, glb: 'assets/buildings/out/port_tankh.glb' },        // TK1
-      { type: 'model', key: 'tankH', x: 232, z: 78, ry: 0, scale: 1, tint: 0x9aa4a8, trim: false, glb: 'assets/buildings/out/port_tankh.glb' },        // TK2
-      { type: 'model', key: 'tankV', x: 20, z: 130, ry: 0, scale: 1, tint: 0x8a9396, trim: false, glb: 'assets/buildings/out/port_tankv.glb' },        // TK3
-      { type: 'model', key: 'guardhouse', x: 18, z: 14, ry: 0, scale: 1, tint: 0x8fa0ad, trim: false, glb: 'assets/buildings/out/port_guardhouse.glb' }, // GH1
-      { type: 'model', key: 'guardhouse', x: 210, z: 196, ry: 0, scale: 1, tint: 0x8fa0ad, trim: false, glb: 'assets/buildings/out/port_guardhouse.glb' }, // GH2
+      { type: 'model', key: 'tankH', x: 210, z: 78, ry: 0, scale: 1, tint: 0x9aa4a8, trim: false },        // TK1
+      { type: 'model', key: 'tankH', x: 232, z: 78, ry: 0, scale: 1, tint: 0x9aa4a8, trim: false },        // TK2
+      { type: 'model', key: 'tankV', x: 20, z: 130, ry: 0, scale: 1, tint: 0x8a9396, trim: false },        // TK3
+      { type: 'model', key: 'guardhouse', x: 18, z: 14, ry: 0, scale: 1, tint: 0x8fa0ad, trim: false }, // GH1
+      { type: 'model', key: 'guardhouse', x: 210, z: 196, ry: 0, scale: 1, tint: 0x8fa0ad, trim: false }, // GH2
 
       /* ===== v1.8 紧凑布局（46→58 栋）：街区填空 =====
        * 用户要求「布局更紧凑」—— 四侧街区补建筑（蓝侧北沿/西民居/北仓储/北港池/东货柜/南民居），
@@ -370,7 +368,9 @@
        * 位置自证：角点 (196,18) → 占地 x[196,253.9] z[18,73.35]。
        *   - 东次街 x[181,191] 东侧 5m、南次街 z[91,101] 南侧 17.6m → 不堵街；
        *   - 红方出生区 (190~260,190~260) 以南 116m；蓝方出生区对角最远 —— 中立东南翼锚点。 */
-      { type: 'model', key: 'refinery', x: 196, z: 18, ry: 0, scale: 0.3, tint: 0x7d8a94, trim: false, glb: 'assets/buildings/out/battle_refinery.glb' }
+      { type: 'model', key: 'refinery', x: 196, z: 18, ry: 0, scale: 0.3, tint: 0x7d8a94, trim: false },
+      /* 庄园地标（外部 large_house 模型） */
+      { type: 'model', key: 'estate', x: 420, z: 420, ry: 0, scale: 0.7, trim: false }
     ],
 
     /* ---------- 掩体（36 处，密度约为荒漠前哨的 2.3 倍）----------
@@ -514,9 +514,9 @@
       perBlock: 4,
       margin: 3,
       styles: {
-        residential: ['house', 'house', 'house', 'apartment', 'guardhouse', 'container', 'watchtower'],
-        commercial: ['apartment', 'warehouse', 'guardhouse', 'container', 'pillbox'],
-        industrial: ['warehouse', 'warehouse', 'container', 'container', 'bunker', 'hangar', 'tankH', 'tankV', 'mast', 'guardhouse']
+        residential: ['house', 'house', 'house', 'house_small', 'house_small', 'apartment', 'guardhouse', 'container', 'watchtower'],
+        commercial: ['apartment', 'warehouse', 'workshop', 'guardhouse', 'container', 'pillbox', 'pumpstation'],
+        industrial: ['warehouse', 'warehouse', 'workshop', 'container', 'container', 'bunker', 'hangar', 'tankH', 'tankV', 'mast', 'pumpstation', 'guardhouse']
       },
       palette: {
         residential: [0x6e7880, 0x7d8a94, 0x8a9396, 0x5f6a72],

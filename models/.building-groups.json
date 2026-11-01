@@ -1,24 +1,25 @@
 {
-  "generator": "tools/export_assets.cjs (inline base64 -> glTF 2.0 .glb)",
-  "legacy": [
-    "apartment",
-    "cover",
-    "house",
-    "warehouse",
-    "watchtower"
-  ],
+  "generator": "scripts/import_buildings.cjs",
+  "legacy": [],
   "out": [
+    "apartment",
     "base",
     "bridge",
     "bunker",
     "complex",
     "container",
+    "cover",
     "crane",
+    "estate",
+    "farmhouse",
     "guardhouse",
     "hangar",
+    "house",
+    "house_small",
     "mast",
     "megatower",
     "pillbox",
+    "pumpstation",
     "refinery",
     "ruins",
     "stadium",
@@ -26,6 +27,9 @@
     "tankH",
     "tankV",
     "tower",
-    "wall"
+    "wall",
+    "warehouse",
+    "watchtower",
+    "workshop"
   ]
 }
