@@ -1,3 +1,5 @@
+> **历史文档（v3）**：仅供理解旧实现。v4 规范以 [docs/rebuild/asset-contract.md](../rebuild/asset-contract.md) 为准；本文的旧尺寸数据不是 v4 目标值。
+
 # 建筑尺寸规范（Building Dimensions Spec）
 
 > 适用范围：本项目（`battlegame`，枪战游戏）所有 `battle_*.scad` 战场建筑资产。

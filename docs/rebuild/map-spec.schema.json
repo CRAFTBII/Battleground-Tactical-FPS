@@ -1,0 +1,347 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "map-spec.schema.json",
+  "title": "Battleground Tactical FPS MapSpec",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "mapId",
+    "name",
+    "units",
+    "bounds",
+    "instances",
+    "regions",
+    "navLinks",
+    "spawns",
+    "objectives"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "mapId": {
+      "type": "string",
+      "pattern": "^[a-z0-9_-]+$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "units": {
+      "const": "m"
+    },
+    "bounds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "min",
+        "max"
+      ],
+      "properties": {
+        "min": {
+          "$ref": "#/$defs/vec3"
+        },
+        "max": {
+          "$ref": "#/$defs/vec3"
+        }
+      }
+    },
+    "terrain": {
+      "type": "object"
+    },
+    "instances": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/instance"
+      }
+    },
+    "regions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/region"
+      }
+    },
+    "navLinks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/navLink"
+      }
+    },
+    "spawns": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/spawn"
+      }
+    },
+    "objectives": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/objective"
+      }
+    },
+    "mechanics": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "presentation": {
+      "type": "object"
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "seed": {
+          "type": "integer"
+        },
+        "contentHash": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "vec3": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "instance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "assetId",
+        "transform"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "assetId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "transform": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "position",
+            "rotationY",
+            "scale"
+          ],
+          "properties": {
+            "position": {
+              "$ref": "#/$defs/vec3"
+            },
+            "rotationY": {
+              "type": "number"
+            },
+            "scale": {
+              "$ref": "#/$defs/vec3"
+            }
+          }
+        },
+        "flags": {
+          "type": "object",
+          "properties": {
+            "render": {
+              "type": "boolean"
+            },
+            "collision": {
+              "type": "boolean"
+            },
+            "navigation": {
+              "type": "boolean"
+            },
+            "minimap": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "team": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "region": {
+      "type": "object",
+      "required": [
+        "id",
+        "type"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "floorId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "navEndpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "floorId"
+      ],
+      "properties": {
+        "instanceId": {
+          "type": "string"
+        },
+        "floorId": {
+          "type": "string"
+        },
+        "anchor": {
+          "type": "string"
+        },
+        "position": {
+          "$ref": "#/$defs/vec3"
+        }
+      }
+    },
+    "navLink": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "from",
+        "to"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "door",
+            "stair",
+            "ladder",
+            "jump",
+            "drop",
+            "elevator"
+          ]
+        },
+        "from": {
+          "$ref": "#/$defs/navEndpoint"
+        },
+        "to": {
+          "$ref": "#/$defs/navEndpoint"
+        },
+        "bidirectional": {
+          "type": "boolean"
+        },
+        "cost": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "agentMask": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "spawn": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "team",
+        "position",
+        "floorId"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "team": {
+          "type": "string"
+        },
+        "position": {
+          "$ref": "#/$defs/vec3"
+        },
+        "rotationY": {
+          "type": "number"
+        },
+        "floorId": {
+          "type": "string"
+        },
+        "safeRadius": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "objective": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "position",
+        "floorId",
+        "radius"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "position": {
+          "$ref": "#/$defs/vec3"
+        },
+        "floorId": {
+          "type": "string"
+        },
+        "radius": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "team": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    }
+  }
+}

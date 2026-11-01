@@ -727,42 +727,6 @@ function exportGunBolts() {
   return out;
 }
 
-/* ---- 6.4 建筑：BUILDINGS_DATA ∪ BUILDINGS_OUT（POSITION/NORMAL/COLOR_0 + Uint16） ---- */
-function exportBuildings() {
-  const legacy = loadInline('models/buildings_data.js', 'BUILDINGS_DATA');
-  const newer = loadInline('models/buildings_out.js', 'BUILDINGS_OUT');
-  const jobs = [];
-  for (const key of Object.keys(legacy)) jobs.push({ key: key, src: 'BUILDINGS_DATA', raw: legacy[key] });
-  for (const key of Object.keys(newer)) {
-    if (legacy[key]) throw new DataError('BUILDINGS_DATA 与 BUILDINGS_OUT 同时存在 key "' + key + '"，产物路径会冲突');
-    jobs.push({ key: key, src: 'BUILDINGS_OUT', raw: newer[key] });
-  }
-  const out = [];
-  for (const job of jobs) {
-    const geo = checkGeometry(job.src + '[' + job.key + ']', job.raw, { requireNormal: true });
-    collectWarnings(job.key, geo);
-    const w = new GlbWriter(GENERATOR);
-    w.addSingleMeshGlb(job.key, job.key, geo, vertexColorMaterial(job.key));
-    const abs = path.join(MODELS, 'buildings', job.key + '.glb');
-    const bytes = w.write(abs);
-    outputs.push({ file: 'models/buildings/' + job.key + '.glb', bytes: bytes, meshes: 1, verts: geo.vtx, tris: geo.tri });
-    out.push({ key: job.key, geo: geo, src: job.src });
-  }
-
-  // 来源分组提示：gen_manifest.cjs 把它写进 manifest.buildingGroups。
-  // 运行时 BuildingLib.build() 用 buildingSource() 决定是否按地图 dims 缩放——
-  // legacy 5 型几何不参与缩放，分组缺失/错乱会让它们被非等比拉伸。
-  const hintAbs = path.join(MODELS, '.building-groups.json');
-  const hint = {
-    generator: GENERATOR,
-    legacy: jobs.filter((j) => j.src === 'BUILDINGS_DATA').map((j) => j.key).sort(),
-    out: jobs.filter((j) => j.src === 'BUILDINGS_OUT').map((j) => j.key).sort(),
-  };
-  fs.writeFileSync(hintAbs, JSON.stringify(hint, null, 2) + '\n');
-  outputs.push({ file: 'models/.building-groups.json', bytes: fs.statSync(hintAbs).size, hint: true });
-  return out;
-}
-
 /* ============================================================
  * 7. 全量自检（重新读原始内联数据 → 与磁盘上的 .glb 逐值比对）
  * ============================================================ */
@@ -832,20 +796,7 @@ function runVerification() {
     }
   }
 
-  /* --- 建筑 --- */
-  {
-    const legacy = loadInline('models/buildings_data.js', 'BUILDINGS_DATA');
-    const newer = loadInline('models/buildings_out.js', 'BUILDINGS_OUT');
-    for (const [src, table] of [['BUILDINGS_DATA', legacy], ['BUILDINGS_OUT', newer]]) {
-      for (const key of Object.keys(table)) {
-        const geo = checkGeometry(src + '[' + key + ']', table[key], { requireNormal: true });
-        infos.push(verifyGlb('models/buildings/' + key + '.glb', {
-          prims: [{ name: key, geo: geo, material: { baseColorFactor: [1, 1, 1, 1], metallicFactor: 0, roughnessFactor: 1 } }],
-          nodes: [{ name: key, meshName: key }],
-        }, failures));
-      }
-    }
-  }
+
 
   return { infos: infos, failures: failures };
 }
@@ -859,15 +810,13 @@ function listGlb(dir) {
 }
 function expectedManifest() {
   const gunsAbs = path.join(MODELS, 'guns');
-  const bldAbs = path.join(MODELS, 'buildings');
-  const exp = { soldier: null, weapons: {}, bolts: {}, buildings: {} };
+  const exp = { soldier: null, weapons: {}, bolts: {} };
   if (fs.existsSync(path.join(MODELS, 'soldier.glb'))) exp.soldier = 'soldier.glb';
   for (const f of listGlb(gunsAbs)) {
     const base = f.replace(/\.glb$/i, '');
     if (/_bolt$/.test(base)) exp.bolts[base.replace(/_bolt$/, '')] = 'guns/' + f;
     else exp.weapons[base] = 'guns/' + f;
   }
-  for (const f of listGlb(bldAbs)) exp.buildings[f.replace(/\.glb$/i, '')] = 'buildings/' + f;
   return exp;
 }
 function verifyManifest() {
@@ -898,27 +847,6 @@ function verifyManifest() {
   if (man.soldier !== exp.soldier) failures.push('manifest.soldier = ' + man.soldier + ' ≠ ' + exp.soldier);
   cmp('weapons', man.weapons, exp.weapons);
   cmp('bolts', man.bolts, exp.bolts);
-  cmp('buildings', man.buildings, exp.buildings);
-
-  // 分组：legacy 5 型不得进 out（否则运行时会把它们按地图 dims 非等比拉伸）
-  const hintAbs = path.join(MODELS, '.building-groups.json');
-  if (fs.existsSync(hintAbs)) {
-    try {
-      const hint = JSON.parse(fs.readFileSync(hintAbs, 'utf8'));
-      const groups = man.buildingGroups || { legacy: [], out: [] };
-      for (const k of hint.legacy || []) {
-        if (!(groups.legacy || []).includes(k)) failures.push('manifest.buildingGroups.legacy 缺 "' + k + '"（legacy 建筑会被当成新类型缩放）');
-        if ((groups.out || []).includes(k)) failures.push('manifest.buildingGroups.out 误含 legacy 建筑 "' + k + '"');
-      }
-      for (const k of hint.out || []) {
-        if (!(groups.out || []).includes(k)) failures.push('manifest.buildingGroups.out 缺 "' + k + '"');
-      }
-    } catch (e) {
-      failures.push('models/.building-groups.json 不是合法 JSON: ' + e.message);
-    }
-  } else {
-    failures.push('models/.building-groups.json 缺失（导出未完成？legacy/out 分组无从得知）');
-  }
   return { failures: failures, notes: notes };
 }
 
@@ -951,9 +879,7 @@ function main() {
     exportSoldier();
     exportWeapons();
     exportGunBolts();
-    exportBuildings();
-    console.log('已写出 ' + outputs.filter((o) => !o.hint).length + ' 个 .glb' +
-      (outputs.some((o) => o.hint) ? ' + 1 个分组提示文件' : ''));
+    console.log('已写出 ' + outputs.length + ' 个角色 / 武器 GLB；建筑资产由 v4 Blender 管线单独管理');
     console.log('');
   }
 

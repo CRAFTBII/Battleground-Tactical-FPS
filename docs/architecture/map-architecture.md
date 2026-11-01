@@ -1,3 +1,5 @@
+> **历史文档（v3）**：仅供理解旧实现。v4 规范以 [docs/rebuild/README.md](../rebuild/README.md) 为准；不要按本文恢复旧 runtime、2D 导航或旧尺寸表。
+
 # 地图架构设计（数据驱动地图 + 建筑精修系统）
 
 > 项目：战地突击 Battleground Tactical FPS（Three.js r160，UMD 全局 `THREE`）
