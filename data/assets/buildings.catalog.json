@@ -2,15 +2,18 @@
   "schemaVersion": 1,
   "units": "m",
   "actorProfile": "vanguard",
-  "actorMaxHeight": 2.5,
+  "actorMaxHeight": 2.2,
   "targetContract": {
-    "doorClearHeight": 3.0,
-    "doorClearWidth": 1.6,
-    "floorToFloor": 4.4,
-    "clearHeight": 3.8,
-    "stepHeight": 0.55,
-    "corridorWidth": 2.2
+    "doorClearHeight": 2.4,
+    "doorClearWidth": 1.3,
+    "floorToFloor": 3.6,
+    "clearHeight": 3.0,
+    "stepHeight": 0.45,
+    "corridorWidth": 1.8
   },
+  "notes": [
+    "targetDims 当前保留上一版 2.5m 基线的沙盒尺寸（偏大）；角色改为默认 2.0/上限 2.2 后，下一轮资产按本 targetContract 收敛。"
+  ],
   "assets": {
     "house_small": {
       "status": "draft",

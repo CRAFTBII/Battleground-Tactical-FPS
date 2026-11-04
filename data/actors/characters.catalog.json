@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "units": "m",
-  "maxHeight": 2.5,
+  "maxHeight": 2.2,
   "defaultId": "vanguard",
   "profiles": [
     {
@@ -10,33 +10,34 @@
       "status": "placeholder",
       "glb": "models/soldier.glb",
       "modelHeight": 1.9,
-      "height": 2.5,
-      "scale": 1.3158,
-      "eyeHeight": 2.3,
+      "height": 2.0,
+      "scale": 1.0526,
+      "eyeHeight": 1.85,
       "capsule": {
-        "radius": 0.45,
-        "height": 2.5,
-        "halfHeight": 0.8
+        "radius": 0.35,
+        "height": 2.0,
+        "halfHeight": 0.65
       },
-      "stepHeight": 0.55,
+      "stepHeight": 0.45,
       "camera": {
         "fov": 70,
         "near": 0.1,
         "far": 1200
       },
       "anchors": {
-        "eye": [0, 2.3, 0],
-        "weaponR": [0.28, 1.95, 0.35],
-        "muzzle": [0.28, 1.95, 0.8]
+        "eye": [0, 1.85, 0],
+        "weaponR": [0.24, 1.6, 0.3],
+        "muzzle": [0.24, 1.6, 0.75]
       },
       "weaponScale": 1.0,
       "variants": []
     }
   ],
   "notes": [
-    "这是角色模型扩展口：后续新增人物只需增加 profile（glb/height/eyeHeight/capsule/anchors）。",
-    "所有角色身高不得超过 maxHeight=2.5m；相机眼高必须按 profile.eyeHeight 设置，不能写死 1.7m。",
-    "建筑净高/门高/楼层标高以 2.5m 角色为基准：门净高 3.0m、层高 4.4m、净层高 3.8m。",
-    "当前 soldier.glb 为占位模型；后续可替换为多套角色，运行时通过 ActorCatalog.get(id) 选择。"
+    "默认身高 2.0m，硬上限 2.2m（2.5m 过高，门洞/层高不经济）。",
+    "门净高 2.4m、净宽 1.3m、层高 3.6m、净层高 3.0m、台阶 0.45m。",
+    "相机眼高必须按 profile.eyeHeight（默认 1.85m），不能写死 1.7m。",
+    "当前沙盒模型仍是上一版 2.5m 基线的尺寸（偏大），先验证通行与手感，下一轮再按 2.2m 上限收敛。",
+    "新增人物模型只需增加 profile（glb/height/eyeHeight/capsule/anchors），建筑侧不改。"
   ]
 }

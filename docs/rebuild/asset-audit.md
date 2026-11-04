@@ -2,6 +2,8 @@
 
 > 分支：`rebuild/maps-v4` · 工具：Blender 5.2 headless（`tools/buildings/audit_sources.py`）
 > 原始数据：`docs/rebuild/source-audit.json`
+> **2026-11-01 修订**：角色基准从 2.5m 下调为默认 2.0m / 上限 2.2m / 相机 1.85m；
+> 权威目标尺寸以 `scale-decision.md` 为准。本文件中 2.5m 基线的尺寸仅作源模型测量参考。
 > 结论：**四套源包都不能直接进入 v4**；需要 Blender 修复轴向/原点、拆分 VIS/COL/NAV/ANCHOR，
 > 并逐类型决定目标尺寸。现有 29 个 v3 派生模型不作为 v4 资产。
 
@@ -62,7 +64,7 @@
 | cover | 14.5×6.3×2.75 | 组合件 | 需定目标 |
 
 源模型层高约 3.0~3.2m；ADR-002 建议多层 3.6~4.0m，门净高 ≥2.1m，普通住宅净层高 ≥2.7m。
-**最终目标（按 2.5m 角色 / 2.3m 相机，见 `scale-decision.md`）**：
+**上一版目标（2.5m 角色 / 2.3m 相机；现已修订为默认 2.0/上限 2.2，见 `scale-decision.md`）**：
 
 - house_small：10×8×4.4（单层，净高 3.8）
 - house（双层）：11×9×8.8（2×4.4）

@@ -1,7 +1,7 @@
 /* ============================================
  * 战地突击 · js/actors.js — 角色 profile 扩展口（v4）
  * --------------------------------------------
- * 建筑物高度/门洞/层高以“角色设计身高 2.5m”为基准；
+ * 建筑物高度/门洞/层高以“默认 2.0m / 上限 2.2m 角色”为基准；
  * 相机眼高、胶囊尺寸、武器/枪口锚点必须来自 profile，不能写死 1.7m。
  *
  * 后续新增人物模型：在 data/actors/characters.catalog.json 增加 profile，
@@ -12,7 +12,7 @@
 const ActorCatalog = {
   version: 1,
   source: 'data/actors/characters.catalog.json',
-  maxHeight: 2.5,
+  maxHeight: 2.2,
   defaultId: 'vanguard',
   data: null,
 
@@ -21,7 +21,7 @@ const ActorCatalog = {
     return {
       schemaVersion: 1,
       units: 'm',
-      maxHeight: 2.5,
+      maxHeight: 2.2,
       defaultId: 'vanguard',
       profiles: [{
         id: 'vanguard',
@@ -29,16 +29,16 @@ const ActorCatalog = {
         status: 'placeholder',
         glb: 'models/soldier.glb',
         modelHeight: 1.9,
-        height: 2.5,
-        scale: 1.3158,
-        eyeHeight: 2.3,
-        capsule: { radius: 0.45, height: 2.5, halfHeight: 0.8 },
-        stepHeight: 0.55,
+        height: 2.0,
+        scale: 1.0526,
+        eyeHeight: 1.85,
+        capsule: { radius: 0.35, height: 2.0, halfHeight: 0.65 },
+        stepHeight: 0.45,
         camera: { fov: 70, near: 0.1, far: 1200 },
         anchors: {
-          eye: [0, 2.3, 0],
-          weaponR: [0.28, 1.95, 0.35],
-          muzzle: [0.28, 1.95, 0.8]
+          eye: [0, 1.85, 0],
+          weaponR: [0.24, 1.6, 0.3],
+          muzzle: [0.24, 1.6, 0.75]
         },
         weaponScale: 1.0,
         variants: []

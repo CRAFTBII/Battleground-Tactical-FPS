@@ -2,58 +2,55 @@
 
 > 入口：`http://localhost:8080/sandbox.html`（v4 分支）
 > 已修复并接入：house / cover / base / estate
-> 未接入：apartment（需要建模补 5 层，不是缩放）、其余 17 个缺失类型
+> 未接入：apartment（需要建模补 5 层）、其余 17 个缺失类型
 
 ## 1. 已修复模型
 
-| key | 目标尺寸 (w×h×d) | 实际 GLB 尺寸 | 轴向/原点 | 节点 |
-|---|---|---|---|---|
-| house | 11×8.8×9 | 11×8.8×9 | Y-up、footprint 中心地面 | VIS/COL/NAV/ANCHOR |
-| cover | 14.5×2.8×6.3 | 14.5×2.8×6.3 | 同上 | VIS/COL |
-| base | 90×16×75 | 90×16×75 | 同上 | VIS/COL |
-| estate | 80×10×60 | 80×10×60 | 同上 | VIS/COL |
+| key | 尺寸 (w×h×d) | 轴向/原点 | 节点 |
+|---|---|---|---|
+| house | 11×8.8×9 | Y-up、footprint 中心地面 | VIS/COL/NAV/ANCHOR |
+| cover | 14.5×2.8×6.3 | 同上 | VIS/COL |
+| base | 90×16×75 | 同上 | VIS/COL |
+| estate | 80×10×60 | 同上 | VIS/COL |
 
-修复内容：
+处理：源 Z-up → Blender -90°X、应用变换；fit 到目标尺寸；中心地面原点；导出 Y-up；
+VIS/COL/NAV/ANCHOR 节点 + extras。house COL 保留真实门洞/窗洞，不再用 AABB/三角边采样。
 
-- 源 Z-up 躺倒 → Blender 绕 X -90°，应用变换；导出 glTF Y-up。
-- footprint 中心地面原点；所有 mesh 变换已应用，root scale=1。
-- VIS/COL/NAV/ANCHOR 节点 + `extras`（battlegameRole/assetId/schemaVersion）。
-- house COL 保留原门洞/窗洞几何；不按名字猜碰撞、不整体 AABB、不采样三角边。
+## 2. 角色/相机（已按反馈缩小）
 
-## 2. 角色/相机
-
-- 角色 profile：身高 2.5m，相机眼高 2.3m，胶囊半径 0.45m/总高 2.5m，台阶 0.55m。
+- 默认身高 **2.0m**，硬上限 **2.2m**；相机眼高 **1.85m**。
+- 胶囊半径 **0.35m**（直径 0.70），总高 2.0m；台阶 0.45m。
 - 沙盒用 Rapier `KinematicCharacterController` + capsule，实时重力/跳跃/疾跑。
-- 实际截图（相机 2.3m 看 house）：`sandbox_house.png`（会话目录）。
 - 相机 fov/near/far 来自 profile；第一人称锚点预留。
+
+2.5m 角色会导致部分门挤不进去；缩到 2.0m 后，house 门 1.344m 对 0.70m 胶囊有 0.64m 余量。
 
 ## 3. 碰撞实测（Rapier）
 
 | 测试 | 结果 |
 |---|---|
-| house 正面墙（x=0） | 角色从 z=8 前进，停在 z=4.84（墙面 4.25 + 胶囊 0.45 + offset） → 挡 |
-| house 门洞（x=-2.923, 锚点） | 角色从 z=8 穿过门到 z=-3.55 → 通 |
+| house 正面墙（x=0） | 角色从 z=8 前进，停在 z=4.75（墙面 + 胶囊） → 挡 |
+| house 门洞（x=-2.923） | 角色从 z=8 穿过门到 z=-3.65 → 通 |
 | house 门上墙（y=4.2） | 射线命中 → 挡 |
-| cover（x=16） | 角色停在 z=5.62（掩体面 + 胶囊） → 挡 |
+| cover（x=16） | 角色停在 z=5.52 → 挡 |
 | base 正面 | 角色停在 z=-20.03（外围结构） → 挡 |
 | COL 调试线框 | C 键显示，共 123 个 trimesh collider |
 
-结论：**不再出现“整面墙可以穿过去”**；门洞实际可通行。之前 v3 的 `voxelRects` 只采三角边的问题在 v4 已不复用。
+结论：墙/沙包/基地可挡，house 门可通行；不再出现“整面墙穿过去”。
 
-## 4. 仍不满足规范的地方（必须记录）
+## 4. 仍不满足规范的地方
 
-1. **house 门净宽 1.344m**，目标 1.6m；胶囊 0.9m 可通过，但低于 v4 目标。下一步 Blender 扩门洞/调门框。
-2. **house 层高实测约 4.17m**（8.8m/2 层），目标 4.4m；差 5%，可接受范围但未严格达标。
-3. **NAV__house 当前是 VIS 的副本占位**，不是真正的可行走面/楼层链接；AI 导航未接入。
-4. **COL__* 当前是完整 VIS 三角副本**，不是低模代理；碰撞正确但三角数偏高。
-5. **apartment 未修复**：源模型只有 2 层 7.58m，目标 5 层 22m，需要补楼层/内梯建模。
+1. **house 门净宽 1.344m**，新目标 1.3m（已达标）；旧目标 1.6m 未达但已按新角色尺度调整。
+2. **house 层高约 4.4m**（8.8/2），新目标 3.6m（偏大但可用）；下一轮资产收敛。
+3. **NAV__house 当前是 VIS 副本占位**，不是真正的分层可走面；AI 导航未接入。
+4. **COL__* 当前是完整 VIS 三角副本**，碰撞正确但非低模代理；三角数偏高。
+5. **apartment 未修复**：源 2 层 7.58m，目标 5 层 18m，需要补楼层/内梯建模。
 6. **17 个类型仍无模型**：container/watchtower/stairs/bridge/wall/ruins/hangar/pillbox/
    crane/tankH/tankV/mast/tower/megatower/stadium/refinery/complex。
 7. 沙盒是单场景，不是完整 MapSpec/WorldRuntime；主游戏入口仍显示“v4 重建中”。
 
 ## 5. 结论
 
-- 模型测量/修复管线已经跑通：轴向、原点、目标尺寸、VIS/COL/NAV/ANCHOR 节点可自动导出。
-- house/cover/base/estate 已经在 Rapier 沙盒里可走、可挡、可进门。
-- apartment 和 17 个缺失类型不能靠“修复现有 GLB”完成，需要补模型；门宽/层高/NAV/低模 COL 还需第二轮精修。
-- 这版可以试玩验证尺度与碰撞手感；不能作为最终地图/游戏交付。
+- 模型测量/修复管线已跑通：轴向、原点、尺寸、VIS/COL/NAV/ANCHOR 可自动导出。
+- house/cover/base/estate 已在 Rapier 沙盒可走、可挡、可进门；角色/相机已按反馈缩到 2.0/1.85。
+- 这版用于验证尺度与碰撞手感；apartment、低模 COL、真正 NAV、完整 MapSpec 仍待下一轮。
