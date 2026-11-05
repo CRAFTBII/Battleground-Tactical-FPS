@@ -108,6 +108,12 @@ export function createPhysics(RAPIER) {
     return y > -1.2 && y < 2.6;
   }
 
+  /** 头顶天花板高度（用于跳跃时不穿楼板）；无遮挡返回 Infinity。 */
+  function ceilingAt(x, z, fromY, maxDist) {
+    const hit = ray({ x, y: fromY, z }, { x: 0, y: 1, z: 0 }, maxDist || 20);
+    return hit ? hit.point.y : Infinity;
+  }
+
   function capsule(radius, halfHeight) {
     const key = radius.toFixed(3) + ':' + halfHeight.toFixed(3);
     let s = capsuleCache.get(key);
@@ -228,7 +234,7 @@ export function createPhysics(RAPIER) {
 
   return {
     reset, finalize, addCuboid, addCuboidDesc, addBoxCollider, addCylinderCollider, addTrimesh,
-    ray, segmentBlocked, heightAt, walkablePoint, moveCapsule, moveRayActor, stats,
+    ray, segmentBlocked, heightAt, ceilingAt, walkablePoint, moveCapsule, moveRayActor, stats,
     get world() { return world; }
   };
 }

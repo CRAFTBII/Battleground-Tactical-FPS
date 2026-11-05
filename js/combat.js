@@ -1058,6 +1058,14 @@ const PC = {
         p.pos.y += this.vy * dt;
         if (p.pos.y <= gy) { p.pos.y = gy; this.vy = 0; this.onGround = true; }
       } else { p.pos.y = gy; this.vy = 0; this.onGround = true; }
+      // 天花板：室内跳跃不穿楼上楼板（Rapier 向上射线）
+      if (this.vy > 0 && typeof World !== 'undefined' && World.ceilingAt) {
+        const ceil = World.ceilingAt(p.pos.x, p.pos.z, p.pos.y + 0.2);
+        if (Number.isFinite(ceil) && ceil - p.pos.y < CFG.PLAYER_HEIGHT + 0.04) {
+          p.pos.y = Math.max(p.pos.y, ceil - CFG.PLAYER_HEIGHT - 0.04);
+          this.vy = 0;
+        }
+      }
     }
     p.yaw = this.yaw;
     // 更新玩家模型旋转以匹配相机方向

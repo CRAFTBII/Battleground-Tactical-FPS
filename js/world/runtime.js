@@ -841,6 +841,10 @@ export function createWorldRuntime(RAPIER) {
       return physics.heightAt(x, z, currentY);
     },
 
+    ceilingAt(x, z, fromY) {
+      return physics.ceilingAt(x, z, fromY);
+    },
+
     walkable(x, z) {
       const def = this.mapDef;
       if (!def) return false;
