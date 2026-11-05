@@ -73,6 +73,9 @@ VIS/COL/NAV/ANCHOR 节点 + extras。house COL 保留真实门洞/窗洞，不�
 - **建筑**：不再重复 house.glb；新增程序化 cottage/townhouse/shop/apartment/villa/warehouse/shed/tower/ruin，墙体留 1.4×2.45m 门洞，室内楼板留楼梯井，楼梯用 sensor + heightAt 实现可上二层。
 - **玩家手感**：玩家改用 Rapier `KinematicCharacterController`（与 sandbox 同一套，自动贴墙/台阶/落地），AI 保留低成本射线移动；不再用自定义 castShape + heightAt 推玩家。
 - **街景**：64 棵树、34 丛灌木、20 块岩石、沿路车辆、路灯、沙袋/集装箱/木箱。
+- **加密**：每张图自动沿街补 20 栋建筑（只补空地，避开道路/据点/出生点），三图建筑总数 54–58 栋。
+- **室内**：程序化建筑材质改 DoubleSide（不再从室内看到背面剔除造成的灰空），室内木地板/踢脚线/窗框/顶灯罩/厂房立柱与屋面梁；玩家相机带一盏跟随补光，室内不再是纯灰。
+- **AI**：红蓝队按据点/侧翼分组进攻，定期换目标；非狙击在 24m 外主动压上，失去命令时随机巡弋；增加 3.6m 间距避免扎堆；NaN 坐标自动重生成，避免全队目标被污染。
 - **预览**：[suburb](preview-suburb.jpg) · [port](preview-port.jpg) · [desert](preview-desert.jpg)
 - **俯视**：[suburb](map-suburb-plan.png) · [port](map-port-plan.png) · [desert](map-desert-plan.png)
 

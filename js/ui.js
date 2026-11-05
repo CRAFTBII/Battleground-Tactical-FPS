@@ -251,8 +251,9 @@ class Squad {
     // v2.7 象限出生修正：红队对角分布（Q2+Q3）下全队质心退化为地图中心——「进攻」命令会冲向中心打空气。
     // 改为「距本方玩家最近的敌方单位」作进攻锚点：语义=找到最近的敌人打，且必然落在敌方象限。
     const u = this.members.find(m => m.isPlayer) || Game.player;
-    const es = Game.units.filter(m => m.alive && m.team !== this.team);
-    if (!es.length) return null;
+    const es = Game.units.filter(m => m.alive && m.team !== this.team &&
+      Number.isFinite(m.pos.x) && Number.isFinite(m.pos.z));
+    if (!es.length || !u || !Number.isFinite(u.pos.x)) return null;
     let best = null, bd = Infinity;
     for (const e of es) {
       const d = U.dist2(u.pos.x, u.pos.z, e.pos.x, e.pos.z);
@@ -275,6 +276,7 @@ class Squad {
     if (m === this.leader) return this.objective;
     const g = this.groups.find(gr => gr.members.includes(m));
     const t = (g && g.target) || this.objective;
+    if (!t || !Number.isFinite(t.x) || !Number.isFinite(t.z)) return null;
     // §7.3 防守环绕：defend 命令下组内成员绕据点圆周边站位（半径 CAP_R + 4m×mapScale，不扎堆旗杆）
     if (this.order === 'defend' && t && g && g.members.length > 1) {
       const mIdx = g.members.indexOf(m);
@@ -284,6 +286,37 @@ class Squad {
     }
     return t;
   }
+  /* 给三个分队分配不同的进攻目标：两个据点 + 一个侧翼，避免全队挤在一个点 */
+  _assignTargets(ex, ez) {
+    const caps = Game.caps || [];
+    const ti = Math.max(0, (Game.teams || []).indexOf(this.team));
+    const pool = caps.filter(c => c.owner !== this.team);
+    const finiteE = Number.isFinite(ex) && Number.isFinite(ez);
+    const W = (typeof CFG !== 'undefined' && CFG.WORLD) || 300;
+    this.groups.forEach((g, gi) => {
+      if (gi === 2 && finiteE) {
+        const ang = ti * 0.8 + 0.7;
+        const tx = U.clamp(ex + Math.cos(ang) * 26, 15, W - 15);
+        const tz = U.clamp(ez + Math.sin(ang) * 26, 15, W - 15);
+        if (typeof World !== 'undefined' && World.walkable && !World.walkable(tx, tz)) {
+          const c = pool[0] || caps[0];
+          g.target = c ? { x: c.x, z: c.z } : null;
+        } else g.target = { x: tx, z: tz };
+        return;
+      }
+      if (pool.length) {
+        const c = pool[(gi + ti) % pool.length];
+        g.target = { x: c.x, z: c.z };
+      } else if (finiteE && caps.length) {
+        // 所有据点已属于本方：转为扑向敌人/巡弋
+        g.target = { x: U.clamp(ex + (gi - 1) * 22, 15, W - 15), z: U.clamp(ez + (gi - 1) * 14, 15, W - 15) };
+      } else if (caps.length) {
+        const c = caps[gi % caps.length];
+        g.target = { x: c.x, z: c.z };
+      }
+    });
+  }
+
   update(dt) {
     this.orderT = Math.max(0, this.orderT - dt);
     // §8.5：队长倒地 → 自动换存活者
@@ -301,26 +334,39 @@ class Squad {
       this.waveHold();
       this.waveResume();
     }
-    const enemies = Game.units.filter(u => u.alive && u.team !== this.team);
+    const enemies = Game.units.filter(u => u.alive && u.team !== this.team &&
+      Number.isFinite(u.pos.x) && Number.isFinite(u.pos.z));
     if (enemies.length === 0) { this.members.forEach(m => m.ai.update(dt, this)); return; }
     let ex = 0, ez = 0;
     for (const e of enemies) { ex += e.pos.x; ez += e.pos.z; }
     ex /= enemies.length; ez /= enemies.length;
-    // 没有玩家指挥（红队/自由状态）→ 原有自动战术；有指挥 → 用 memberDest
+    if (!Number.isFinite(ex) || !Number.isFinite(ez)) { ex = CFG.WORLD / 2; ez = CFG.WORLD / 2; }
+    // 没有玩家指挥（红队/自由状态）→ 自动战术；有指挥 → 用 memberDest
     const playerCmd = this.team === 'blue' && this.order !== 'free';
+    this._targetT = (this._targetT || 0) - dt;
     if (!playerCmd) {
       if (this.orderT <= 0) {
         this.orderT = U.rand(7, 12);
         const r = Math.random();
         this.tactic = r < 0.3 ? 'flankL' : r < 0.55 ? 'flankR' : 'advance';
         this.objective = { x: ex, z: ez };
+        this._assignTargets(ex, ez);
         const side = this.tactic === 'flankL' ? -1 : this.tactic === 'flankR' ? 1 : 0;
         const flankers = this.members.filter(m => m.alive && m.ai.role !== 'sniper').slice(0, 2);
         flankers.forEach((m, i) => {
           const perp = side || (i === 0 ? -1 : 1);
           m.ai.orderPt = { x: ex + perp * 26, z: ez + perp * 18 };
         });
+      } else if (this._targetT <= 0) {
+        this._targetT = U.rand(6, 10);
+        this.objective = { x: ex, z: ez };
+        this._assignTargets(ex, ez);
       }
+    } else if (this.order === 'attack' && this._targetT <= 0) {
+      // 蓝队 attack：定期换目标，避免全队占完一个点后原地发呆
+      this._targetT = U.rand(8, 12);
+      this.objective = { x: ex, z: ez };
+      this._assignTargets(ex, ez);
     }
     for (const m of this.members) m.ai.update(dt, this);
   }

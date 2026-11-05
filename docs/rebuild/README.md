@@ -45,7 +45,7 @@ js/world/maps.js            # 三张地图数据（suburb / port / desert）
 ```
 `js/world/{core,assets,collision,navigation,spawn,map,debug}/README.md` 保留为后续拆分说明；当前可玩实现集中在上面 6 个文件。
 
-**视觉预览**：[暮色小镇](preview-suburb.jpg) · [街景](preview-suburb-street.jpg) · [灰港](preview-port.jpg) · [沙岭](preview-desert.jpg)
+**视觉预览**：[暮色小镇](preview-suburb.jpg) · [街景](preview-suburb-street.jpg) · [厂房内部](preview-interior.jpg) · [灰港](preview-port.jpg) · [沙岭](preview-desert.jpg)
 **俯视规划**：[suburb](map-suburb-plan.png) · [port](map-port-plan.png) · [desert](map-desert-plan.png)
 
 ## 坐标与尺度

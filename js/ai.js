@@ -83,6 +83,7 @@ class AIBrain {
     const eye = this.eyePos(u);
     for (const e of Game.units) {
       if (!e.alive || e.team === u.team) continue;
+      if (!Number.isFinite(e.pos.x) || !Number.isFinite(e.pos.z)) continue;
       if (e.spawnProtT > 0) continue; // §4.5：AI 不预瞄出生无敌帧目标（配合表现）
       const d = Math.sqrt(U.dist2(u.pos.x, u.pos.z, e.pos.x, e.pos.z));
       if (d > 90) continue;
@@ -181,8 +182,9 @@ class AIBrain {
     // 与队友分离
     for (const o of squad.members) {
       if (o === u || !o.alive) continue;
+      if (!Number.isFinite(o.pos.x) || !Number.isFinite(o.pos.z)) continue;
       const d2 = U.dist2(u.pos.x, u.pos.z, o.pos.x, o.pos.z);
-      if (d2 < 2.4) { const d = Math.sqrt(d2) || 0.01; u.pos.x += (u.pos.x - o.pos.x) / d * dt * 0.6; u.pos.z += (u.pos.z - o.pos.z) / d * dt * 0.6; }
+      if (d2 < 3.6) { const d = Math.sqrt(d2) || 0.01; u.pos.x += (u.pos.x - o.pos.x) / d * dt * 0.9; u.pos.z += (u.pos.z - o.pos.z) / d * dt * 0.9; }
     }
 
     /* ---- v1.4 战术移动目标（环境压力/自保；战斗不打断——engage 分支仍 tryShoot）----
@@ -215,8 +217,14 @@ class AIBrain {
         if (this.burst <= 0) { this.moveTo(this._tacDest.d.x, this._tacDest.d.z, dt, 2.0); this.moving = true; }
       } else if (this.burst <= 0) {
         // ② 断电推进：横移概率减半 + 非狙击向目标逼近（行为层，不改命中/射速/移速）
-        if (pwrOff && this.role !== 'sniper' && U.rand() < 0.10 + assertP) { this.moveTo(this.target.pos.x, this.target.pos.z, dt, 2.2); this.moving = true; }
-        else if (U.rand() < ((pwrOff ? 0.025 : 0.05) + assertP)) { const a = U.rand(0, 1) < 0.5 ? 1 : -1; this.moveTo(u.pos.x + a * 2, u.pos.z + a * 2, dt, 1.6); this.moving = true; }
+        if (d > 24 && this.role !== 'sniper') {
+          this.moveTo(this.target.pos.x, this.target.pos.z, dt, 3.6);
+          this.moving = true;
+        } else if (U.rand() < ((pwrOff ? 0.05 : 0.09) + assertP)) {
+          const a = U.rand(0, 1) < 0.5 ? 1 : -1;
+          this.moveTo(u.pos.x + a * 2, u.pos.z + a * 2, dt, 1.9);
+          this.moving = true;
+        }
       }
       // 射击（换弹停顿中 tryShoot 自动跳过）
       this.tryShoot(dt);
@@ -397,6 +405,8 @@ class AIBrain {
   /* 移动核心（路径 + moveTo；followOrder / respawnDuty 共用） */
   _moveToDest(dest, dt, squad, forceSprint) {
     const u = this.unit;
+    if (!dest || !Number.isFinite(dest.x) || !Number.isFinite(dest.z)) return;
+    if (!Number.isFinite(u.pos.x) || !Number.isFinite(u.pos.z)) return;
     const d = Math.sqrt(U.dist2(u.pos.x, u.pos.z, dest.x, dest.z));
     if (d < 6) return;
     const isSprint = forceSprint || squad.order === 'attack' || squad.order === 'group';
@@ -407,7 +417,7 @@ class AIBrain {
     if (pathBroken) {
       if (this.repathT <= 0) {
         this.repathT = 0.6;
-        this.path = findPath(u.pos.x, u.pos.z, dest.x, dest.z);
+        this.path = (findPath(u.pos.x, u.pos.z, dest.x, dest.z) || []).filter(w => w && Number.isFinite(w.x) && Number.isFinite(w.z));
         this.pathI = 1;
         if (!this.path.length && d > 30 && World.walkable(dest.x, dest.z)) {
           this.path = [{ x: dest.x, z: dest.z }];
@@ -723,12 +733,29 @@ class AIBrain {
       // §7.2 行进散兵线：仅对命令目标偏移（zone 目标不可偏移，防推出圈外；defend 走环绕站位）
       if (dest && squad.order !== 'defend' && squad.spreadDest && typeof squad.spreadDest === 'function') dest = squad.spreadDest(u, dest);
     }
-    if (!dest) return;
+    if (!dest || !Number.isFinite(dest.x) || !Number.isFinite(dest.z)) {
+      // 没有命令/目标时随机巡弋，避免全队站着不动
+      this._roamT = (this._roamT || 0) - dt;
+      if (this._roamT <= 0 || !this._roamPt) {
+        this._roamT = U.rand(4, 8);
+        const R = 34;
+        this._roamPt = {
+          x: U.clamp(u.pos.x + U.rand(-R, R), 6, CFG.WORLD - 6),
+          z: U.clamp(u.pos.z + U.rand(-R, R), 6, CFG.WORLD - 6)
+        };
+      }
+      dest = this._roamPt;
+    }
     this._moveToDest(dest, dt, squad, false);
   }
 
   moveTo(tx, tz, dt, speed) {
     const u = this.unit;
+    if (!Number.isFinite(tx) || !Number.isFinite(tz) ||
+        !Number.isFinite(u.pos.x) || !Number.isFinite(u.pos.z) || !Number.isFinite(u.pos.y)) {
+      this.moving = false;
+      return;
+    }
     const dx = tx - u.pos.x, dz = tz - u.pos.z;
     const d = Math.sqrt(dx * dx + dz * dz);
     if (d < 0.2) return;

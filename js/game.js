@@ -548,6 +548,14 @@ const Game = {
   // 每帧：流血倒计时（T3）/ 玩家救援进度 / 出生无敌帧衰减
   tickDown(dt) {
     for (const u of this.units) {
+      // 防御：任何 NaN 坐标立即重生成，避免污染全队 AI 目标（enemyCenter → NaN）
+      if (!Number.isFinite(u.pos.x) || !Number.isFinite(u.pos.z) || !Number.isFinite(u.pos.y)) {
+        const s = World.pickSpawn(u.team);
+        u.pos.set(s.x, s.y, s.z);
+        u.yaw = u.team === 'blue' ? 0 : Math.PI;
+        if (u.ai && typeof u.ai.reset === 'function') { u.ai.reset(); u.ai.orderPt = null; u.ai._roamPt = null; }
+        if (u === this.player) { PC.vy = 0; PC.onGround = true; }
+      }
       // 出生无敌帧衰减 + 离开保护半径提前失效（§4.5）
       if (u.spawnProtT > 0) {
         u.spawnProtT = Math.max(0, u.spawnProtT - dt);

@@ -45,28 +45,25 @@ const PALETTES = {
 };
 
 function makeMerger(THREE) {
-  const buckets = new Map();
-  function bucket(color) {
-    let b = buckets.get(color);
-    if (!b) {
-      b = { pos: [], nor: [], idx: [] };
-      buckets.set(color, b);
-    }
-    return b;
-  }
+  const pos = [], nor = [], col = [], idx = [];
+  const tmpColor = new THREE.Color();
   function addGeometry(geo, matrix, color) {
     geo.applyMatrix4(matrix);
     const p = geo.attributes.position && geo.attributes.position.array;
     if (!p) { geo.dispose(); return; }
     const n = geo.attributes.normal && geo.attributes.normal.array;
-    const b = bucket(color);
-    const off = b.pos.length / 3;
-    for (let i = 0; i < p.length; i++) { b.pos.push(p[i]); b.nor.push(n ? n[i] : 0); }
+    const off = pos.length / 3;
+    tmpColor.setHex(color);
+    for (let i = 0; i < p.length; i += 3) {
+      pos.push(p[i], p[i + 1], p[i + 2]);
+      nor.push(n ? n[i] : 0, n ? n[i + 1] : 0, n ? n[i + 2] : 0);
+      col.push(tmpColor.r, tmpColor.g, tmpColor.b);
+    }
     if (geo.index) {
       const ix = geo.index.array;
-      for (let i = 0; i < ix.length; i++) b.idx.push(ix[i] + off);
+      for (let i = 0; i < ix.length; i++) idx.push(ix[i] + off);
     } else {
-      for (let i = 0; i < p.length / 3; i++) b.idx.push(off + i);
+      for (let i = 0; i < p.length / 3; i++) idx.push(off + i);
     }
     geo.dispose();
   }
@@ -88,24 +85,20 @@ function makeMerger(THREE) {
     );
     addGeometry(geo, m, color);
   }
-  function finish(group, glassColor) {
-    for (const [color, b] of buckets) {
-      const geo = new THREE.BufferGeometry();
-      geo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(b.pos), 3));
-      geo.setAttribute('normal', new THREE.Float32BufferAttribute(new Float32Array(b.nor), 3));
-      geo.setIndex(b.idx);
-      geo.computeBoundingSphere();
-      const mat = new THREE.MeshLambertMaterial({ color });
-      if (color === glassColor) {
-        mat.emissive = new THREE.Color(0x27333c);
-        mat.emissiveIntensity = 0.55;
-      }
-      const mesh = new THREE.Mesh(geo, mat);
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      group.add(mesh);
-    }
-    buckets.clear();
+  function finish(group) {
+    if (!pos.length) return;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(pos), 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(new Float32Array(nor), 3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(new Float32Array(col), 3));
+    geo.setIndex(idx);
+    geo.computeBoundingSphere();
+    const mat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    group.add(mesh);
+    pos.length = 0; nor.length = 0; col.length = 0; idx.length = 0;
   }
   return { box, cone, finish };
 }
@@ -147,6 +140,8 @@ export function createBuildingFactory(THREE, physics, mapId) {
     /* ---------- 地基 ---------- */
     // 只做 6cm 薄台，避免 14cm 门槛在胶囊 sweep 里变成“隐形台阶”卡门
     solid(W + 0.45, 0.06, DD + 0.45, 0, 0.03, 0, slabColor);
+    // 室内木地板（纯视觉，踩踏仍由地基/楼板碰撞负责）
+    M.box(W - 0.5, 0.02, DD - 0.5, 0, 0.072, 0, P.wood);
 
     /* ---------- 门洞/窗 ---------- */
     const doorW = type === 'warehouse' ? 4.2 : 1.4;
@@ -170,11 +165,6 @@ export function createBuildingFactory(THREE, physics, mapId) {
       M.box(0.1, door.h + 0.15, t + 0.12, dl, by + door.h / 2, zPos + 0.02, trimColor);
       M.box(0.1, door.h + 0.15, t + 0.12, dr, by + door.h / 2, zPos + 0.02, trimColor);
       M.box(dr - dl, 0.12, t + 0.12, (dl + dr) / 2, by + door.h + 0.06, zPos + 0.02, trimColor);
-      const th = 1.12;
-      const dw = dr - dl;
-      M.box(dw, door.h - 0.08, 0.07,
-        dl + Math.cos(th) * dw / 2, by + door.h / 2, zPos - Math.sin(th) * dw / 2,
-        doorColor, 0, -th, 0);
     }
 
     function wallZ(xPos, z0, z1, by, h, color) {
@@ -185,17 +175,23 @@ export function createBuildingFactory(THREE, physics, mapId) {
 
     function windowX(zPos, cx, by, wide, tall) {
       const w = wide || 1.15, hh = tall || 1.15;
-      M.box(w, hh, 0.09, cx, by + 1.55, zPos + 0.16, glassColor);
-      M.box(w + 0.2, 0.1, 0.16, cx, by + 1.55 - hh / 2 - 0.07, zPos + 0.17, trimColor);
-      M.box(0.09, hh + 0.2, 0.16, cx - w / 2 - 0.06, by + 1.55, zPos + 0.17, trimColor);
-      M.box(0.09, hh + 0.2, 0.16, cx + w / 2 + 0.06, by + 1.55, zPos + 0.17, trimColor);
+      for (const side of [-1, 1]) {
+        const z = zPos + side * 0.16, zf = zPos + side * 0.17;
+        M.box(w, hh, 0.09, cx, by + 1.55, z, glassColor);
+        M.box(w + 0.2, 0.1, 0.14, cx, by + 1.55 - hh / 2 - 0.07, zf, trimColor);
+        M.box(0.09, hh + 0.2, 0.14, cx - w / 2 - 0.06, by + 1.55, zf, trimColor);
+        M.box(0.09, hh + 0.2, 0.14, cx + w / 2 + 0.06, by + 1.55, zf, trimColor);
+      }
     }
     function windowZ(xPos, cz, by, wide, tall) {
       const w = wide || 1.15, hh = tall || 1.15;
-      M.box(0.09, hh, w, xPos + 0.16, by + 1.55, cz, glassColor);
-      M.box(0.16, 0.1, w + 0.2, xPos + 0.17, by + 1.55 - hh / 2 - 0.07, cz, trimColor);
-      M.box(0.16, hh + 0.2, 0.09, xPos + 0.17, by + 1.55, cz - w / 2 - 0.06, trimColor);
-      M.box(0.16, hh + 0.2, 0.09, xPos + 0.17, by + 1.55, cz + w / 2 + 0.06, trimColor);
+      for (const side of [-1, 1]) {
+        const x = xPos + side * 0.16, xf = xPos + side * 0.17;
+        M.box(0.09, hh, w, x, by + 1.55, cz, glassColor);
+        M.box(0.14, 0.1, w + 0.2, xf, by + 1.55 - hh / 2 - 0.07, cz, trimColor);
+        M.box(0.14, hh + 0.2, 0.09, xf, by + 1.55, cz - w / 2 - 0.06, trimColor);
+        M.box(0.14, hh + 0.2, 0.09, xf, by + 1.55, cz + w / 2 + 0.06, trimColor);
+      }
     }
 
     /* ---------- 楼板（留楼梯井） ---------- */
@@ -224,6 +220,20 @@ export function createBuildingFactory(THREE, physics, mapId) {
       const backD = DD / 2 - hole.z1;
       if (frontD > 0.05) solid(midW, h, frontD, (hole.x0 + hole.x1) / 2, topY - h / 2, -DD / 2 + frontD / 2, slabColor);
       if (backD > 0.05) solid(midW, h, backD, (hole.x0 + hole.x1) / 2, topY - h / 2, DD / 2 - backD / 2, slabColor);
+    }
+
+    function woodFloor(topY, hole) {
+      const h = 0.018;
+      if (!hole) { M.box(W - 0.45, h, DD - 0.45, 0, topY + 0.01, 0, P.wood); return; }
+      const leftW = hole.x0 + W / 2;
+      const rightW = W / 2 - hole.x1;
+      if (leftW > 0.05) M.box(leftW - 0.25, h, DD - 0.45, -W / 2 + leftW / 2, topY + 0.01, 0, P.wood);
+      if (rightW > 0.05) M.box(rightW - 0.25, h, DD - 0.45, W / 2 - rightW / 2, topY + 0.01, 0, P.wood);
+      const midW = hole.x1 - hole.x0;
+      const frontD = hole.z0 + DD / 2;
+      const backD = DD / 2 - hole.z1;
+      if (frontD > 0.05) M.box(midW, h, frontD - 0.25, (hole.x0 + hole.x1) / 2, topY + 0.01, -DD / 2 + frontD / 2, P.wood);
+      if (backD > 0.05) M.box(midW, h, backD - 0.25, (hole.x0 + hole.x1) / 2, topY + 0.01, DD / 2 - backD / 2, P.wood);
     }
 
     function stairs(baseY) {
@@ -267,10 +277,22 @@ export function createBuildingFactory(THREE, physics, mapId) {
         windowZ(W / 2 - t / 2, 0, winY, 1.05, 1.15);
       }
 
+      // 室内踢脚线 + 顶灯罩（让室内有明暗层次，不再是纯灰盒子）
+      const bbY = by + 0.18;
+      M.box(W - 0.5, 0.26, 0.06, 0, bbY, -DD / 2 + t + 0.1, P.door);
+      M.box(0.06, 0.26, DD - 0.5, -W / 2 + t + 0.1, bbY, 0, P.door);
+      M.box(0.06, 0.26, DD - 0.5, W / 2 - t - 0.1, bbY, 0, P.door);
+      M.box(1.25, 0.06, 0.48, 0, by + wallH - 0.12, 0, 0xfff0c0);
+
       if (lv < floors - 1) {
         const topY = (lv + 1) * floorH;
         floorSlab(topY, stairHole);
+        woodFloor(topY, stairHole);
         stairs(lv * floorH + 0.14);
+        // 楼梯井两侧护栏：防止从侧面钻进楼梯/被 heightAt 抬上去
+        const railBase = lv * floorH + 0.14;
+        solid(0.12, 1.05, sz1 - sz0, sx0 - 0.07, railBase + 0.525, (sz0 + sz1) / 2, P.metal);
+        solid(0.12, 1.05, sz1 - sz0, sx1 + 0.07, railBase + 0.525, (sz0 + sz1) / 2, P.metal);
       }
     }
 
@@ -311,10 +333,14 @@ export function createBuildingFactory(THREE, physics, mapId) {
       M.box(2.4, 0.55, 0.1, doorAt + 0.4, 4.15, DD / 2 + 0.2, P.trim);
     }
     if (type === 'warehouse') {
-      // 大卷帘门 + 通风窗
+      // 大卷帘门 + 通风窗 + 屋面梁
       M.box(doorW + 0.4, 0.3, 0.25, doorAt, 4.55, DD / 2 + 0.05, P.metal);
       for (let i = 0; i < 4; i++) M.box(1.2, 0.5, 0.12, -W * 0.32 + i * 1.6, 5.0, DD / 2 + 0.1, P.metal);
       M.box(W * 0.6, 0.16, 0.16, 0, roofY + 0.4, DD / 2 + 0.1, P.metal);
+      for (let i = 0; i < 4; i++) M.box(W - 0.6, 0.22, 0.22, 0, roofY - 0.35, -DD / 2 + 2 + i * (DD - 4) / 3, P.metal);
+      for (const cx of [-W * 0.28, W * 0.28]) for (const cz of [-DD * 0.24, DD * 0.24]) {
+        solid(0.38, floorH - 0.2, 0.38, cx, (floorH - 0.2) / 2 + 0.14, cz, P.metal);
+      }
     }
     if (type === 'apartment' || type === 'villa' || type === 'townhouse') {
       // 阳台（视觉 + 可站台面碰撞）
@@ -339,7 +365,7 @@ export function createBuildingFactory(THREE, physics, mapId) {
       }
     }
 
-    M.finish(group, glassColor);
+    M.finish(group);
     const hx = Math.abs(cos) * W / 2 + Math.abs(sin) * DD / 2 + 0.3;
     const hz = Math.abs(sin) * W / 2 + Math.abs(cos) * DD / 2 + 0.3;
     return {

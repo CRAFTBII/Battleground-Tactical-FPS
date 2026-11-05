@@ -67,6 +67,8 @@ export function createWorldRuntime(RAPIER) {
         CFG.WORLD = def.size;
         CFG.mapScale = Math.max(0.8, Math.min(1.5, def.size / 300));
       }
+      // 自动沿街补建筑：只补空地，不覆盖已有建筑/据点/出生点/道路
+      def = this._withAutoBuildings(def);
       this.mapId = def.id;
       this.mapDef = def;
       this._footprints = [];
@@ -166,6 +168,16 @@ export function createWorldRuntime(RAPIER) {
     _initEnv() {
       const scene = this.scene;
       this._envLights = [];
+      // 跟随相机的单盏补光：玩家进室内时照亮近处墙面/地面，灯数固定 1，避免每栋楼一盏灯拖帧
+      if (!this._fillLight) {
+        const cam = scene.children.find(o => o && o.isCamera);
+        if (cam) {
+          const fl = new THREE.PointLight(0xffe2b0, 2.8, 19, 1.3);
+          fl.position.set(0, 0, 0);
+          cam.add(fl);
+          this._fillLight = fl;
+        }
+      }
       const hemi = new THREE.HemisphereLight(0xdfeaff, 0x3d4a3a, 0.95);
       hemi.name = 'env:hemi';
       scene.add(hemi);
@@ -201,7 +213,7 @@ export function createWorldRuntime(RAPIER) {
       e.sun.color.setHex(env.sun !== undefined ? env.sun : 0xfff2d8);
       e.sun.intensity = env.sunIntensity !== undefined ? env.sunIntensity : 1.25;
       e.ambient.color.setHex(env.ambient !== undefined ? env.ambient : 0x8899aa);
-      e.ambient.intensity = env.ambientIntensity !== undefined ? env.ambientIntensity : 0.22;
+      e.ambient.intensity = Math.max(0.32, env.ambientIntensity !== undefined ? env.ambientIntensity : 0.22);
     },
 
     updateSun(x, z) {
@@ -213,6 +225,99 @@ export function createWorldRuntime(RAPIER) {
     },
 
     /* ---------- 地图内容 ---------- */
+    _withAutoBuildings(def) {
+      const list = (def.buildings || []).slice();
+      const dimsOf = p => p.key ? BUILDING_DIMS[p.key] : PROC_DIMS[p.type];
+      const footOf = p => {
+        const d = dimsOf(p);
+        if (!d) return null;
+        const c = Math.abs(Math.cos(p.ry || 0)), s = Math.abs(Math.sin(p.ry || 0));
+        const hx = c * d.w / 2 + s * d.d / 2, hz = s * d.w / 2 + c * d.d / 2;
+        return { x0: p.x - hx, x1: p.x + hx, z0: p.z - hz, z1: p.z + hz };
+      };
+      const ov = (a, b, m) => {
+        m = m || 0;
+        return a.x0 < b.x1 + m && a.x1 > b.x0 - m && a.z0 < b.z1 + m && a.z1 > b.z0 - m;
+      };
+      const existing = list.map(footOf).filter(Boolean);
+      for (const p of (def.props || [])) {
+        const c = Math.abs(Math.cos(p.ry || 0)), s = Math.abs(Math.sin(p.ry || 0));
+        existing.push({ x0: p.x - (c * p.w / 2 + s * p.d / 2), x1: p.x + (c * p.w / 2 + s * p.d / 2),
+          z0: p.z - (s * p.w / 2 + c * p.d / 2), z1: p.z + (s * p.w / 2 + c * p.d / 2) });
+      }
+      const roadRects = (def.roads || []).map(r => ({ x0: r.x - r.w / 2 - 2, x1: r.x + r.w / 2 + 2, z0: r.z - r.d / 2 - 2, z1: r.z + r.d / 2 + 2 }));
+      const capPts = def.capturePoints || [];
+      const spawnPts = Object.values(def.spawns || {}).flat();
+      const fits = f => {
+        if (f.x0 < 8 || f.z0 < 8 || f.x1 > def.size - 8 || f.z1 > def.size - 8) return false;
+        if (existing.some(e => ov(e, f, 2.0))) return false;
+        if (roadRects.some(e => ov(e, f, 0))) return false;
+        for (const cp of capPts) {
+          const dx = Math.max(f.x0 - cp.x, 0, cp.x - f.x1);
+          const dz = Math.max(f.z0 - cp.z, 0, cp.z - f.z1);
+          if (Math.hypot(dx, dz) < (cp.r || 6) + 3) return false;
+        }
+        for (const sp of spawnPts) {
+          const dx = Math.max(f.x0 - sp.x, 0, sp.x - f.x1);
+          const dz = Math.max(f.z0 - sp.z, 0, sp.z - f.z1);
+          if (Math.hypot(dx, dz) < 14) return false;
+        }
+        return true;
+      };
+      const types = def.id === 'port'
+        ? ['shed', 'warehouse', 'cottage', 'townhouse']
+        : def.id === 'desert'
+          ? ['shed', 'cottage', 'townhouse', 'shop']
+          : ['shed', 'cottage', 'townhouse', 'shop'];
+      let a = (def.id === 'port' ? 23 : def.id === 'desert' ? 41 : 11) >>> 0;
+      const rnd = () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+      let made = 0;
+      const tryAdd = (type, x, z, ry) => {
+        if (made >= 20) return false;
+        const p = { type, x: Math.round(x * 10) / 10, z: Math.round(z * 10) / 10, ry };
+        const f = footOf(p);
+        if (!f || !fits(f)) return false;
+        list.push(p); existing.push(f); made++;
+        return true;
+      };
+      const pickType = i => types[Math.floor(rnd() * types.length + i) % types.length];
+      for (const r of (def.roads || [])) {
+        if (Math.min(r.w, r.d) >= 30) continue;
+        const horizontal = r.w >= r.d;
+        const len = horizontal ? r.w : r.d;
+        if (len < 55) continue;
+        const step = 24;
+        const n = Math.max(2, Math.floor(len / step));
+        for (let i = 0; i < n; i++) {
+          const t = (i + 0.5) / n;
+          for (const side of [-1, 1]) {
+            let type = pickType(i);
+            let d = PROC_DIMS[type];
+            if (!d) continue;
+            let x, z, ry;
+            if (horizontal) {
+              x = r.x - r.w / 2 + r.w * t;
+              z = r.z + side * (r.d / 2 + 2 + 7 + d.d / 2);
+              ry = side < 0 ? 0 : Math.PI;
+            } else {
+              z = r.z - r.d / 2 + r.d * t;
+              x = r.x + side * (r.w / 2 + 2 + 7 + d.w / 2);
+              ry = side < 0 ? Math.PI / 2 : -Math.PI / 2;
+            }
+            if (tryAdd(type, x, z, ry)) continue;
+            // 大建筑放不下时退到小屋
+            for (const alt of ['cottage', 'shed']) {
+              d = PROC_DIMS[alt];
+              if (horizontal) z = r.z + side * (r.d / 2 + 2 + 7 + d.d / 2);
+              else x = r.x + side * (r.w / 2 + 2 + 7 + d.w / 2);
+              if (tryAdd(alt, x, z, ry)) break;
+            }
+          }
+        }
+      }
+      return Object.assign({}, def, { buildings: list });
+    },
+
     _buildGround(def) {
       const env = def.env || {};
       // v4.1：旧实现把地面放在世界原点，但地图范围是 0..size → 东/南侧会露出天空。
@@ -655,6 +760,13 @@ export function createWorldRuntime(RAPIER) {
         root.rotation.y = p.ry || 0;
         this._group.add(root);
         root.updateMatrixWorld(true);
+        // 内部可见：单面材质从室内看会被背面剔除，表现为“里面一片灰/空”
+        root.traverse(o => {
+          if (!o.isMesh || !o.material) return;
+          const mats = Array.isArray(o.material) ? o.material : [o.material];
+          mats.forEach(m => { if (m) m.side = THREE.DoubleSide; });
+        });
+
 
         const navGroup = root.getObjectByName('NAV__' + p.key);
         if (navGroup) navGroup.visible = false;
@@ -891,6 +1003,8 @@ export function createWorldRuntime(RAPIER) {
     movePlayer(obj, dx, dy, dz) {
       const p = obj && obj.pos ? obj.pos : obj;
       if (!p) return null;
+      if (!Number.isFinite(dx) || !Number.isFinite(dy) || !Number.isFinite(dz)) return null;
+      if (!Number.isFinite(p.x) || !Number.isFinite(p.z)) return null;
       if (!Number.isFinite(p.y)) p.y = 0;
       const res = physics.movePlayer({ x: p.x, y: p.y, z: p.z }, dx || 0, dy || 0, dz || 0);
       if (!res) return null;
@@ -913,6 +1027,8 @@ export function createWorldRuntime(RAPIER) {
     moveActor(obj, dx, dz) {
       const p = obj && obj.pos ? obj.pos : obj;
       if (!p) return null;
+      if (!Number.isFinite(dx) || !Number.isFinite(dz)) return null;
+      if (!Number.isFinite(p.x) || !Number.isFinite(p.z)) return null;
       const CFG = window.CFG || {};
       const radius = CFG.PLAYER_RADIUS || 0.35;
       const height = CFG.PLAYER_CAPSULE_HEIGHT || CFG.PLAYER_HEIGHT || 2.0;

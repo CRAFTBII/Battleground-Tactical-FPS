@@ -94,6 +94,9 @@ export function createPhysics(RAPIER) {
 
   function ray(origin, dir, maxDist) {
     if (!world) return null;
+    if (!Number.isFinite(origin.x) || !Number.isFinite(origin.y) || !Number.isFinite(origin.z) ||
+        !Number.isFinite(dir.x) || !Number.isFinite(dir.y) || !Number.isFinite(dir.z) ||
+        !Number.isFinite(maxDist) || maxDist <= 0) return null;
     const r = new RAPIER.Ray({ x: origin.x, y: origin.y, z: origin.z },
       { x: dir.x, y: dir.y, z: dir.z });
     const hit = world.castRay(r, maxDist, true, undefined, STATIC_QUERY);
@@ -108,6 +111,8 @@ export function createPhysics(RAPIER) {
 
   /** 视线/弹道遮挡：命中返回命中点（THREE.Vector3 兼容对象），否则 null。 */
   function segmentBlocked(from, to) {
+    if (!from || !to || !Number.isFinite(from.x) || !Number.isFinite(from.y) || !Number.isFinite(from.z) ||
+        !Number.isFinite(to.x) || !Number.isFinite(to.y) || !Number.isFinite(to.z)) return null;
     const dx = to.x - from.x, dy = to.y - from.y, dz = to.z - from.z;
     const len = Math.sqrt(dx * dx + dy * dy + dz * dz);
     if (len < 1e-5) return null;
@@ -117,6 +122,7 @@ export function createPhysics(RAPIER) {
 
   /** 竖直射线取地面/楼板高度；currentY 用于多楼层（从当前脚底往上找最近的下方表面）。 */
   function heightAt(x, z, currentY) {
+    if (!Number.isFinite(x) || !Number.isFinite(z)) return 0;
     const hasY = typeof currentY === 'number' && Number.isFinite(currentY);
     const startY = hasY ? currentY + 1.35 : 90;
     const maxToi = startY + 40;
@@ -127,7 +133,7 @@ export function createPhysics(RAPIER) {
 
   /** 点是否在可行走面上（只看地面高度 + 水平边界，建筑 footprint 由 runtime 叠加）。 */
   function walkablePoint(x, z) {
-    if (!world) return false;
+    if (!world || !Number.isFinite(x) || !Number.isFinite(z)) return false;
     const hit = ray({ x, y: 2.6, z }, { x: 0, y: -1, z: 0 }, 7);
     if (!hit) return false;
     const y = hit.point.y;
@@ -173,6 +179,8 @@ export function createPhysics(RAPIER) {
    * feet 为脚底位置；返回新的脚底位置。不处理重力/跳跃（沿用旧 PC/AI 逻辑）。
    */
   function moveCapsule(feet, dx, dz, radius, height, stepHeight) {
+    if (!feet || !Number.isFinite(feet.x) || !Number.isFinite(feet.y) || !Number.isFinite(feet.z) ||
+        !Number.isFinite(dx) || !Number.isFinite(dz)) return { x: feet && feet.x, y: feet && feet.y, z: feet && feet.z, blocked: true };
     const r = Math.max(0.1, radius || 0.35);
     const h = Math.max(2 * r + 0.02, height || 2.0);
     const hh = (h - 2 * r) / 2;
@@ -228,6 +236,8 @@ export function createPhysics(RAPIER) {
    * 比 capsule castShape 便宜一个量级（20 个 AI 同时跑也不会掉帧）。
    */
   function moveRayActor(feet, dx, dz, radius, height) {
+    if (!feet || !Number.isFinite(feet.x) || !Number.isFinite(feet.y) || !Number.isFinite(feet.z) ||
+        !Number.isFinite(dx) || !Number.isFinite(dz)) return { x: feet && feet.x, y: feet && feet.y, z: feet && feet.z, blocked: false };
     const r = Math.max(0.15, radius || 0.35);
     const y = feet.y + Math.min(1.05, (height || 2.0) * 0.52);
     let x = feet.x, z = feet.z;
@@ -259,6 +269,8 @@ export function createPhysics(RAPIER) {
   /** 玩家：Rapier KinematicCharacterController（与 sandbox 同一套，自动台阶/贴墙/落地）。 */
   function movePlayer(feet, dx, dy, dz) {
     if (!world || !controller || !playerBody || !playerCol) return null;
+    if (!feet || !Number.isFinite(feet.x) || !Number.isFinite(feet.y) || !Number.isFinite(feet.z) ||
+        !Number.isFinite(dx) || !Number.isFinite(dy) || !Number.isFinite(dz)) return null;
     const cy = feet.y + playerRadius + playerHH;
     playerBody.setTranslation({ x: feet.x, y: cy, z: feet.z }, false);
     // 让 collider 位姿进入查询管线（静态世界，step 很便宜）
@@ -279,7 +291,7 @@ export function createPhysics(RAPIER) {
   }
 
   function teleportPlayer(feet) {
-    if (!playerBody) return;
+    if (!playerBody || !feet || !Number.isFinite(feet.x) || !Number.isFinite(feet.y) || !Number.isFinite(feet.z)) return;
     playerBody.setTranslation({ x: feet.x, y: feet.y + playerRadius + playerHH, z: feet.z }, true);
     world.step();
   }
