@@ -1,7 +1,7 @@
 {
   "name": "battleground-tactical-fps",
-  "version": "1.15.0",
-  "description": "战地突击 · 地图 v4 重建工作区；当前暂不可玩，详见 docs/rebuild/README.md",
+  "version": "4.0.0",
+  "description": "战地突击 · 地图 v4 可玩训练版（Rapier 碰撞 + 三张城镇图），详见 docs/rebuild/README.md",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

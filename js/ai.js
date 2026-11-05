@@ -746,8 +746,24 @@ class AIBrain {
         }
       }
     }
-    u.pos.x += vx * dt; u.pos.z += vz * dt;
-    // 音效：AI 脚步（近无声沙沙，14m 内玩家可闻，空间定位；步频随速度，阈值 0.8 → 更连续）；倒地爬行不算脚步
+    if (typeof World !== 'undefined' && World.moveActor) {
+      // v4：World.moveActor 对 AI 使用射线近似胶囊（便宜），玩家用完整 Rapier 胶囊 sweep
+      World.moveActor(u, vx * dt, vz * dt);
+    } else {
+      u.pos.x += vx * dt; u.pos.z += vz * dt;
+      const R = (typeof CFG !== 'undefined' && CFG.PLAYER_RADIUS) ? CFG.PLAYER_RADIUS : 0.35;
+      const feet = u.pos.y || 0;   // 楼板/屋顶板不再当实心墙（World.blocksAt）
+      for (const c of World.colliders) {
+        if (!World.blocksAt(c, feet)) continue;
+        if (u.jumpAnim && u.jumpAnim.skip === c) continue;
+        const cx = U.clamp(u.pos.x, c.min.x, c.max.x), cz = U.clamp(u.pos.z, c.min.z, c.max.z);
+        const ddx = u.pos.x - cx, ddz = u.pos.z - cz;
+        const d2 = ddx * ddx + ddz * ddz;
+        if (d2 < R * R && d2 > 0.0001) { const dd = Math.sqrt(d2); u.pos.x = cx + ddx / dd * R; u.pos.z = cz + ddz / dd * R; }
+      }
+      u.pos.x = U.clamp(u.pos.x, 1, CFG.WORLD - 1); u.pos.z = U.clamp(u.pos.z, 1, CFG.WORLD - 1);
+    }
+    // 音效：AI 脚步（近无声沙沙，14m 内玩家可闻，空间定位；步频随速度）；倒地爬行不算脚步
     if (!u.down) {
       this._stepT = (this._stepT || 0) + dt * (speed >= 5 ? 2.6 : speed >= 2.5 ? 2.0 : 1.4);
       if (this._stepT > 0.8) {
@@ -759,18 +775,6 @@ class AIBrain {
         }
       }
     }
-    // 碰撞（跳跃中忽略目标障碍）
-    const R = 0.45;
-    const feet = u.pos.y || 0;   // v1.5：楼板/屋顶板不再当实心墙（World.blocksAt）
-    for (const c of World.colliders) {
-      if (!World.blocksAt(c, feet)) continue;
-      if (u.jumpAnim && u.jumpAnim.skip === c) continue;
-      const cx = U.clamp(u.pos.x, c.min.x, c.max.x), cz = U.clamp(u.pos.z, c.min.z, c.max.z);
-      const ddx = u.pos.x - cx, ddz = u.pos.z - cz;
-      const d2 = ddx * ddx + ddz * ddz;
-      if (d2 < R * R && d2 > 0.0001) { const dd = Math.sqrt(d2); u.pos.x = cx + ddx / dd * R; u.pos.z = cz + ddz / dd * R; }
-    }
-    u.pos.x = U.clamp(u.pos.x, 1, CFG.WORLD - 1); u.pos.z = U.clamp(u.pos.z, 1, CFG.WORLD - 1);
   }
 
   tryShoot(dt) {

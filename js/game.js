@@ -31,6 +31,11 @@ const Game = {
     for (let ti = 1; ti < this.teamCount; ti++) this.spawnAI(this.teams[ti], this.mission.teamSize);
     this.spawnAI('blue', this.mission.teamSize - 1); // 蓝队 = 玩家 + (任务人数-1) AI
     this.initCaps();
+    // 蓝队 AI 默认进攻：Squad.order 默认 attack 但 objective 为空时 memberDest 返回 null → 全队站桩。
+    // 开局给一次进攻命令，让 AI 主动向最近敌人推进（玩家之后可用 Z/X/C/V 改令）。
+    if (this.squads.blue && this.squads.blue.command) {
+      try { this.squads.blue.command('attack'); } catch (e) { /* HUD 未就绪时忽略 */ }
+    }
     this.phase = 'playing';
     document.getElementById('menu').style.display = 'none';
     // v2.7 任务驱动：banner 播报任务 + objective 更新（v2.8 任务绑图，选图即选任务）
@@ -210,7 +215,10 @@ const Game = {
     this.player = new Unit('blue', { player: true, name: '你', x: s.x, y: s.y, z: s.z, weapon: 'rifle', armor: 100 });
     this.player.dead = false;
     this.units.push(this.player);
-    PC.yaw = Math.PI / 4; PC.pitch = 0; PC.vy = 0;
+    // 出生朝向地图中心（旧图蓝队固定在西北，v4 多图/多角出生必须动态算）
+    const c0 = (CFG.WORLD || 300) / 2;
+    PC.yaw = Math.atan2(-(c0 - s.x), -(c0 - s.z));
+    PC.pitch = 0; PC.vy = 0;
     PlayerGun.setCur('rifle');
     PlayerGun.mags = {}; PlayerGun.reserves = {};
     for (const w in WEAPONS) { PlayerGun.mags[w] = WEAPONS[w].mag; PlayerGun.reserves[w] = WEAPONS[w].reserve; }
@@ -221,6 +229,8 @@ const Game = {
     if (typeof Backpack !== 'undefined' && Backpack.resetToDefault) Backpack.resetToDefault();
     this.dead = false; Game._hpPrev = 100;
     camera.position.set(this.player.pos.x, this.player.pos.y + CFG.EYE, this.player.pos.z);
+    // 开局视角：菜单相机是俯瞰轨道，若不重置朝向会像"看地面"（pointer lock 失败时尤其明显）
+    if (typeof PC !== 'undefined' && PC.applyCamera) PC.applyCamera(camera, false);
     this.player.mesh.grp.visible = false; // 第一人称隐藏自网格，迫击炮视角恢复
   },
   spawnAI(team, n, avoidIds) {

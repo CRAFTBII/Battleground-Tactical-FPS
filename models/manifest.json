@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-01T00:00:00.000Z",
+  "generatedAt": "2026-11-05T14:30:49.181Z",
   "soldier": "soldier.glb",
   "weapons": {
     "pistol": "guns/pistol.glb",
@@ -13,5 +13,11 @@
     "rifle": "guns/rifle_bolt.glb",
     "shotgun": "guns/shotgun_bolt.glb",
     "sniper": "guns/sniper_bolt.glb"
+  },
+  "buildings": {
+    "base": "buildings/base.glb",
+    "cover": "buildings/cover.glb",
+    "estate": "buildings/estate.glb",
+    "house": "buildings/house.glb"
   }
 }

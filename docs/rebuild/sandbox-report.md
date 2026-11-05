@@ -47,10 +47,24 @@ VIS/COL/NAV/ANCHOR 节点 + extras。house COL 保留真实门洞/窗洞，不�
 5. **apartment 未修复**：源 2 层 7.58m，目标 5 层 18m，需要补楼层/内梯建模。
 6. **17 个类型仍无模型**：container/watchtower/stairs/bridge/wall/ruins/hangar/pillbox/
    crane/tankH/tankV/mast/tower/megatower/stadium/refinery/complex。
-7. 沙盒是单场景，不是完整 MapSpec/WorldRuntime；主游戏入口仍显示“v4 重建中”。
+7. 沙盒是单场景；**主游戏入口已接通 v4 运行时**（2026-11 本轮）。
 
-## 5. 结论
+## 5. 主游戏接入实测（v4 runtime）
 
-- 模型测量/修复管线已跑通：轴向、原点、尺寸、VIS/COL/NAV/ANCHOR 可自动导出。
-- house/cover/base/estate 已在 Rapier 沙盒可走、可挡、可进门；角色/相机已按反馈缩到 2.0/1.85。
-- 这版用于验证尺度与碰撞手感；apartment、低模 COL、真正 NAV、完整 MapSpec 仍待下一轮。
+入口：`http://localhost:8080/` → 选图 → 开始单人战役（VS AI）。
+
+| 项目 | 结果 |
+|---|---|
+| 地图 | suburb / port / desert 三张 300m 城镇图，各 3 据点、5+5 出生点 |
+| 场景 | 254–263 个静态 trimesh、13–15 个 cuboid、22,500 个 2m 导航格 |
+| 玩家碰撞 | Rapier capsule sweep：墙停、cover 停、house 门可进（门内 y≈0.24 台阶） |
+| 弹道 | Rapier ray：墙后目标 8 发 0 伤害；无墙目标正常扣甲/扣血 |
+| AI | 射线近似胶囊移动 + A*；20 人开局 4s 内全部离开出生点，无卡墙 |
+| 性能 | 2 队 20 人、headless Chrome 实测 60fps（AI 碰撞从 capsule cast 改为射线后从 ~20fps 提升） |
+| 击杀 | 玩家击倒→处决/击杀，比分 +1，killfeed 正常 |
+
+## 6. 结论
+
+- 主入口已从“v4 重建中”变为**可玩单机训练版**：三图、据点、20 人 AI、碰撞/弹道/击杀/小地图全部接通。
+- WorldCompat 保留旧 `World` / `MapRegistry` / `findPath` / `gridLineClear` 接口，Game/AI/Combat 仅改移动与弹道两处。
+- 下一轮：apartment/17 类缺失模型、低模 COL 代理、室内多层导航与楼梯、联机端地图同步。

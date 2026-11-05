@@ -38,7 +38,10 @@ const ModelLib = {
         if (missing.length) throw new Error('士兵模型缺少部件: ' + missing.join(',') + '（期望 7 个：' + this.PART_NAMES.join(',') + '）');
         // 校正：模型沿 z 站立且脚在 +z、头在 -z → 绕 X 旋转 +90° 头朝上（+z→-y 脚朝下）
         sceneRoot.rotation.x = Math.PI / 2;
-        sceneRoot.scale.setScalar(1.8 / 1.9);
+        // v4：高度跟随 ActorCatalog profile（默认 2.0m），不再写死 1.8m
+        const targetH = (typeof ActorCatalog !== 'undefined' && ActorCatalog.get)
+          ? ActorCatalog.get().height : 2.0;
+        sceneRoot.scale.setScalar(targetH / 1.9);
         this.root = sceneRoot;
         this.ready = true;
         this.failed = false;

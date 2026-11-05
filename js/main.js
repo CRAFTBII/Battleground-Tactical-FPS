@@ -210,8 +210,9 @@ function loop() {
   const dt = Math.min(clock.getDelta(), 0.05);
   if (Game.phase === 'menu') {
     const t = clock.elapsedTime;
-    camera.position.set(100 + Math.sin(t * 0.08) * 75, 42 + Math.sin(t * 0.06) * 6, 100 + Math.cos(t * 0.08) * 75);
-    camera.lookAt(100, 0, 100);
+    const mc = (World && World.mapDef && World.mapDef.size) ? World.mapDef.size / 2 : 100;
+    camera.position.set(mc + Math.sin(t * 0.08) * 75, 42 + Math.sin(t * 0.06) * 6, mc + Math.cos(t * 0.08) * 75);
+    camera.lookAt(mc, 0, mc);
   } else if (!paused) {
     if (typeof AudioFX !== 'undefined' && AudioFX.setListener) AudioFX.setListener(camera.position); // 空间音效以玩家为参考点
     // ECS 驱动更新：输入/物理/网络/特效系统分离——聊天空闲时物理照常，仅玩家操控暂停
@@ -282,8 +283,16 @@ function fatalShow(msg) {
     fatalShow('地图 v4 重建工作区：运行时尚未实现。请按 docs/rebuild/implementation-plan.md 完成资产、碰撞、导航和地图阶段。');
     return;
   }
-  if (mapModule.ready) await mapModule.ready;
-  // v4 角色扩展口：相机眼高/胶囊/锚点来自 profile（设计上限 2.5m），不要写死 1.7m
+  if (mapModule.ready) {
+    try {
+      await mapModule.ready;
+    } catch (err) {
+      document.body.classList.add('bootFail');
+      fatalShow('地图 v4 物理/运行时初始化失败：' + (err && err.message || err));
+      return;
+    }
+  }
+  // v4 角色扩展口：相机眼高/胶囊/锚点来自 profile（设计上限 2.2m），不要写死 1.7m
   if (typeof ActorCatalog !== 'undefined' && ActorCatalog.load) {
     try { await ActorCatalog.load(); } catch (e) { console.warn('[Actors] profile 加载异常：' + (e && e.message || e)); }
   }

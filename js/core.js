@@ -62,7 +62,7 @@ const CFG = {
   AI_LOOT_ARMOR_THRESHOLD: 50,  // [PLAYTEST] 40~60 AI 护甲低于此值且未带护甲包 → 找箱补护甲
   PLAYER_LOOT_MEDKIT_MAX: 2,    // [PLAYTEST] 1~3 玩家死亡箱子医疗包上限（弹药不保留，只转护甲+部分医疗包）
   // v2.6 分散出生（阵营半区铺开，保留蓝/红分区开局）：
-  SPAWN_SPREAD: 60,             // [PLAYTEST] 40~80 · ×mapScale（空间类）出生分散半径——以阵营出生区质心为锚随机落点
+  SPAWN_SPREAD: 32,             // [PLAYTEST] 40~80 → v4 城镇图收敛到 32：出生更集中、首屏能看到街区
   SPAWN_SEP: 8,                 // [PLAYTEST] 6~12（交互-碰撞）出生最小间距——与已出生单位(含玩家)≥此距离，防叠点
   // v2.4 医疗包分配（救援耗包后重新平衡：医疗包 = 自愈 + 救援双用途稀缺资源）：
   PLAYER_START_MEDKITS: 6,      // [PLAYTEST] 5~7 玩家开局（自愈+救援双用；玩家不能像 AI 自动找箱，给足救 2~3 次队友的余量）

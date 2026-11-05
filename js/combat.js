@@ -387,12 +387,16 @@ const Projectiles = {
       p.vel.y -= CFG.GRAV * dt;
       const prevX = p.pos.x, prevZ = p.pos.z, prevY = p.pos.y;
       p.pos.addScaledVector(p.vel, dt);
-      // 墙体碰撞：检测移动后位置是否陷入 AABB（高度覆盖）→ 反弹/停住，杜绝穿墙
+      // 墙体碰撞（v4：Rapier 线段查询；回退旧 AABB）
       let hitWall = false;
-      for (const c of World.colliders) {
-        if (c.max.y < 0.8) continue;
-        if (p.pos.x > c.min.x && p.pos.x < c.max.x && p.pos.z > c.min.z && p.pos.z < c.max.z && p.pos.y > c.min.y && p.pos.y < c.max.y) {
-          hitWall = true; break;
+      if (typeof World !== 'undefined' && World.segmentBlocked) {
+        hitWall = !!World.segmentBlocked({ x: prevX, y: prevY, z: prevZ }, p.pos);
+      } else {
+        for (const c of World.colliders) {
+          if (c.max.y < 0.8) continue;
+          if (p.pos.x > c.min.x && p.pos.x < c.max.x && p.pos.z > c.min.z && p.pos.z < c.max.z && p.pos.y > c.min.y && p.pos.y < c.max.y) {
+            hitWall = true; break;
+          }
         }
       }
       if (hitWall) {
@@ -500,6 +504,9 @@ function raySphereT(origin, dir, center, r) {
   if (disc < 0) return Infinity;
   const t = -b - Math.sqrt(disc);
   return t > 0.1 ? t : Infinity;
+}
+function raySphere(origin, dir, center, r) {
+  return raySphereT(origin, dir, center, r) !== Infinity;
 }
 
 /* ---------- 玩家枪械状态与开火 ---------- */
@@ -942,9 +949,17 @@ const PC = {
     document.addEventListener('mouseup', e => this.keys.delete(e.button === 0 ? 'Mouse0' : 'Mouse2'));
     document.addEventListener('pointerlockchange', () => { this.locked = document.pointerLockElement === renderer.domElement; });
   },
-  // 圆形移动 + 碰撞解析（圆 vs AABB）+ 世界边界（正常/倒地爬行共用）
+  // 圆形移动 + 碰撞解析（v4：优先 Rapier 胶囊 sweep；无 World.moveActor 时回退旧 AABB）
+  _move(p, dx, dz) {
+    if (typeof World !== 'undefined' && World.moveActor) {
+      World.moveActor(p, dx, dz);
+      return;
+    }
+    p.pos.x += dx; p.pos.z += dz;
+    this._moveResolve(p);
+  },
   _moveResolve(p) {
-    const R = 0.45;
+    const R = (typeof CFG !== 'undefined' && CFG.PLAYER_RADIUS) ? CFG.PLAYER_RADIUS : 0.35;
     const feet = p.pos.y || 0;   // v1.5：按脚底高度判定竖直重叠 —— 楼板/屋顶板不再当实心墙（World.blocksAt）
     for (const c of World.colliders) {
       if (!World.blocksAt(c, feet)) continue;
@@ -990,8 +1005,7 @@ const PC = {
       const speed = CFG.CRAWL_SPEED;
       const sin = Math.sin(this.yaw), cos = Math.cos(this.yaw);
       const mx = (-sin * f + cos * s) * speed, mz = (-cos * f - sin * s) * speed;
-      p.pos.x += mx * dt; p.pos.z += mz * dt;
-      this._moveResolve(p);
+      this._move(p, mx * dt, mz * dt);
       p.yaw = this.yaw;
       p.pos.y = World.heightAt(p.pos.x, p.pos.z, p.pos.y);
       // 更新玩家模型旋转以匹配相机方向（倒地爬行可转向）
@@ -1027,9 +1041,8 @@ const PC = {
     const sin = Math.sin(this.yaw), cos = Math.cos(this.yaw);
     let mx = (-sin * f + cos * s) * speed, mz = (-cos * f - sin * s) * speed;
     if (Game.mortarMode) { mx = 0; mz = 0; }
-    // 碰撞解析（圆 vs AABB）
-    p.pos.x += mx * dt; p.pos.z += mz * dt;
-    this._moveResolve(p);
+    // 碰撞解析（v4 Rapier 胶囊 sweep；回退旧圆 vs AABB）
+    this._move(p, mx * dt, mz * dt);
     // 跳跃与重力（/enablefly 飞行：无重力浮空，Shift=上升 空格=下降）
     const gy = World.heightAt(p.pos.x, p.pos.z, p.pos.y);
     if (this.fly) {

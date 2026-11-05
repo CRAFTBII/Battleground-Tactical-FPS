@@ -1,7 +1,10 @@
 # 地图 / 建筑系统 v4 重建工作区
 
-> **状态：架构与目录骨架已建立，运行时尚未实现；本分支暂不可玩。**
+> **状态：可玩（单机训练版）。** Rapier 碰撞、三张 300m 城镇图、出生/据点/AI/战斗已接通。
 > 分支：`rebuild/maps-v4`　基线：`main@154be4e`　架构版本：v4.0
+>
+> **试玩**：`node server.js` → `http://localhost:8080/` → 选图 → 开始单人战役。
+> 独立模型沙盒：`http://localhost:8080/sandbox.html`。
 
 ## 已定架构
 1. 保留渲染、角色、枪械、战斗规则、AI 战术逻辑、网络、UI、音效与通用机制。
@@ -26,25 +29,20 @@
 | 7 | [清理记录](cleanup-record.md) | 删除、保留和隔离范围 |
 | ADR | [决策记录](decisions/) | 已确定的架构决策 |
 
-## 新目录约定
+## 新目录约定（当前实现）
 ```text
 assets/source-buildings/    # 原始输入 GLB，仅供 Blender 修复
-data/assets/                # 建筑 Catalog、agent profiles
+data/assets/                # 建筑 Catalog
 data/actors/                # 角色 profile Catalog（身高/相机/胶囊/锚点）
-data/maps/                  # suburb / port / desert MapSpec JSON
-js/world/core/              # runtime 生命周期和编排
-js/world/assets/            # Catalog、GLB 解析、节点校验
-js/world/map/               # MapSpec loader / builder
-js/world/collision/         # Rapier PhysicsWorld
-js/world/navigation/        # 分层导航 tile graph
-js/world/spawn/             # 出生和重生服务
-js/world/debug/             # VIS/COL/NAV/debug overlay
-models/buildings/           # 通过验收的 v4 GLB（当前应为空）
+models/buildings/           # 已验收的 v4 GLB：house / cover / base / estate
 tools/buildings/            # Blender 导出和 GLB 校验
-tools/maps/                 # MapSpec 校验、导航烘焙
-test/world/                 # v4 资产/碰撞/导航/地图测试
-test/fixtures/world/        # 可重复的小测试场景
+js/world/index.js           # ESM 入口：Rapier 初始化 + 暴露 window.World / MapRegistry
+js/world/runtime.js         # WorldCompat：场景/建筑/据点/出生/旧 API
+js/world/physics.js         # Rapier 静态 trimesh、射线、玩家胶囊 sweep、AI 射线移动
+js/world/nav.js             # 2m 网格 A*（旧 findPath / gridLineClear）
+js/world/maps.js            # 三张地图数据（suburb / port / desert）
 ```
+`js/world/{core,assets,collision,navigation,spawn,map,debug}/README.md` 保留为后续拆分说明；当前可玩实现集中在上面 5 个文件。
 
 ## 坐标与尺度
 Three.js 右手系，Y-up，1 world unit = 1m；建筑局部原点是 footprint 中心的地面点。默认 scale=(1,1,1)，禁止隐藏的全局资产倍率。模型目标尺寸由设计契约单独决定，不能把当前 GLB 的缩水尺寸当作标准。
@@ -52,8 +50,9 @@ Three.js 右手系，Y-up，1 world unit = 1m；建筑局部原点是 footprint 
 **角色基准**：默认 2.0m（硬上限 2.2m），相机眼高 1.85m，胶囊 0.70m 直径/2.0m 高，台阶 0.45m。门净高 2.4m、净宽 1.3m，层高 3.6m，净层高 3.0m；详见 [尺度决策](scale-decision.md) 与 [角色契约](actor-contract.md)。
 
 ## 运行状态
-旧 `js/world.js` 和旧地图脚本从活动路径移除。新 runtime 未完成时入口应显示“v4 重建中”并中止启动，避免误导性报错。此分支不是可玩版本，也不应合并 main，直到 P0 验收通过。
+旧 `js/world.js` 和旧地图脚本已从活动路径移除；v4 runtime 以 `WorldCompat` 方式恢复 `World` / `MapRegistry` / `findPath` / `gridLineClear`，旧 Game/AI/Combat 无需整体重写。
 
-**可试玩沙盒**：`node server.js` 后打开 `http://localhost:8080/sandbox.html`。
-当前接入 house / cover / base / estate 四个修复模型，Rapier 胶囊控制器，角色 2.0m / 相机 1.85m（资产仍按 2.5m 基线偏大）。
-详见 [sandbox-report.md](sandbox-report.md)。主入口仍是“v4 重建中”。
+**已接通**：三张城镇图、三处据点、双方出生、20 人 AI 对局、玩家胶囊碰撞/门洞/墙面、AI 射线碰撞与 2m 网格 A*、小地图、埋点/击杀/结算流程。
+
+**仍需继续**：多层建筑内部楼层与楼梯导航（当前 AI 只在室外导航）、apartment 等 17 类缺失建筑、低模 COL 代理优化、联机端地图同步验证。
+详见 [sandbox-report.md](sandbox-report.md)。
