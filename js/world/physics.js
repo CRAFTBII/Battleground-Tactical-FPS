@@ -6,7 +6,16 @@
 export function createPhysics(RAPIER) {
   let world = null;
   let staticBody = null;
+  let playerBody = null;
+  let playerCol = null;
+  let controller = null;
+  let playerRadius = 0.35;
+  let playerHH = 0.65;
+  let playerHeight = 2.0;
+  let playerStep = 0.45;
   const capsuleCache = new Map();
+  const STATIC_QUERY = (0xFFFF << 16) | 0x0001;
+  const PLAYER_GROUPS = (0x0002 << 16) | 0x0001;
   let trimeshCount = 0;
   let cuboidCount = 0;
 
@@ -19,6 +28,24 @@ export function createPhysics(RAPIER) {
     capsuleCache.clear();
     trimeshCount = 0;
     cuboidCount = 0;
+    playerBody = null; playerCol = null; controller = null;
+    const CFG = (typeof window !== 'undefined' && window.CFG) || {};
+    playerRadius = CFG.PLAYER_RADIUS || 0.35;
+    playerHeight = CFG.PLAYER_CAPSULE_HEIGHT || 2.0;
+    playerHH = Math.max(0.02, (playerHeight - 2 * playerRadius) / 2);
+    playerStep = CFG.PLAYER_STEP || 0.45;
+    playerBody = world.createRigidBody(
+      RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(0, playerRadius + playerHH, 0)
+    );
+    playerCol = world.createCollider(
+      RAPIER.ColliderDesc.capsule(playerHH, playerRadius).setCollisionGroups(PLAYER_GROUPS),
+      playerBody
+    );
+    controller = world.createCharacterController(0.02);
+    controller.enableAutostep(playerStep, 0.2, true);
+    controller.enableSnapToGround(0.55);
+    controller.setApplyImpulsesToDynamicBodies(false);
+    controller.setCharacterMass(80);
   }
 
   function addCuboid(hx, hy, hz, x, y, z) {
@@ -69,7 +96,7 @@ export function createPhysics(RAPIER) {
     if (!world) return null;
     const r = new RAPIER.Ray({ x: origin.x, y: origin.y, z: origin.z },
       { x: dir.x, y: dir.y, z: dir.z });
-    const hit = world.castRay(r, maxDist, true);
+    const hit = world.castRay(r, maxDist, true, undefined, STATIC_QUERY);
     if (!hit) return null;
     const t = hit.timeOfImpact;
     return {
@@ -135,7 +162,8 @@ export function createPhysics(RAPIER) {
       0,    // targetDistance
       1,    // maxToi（位移用 0..1 参数化）
       true, // stopAtPenetration
-      RAPIER.QueryFilterFlags.EXCLUDE_SENSORS // 楼梯是 sensor：高度由 heightAt 提供，胶囊不被台阶卡住
+      RAPIER.QueryFilterFlags.EXCLUDE_SENSORS,
+      STATIC_QUERY
     );
     return hit || null;
   }
@@ -228,13 +256,41 @@ export function createPhysics(RAPIER) {
     return { x, y: feet.y, z, blocked };
   }
 
+  /** 玩家：Rapier KinematicCharacterController（与 sandbox 同一套，自动台阶/贴墙/落地）。 */
+  function movePlayer(feet, dx, dy, dz) {
+    if (!world || !controller || !playerBody || !playerCol) return null;
+    const cy = feet.y + playerRadius + playerHH;
+    playerBody.setTranslation({ x: feet.x, y: cy, z: feet.z }, false);
+    // 让 collider 位姿进入查询管线（静态世界，step 很便宜）
+    world.step();
+    controller.computeColliderMovement(
+      playerCol,
+      { x: dx, y: dy, z: dz },
+      RAPIER.QueryFilterFlags.EXCLUDE_SENSORS
+    );
+    const mv = controller.computedMovement();
+    const nx = feet.x + mv.x, nz = feet.z + mv.z;
+    let ny = feet.y + mv.y;
+    // 楼梯是 sensor：控制器不做台阶，y 由 heightAt 抬升（最多一个台阶高度）
+    const gh = heightAt(nx, nz, feet.y + 0.55);
+    if (Number.isFinite(gh) && gh > ny + 0.01 && gh - feet.y <= playerStep + 0.08) ny = gh;
+    playerBody.setTranslation({ x: nx, y: ny + playerRadius + playerHH, z: nz }, false);
+    return { x: nx, y: ny, z: nz, grounded: controller.computedGrounded() };
+  }
+
+  function teleportPlayer(feet) {
+    if (!playerBody) return;
+    playerBody.setTranslation({ x: feet.x, y: feet.y + playerRadius + playerHH, z: feet.z }, true);
+    world.step();
+  }
+
   function stats() {
-    return { trimeshes: trimeshCount, cuboids: cuboidCount };
+    return { trimeshes: trimeshCount, cuboids: cuboidCount, player: !!controller };
   }
 
   return {
     reset, finalize, addCuboid, addCuboidDesc, addBoxCollider, addCylinderCollider, addTrimesh,
-    ray, segmentBlocked, heightAt, ceilingAt, walkablePoint, moveCapsule, moveRayActor, stats,
+    ray, segmentBlocked, heightAt, ceilingAt, walkablePoint, moveCapsule, moveRayActor, movePlayer, teleportPlayer, stats,
     get world() { return world; }
   };
 }

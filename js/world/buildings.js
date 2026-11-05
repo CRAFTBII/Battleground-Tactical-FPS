@@ -204,7 +204,9 @@ export function createBuildingFactory(THREE, physics, mapId) {
     const sx1 = Math.min(W / 2 - 0.65, sx0 + stairW);
     const run = Math.min(3.0, DD - 2.8);
     const sz0 = -DD / 2 + 1.4;
-    const sz1 = sz0 + run;
+    // 洞口比梯段多 1m：顶层踏板延伸到楼板边，避免胶囊卡在楼板侧边
+    const landing = 1.0;
+    const sz1 = sz0 + run + landing;
     const stairHole = { x0: sx0, x1: sx1, z0: sz0, z1: sz1 };
 
     function floorSlab(topY, hole) {
@@ -230,9 +232,12 @@ export function createBuildingFactory(THREE, physics, mapId) {
       const dep = run / n;
       for (let i = 0; i < n; i++) {
         const hh = rise * (i + 1);
-        const lx = (sx0 + sx1) / 2, ly = baseY + hh / 2, lz = sz0 + dep * (i + 0.5);
-        M.box(sx1 - sx0 - 0.08, hh, dep + 0.02, lx, ly, lz, P.wood);
-        collider(sx1 - sx0 - 0.08, hh, dep + 0.02, lx, ly, lz, 0, true);
+        const isTop = i === n - 1;
+        const depth = dep + (isTop ? landing : 0);
+        const lx = (sx0 + sx1) / 2, ly = baseY + hh / 2;
+        const lz = sz0 + dep * i + depth / 2;
+        M.box(sx1 - sx0 - 0.08, hh, depth, lx, ly, lz, P.wood);
+        collider(sx1 - sx0 - 0.08, hh, depth, lx, ly, lz, 0, true);
       }
     }
 

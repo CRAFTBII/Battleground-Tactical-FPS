@@ -1005,9 +1005,15 @@ const PC = {
       const speed = CFG.CRAWL_SPEED;
       const sin = Math.sin(this.yaw), cos = Math.cos(this.yaw);
       const mx = (-sin * f + cos * s) * speed, mz = (-cos * f - sin * s) * speed;
-      this._move(p, mx * dt, mz * dt);
+      if (typeof World !== 'undefined' && World.movePlayer) {
+        this.vy = Math.max(-55, (this.vy || 0) - CFG.GRAV * dt);
+        const res = World.movePlayer(p, mx * dt, this.vy * dt, mz * dt);
+        if (res && res.grounded) this.vy = 0;
+      } else {
+        this._move(p, mx * dt, mz * dt);
+        p.pos.y = World.heightAt(p.pos.x, p.pos.z, p.pos.y);
+      }
       p.yaw = this.yaw;
-      p.pos.y = World.heightAt(p.pos.x, p.pos.z, p.pos.y);
       // 更新玩家模型旋转以匹配相机方向（倒地爬行可转向）
       if (Game.player && Game.player.mesh && Game.player.mesh.grp) {
         Game.player.mesh.grp.rotation.y = this.yaw;
@@ -1041,31 +1047,36 @@ const PC = {
     const sin = Math.sin(this.yaw), cos = Math.cos(this.yaw);
     let mx = (-sin * f + cos * s) * speed, mz = (-cos * f - sin * s) * speed;
     if (Game.mortarMode) { mx = 0; mz = 0; }
-    // 碰撞解析（v4 Rapier 胶囊 sweep；回退旧圆 vs AABB）
-    this._move(p, mx * dt, mz * dt);
-    // 跳跃与重力（/enablefly 飞行：无重力浮空，Shift=上升 空格=下降）
-    const gy = World.heightAt(p.pos.x, p.pos.z, p.pos.y);
+    // v4.2：玩家使用 Rapier KinematicCharacterController（与 sandbox 同一套）
     if (this.fly) {
-      this.vy = 0; this.onGround = false; // 飞行：不受重力
-      // /speed 倍率同时作用于飞行升降（mul 上文已按 speedMul 计算）
-      if (inputOK && this.keys.has(Settings.key('jump'))) p.pos.y += CFG.WALK * 1.4 * mul * dt;   // 飞行升高
-      if (inputOK && this.keys.has(Settings.key('sprint'))) p.pos.y -= CFG.WALK * 1.4 * mul * dt; // 飞行下降
-      p.pos.y = Math.max(0.5, p.pos.y); // 不穿地
+      p.pos.x = U.clamp(p.pos.x + mx * dt, 1.5, CFG.WORLD - 1.5);
+      p.pos.z = U.clamp(p.pos.z + mz * dt, 1.5, CFG.WORLD - 1.5);
+      this.vy = 0; this.onGround = false;
+      if (inputOK && this.keys.has(Settings.key('jump'))) p.pos.y += CFG.WALK * 1.4 * mul * dt;
+      if (inputOK && this.keys.has(Settings.key('sprint'))) p.pos.y -= CFG.WALK * 1.4 * mul * dt;
+      p.pos.y = Math.max(0.5, p.pos.y);
+    } else if (typeof World !== 'undefined' && World.movePlayer) {
+      if (inputOK && this.keys.has(Settings.key('jump')) && this.onGround) {
+        this.vy = CFG.JUMP;
+        this.onGround = false;
+      }
+      this.vy -= CFG.GRAV * dt;
+      if (this.vy < -55) this.vy = -55;
+      const res = World.movePlayer(p, mx * dt, this.vy * dt, mz * dt);
+      if (res) {
+        if (res.grounded && this.vy < 0) this.vy = 0;
+        this.onGround = res.grounded;
+      }
     } else {
+      // 回退：旧 heightAt 重力/跳跃
+      this._move(p, mx * dt, mz * dt);
+      const gy = World.heightAt(p.pos.x, p.pos.z, p.pos.y);
       if (inputOK && this.keys.has(Settings.key('jump')) && p.pos.y <= gy + 0.01) { this.vy = CFG.JUMP; this.onGround = false; }
       if (p.pos.y > gy + 0.01 || this.vy > 0) {
         this.vy -= CFG.GRAV * dt;
         p.pos.y += this.vy * dt;
         if (p.pos.y <= gy) { p.pos.y = gy; this.vy = 0; this.onGround = true; }
       } else { p.pos.y = gy; this.vy = 0; this.onGround = true; }
-      // 天花板：室内跳跃不穿楼上楼板（Rapier 向上射线）
-      if (this.vy > 0 && typeof World !== 'undefined' && World.ceilingAt) {
-        const ceil = World.ceilingAt(p.pos.x, p.pos.z, p.pos.y + 0.2);
-        if (Number.isFinite(ceil) && ceil - p.pos.y < CFG.PLAYER_HEIGHT + 0.04) {
-          p.pos.y = Math.max(p.pos.y, ceil - CFG.PLAYER_HEIGHT - 0.04);
-          this.vy = 0;
-        }
-      }
     }
     p.yaw = this.yaw;
     // 更新玩家模型旋转以匹配相机方向

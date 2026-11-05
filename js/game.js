@@ -218,7 +218,7 @@ const Game = {
     // 出生朝向地图中心（旧图蓝队固定在西北，v4 多图/多角出生必须动态算）
     const c0 = (CFG.WORLD || 300) / 2;
     PC.yaw = Math.atan2(-(c0 - s.x), -(c0 - s.z));
-    PC.pitch = 0; PC.vy = 0;
+    PC.pitch = 0; PC.vy = 0; PC.onGround = true;
     PlayerGun.setCur('rifle');
     PlayerGun.mags = {}; PlayerGun.reserves = {};
     for (const w in WEAPONS) { PlayerGun.mags[w] = WEAPONS[w].mag; PlayerGun.reserves[w] = WEAPONS[w].reserve; }

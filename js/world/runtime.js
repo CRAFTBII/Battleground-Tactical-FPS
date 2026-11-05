@@ -887,8 +887,27 @@ export function createWorldRuntime(RAPIER) {
       return { x: s.x, y: this.heightAt(s.x, s.z), z: s.z };
     },
 
+    /** 玩家专用：Rapier 角色控制器（自动台阶/贴墙/落地），y 也由控制器负责。 */
+    movePlayer(obj, dx, dy, dz) {
+      const p = obj && obj.pos ? obj.pos : obj;
+      if (!p) return null;
+      if (!Number.isFinite(p.y)) p.y = 0;
+      const res = physics.movePlayer({ x: p.x, y: p.y, z: p.z }, dx || 0, dy || 0, dz || 0);
+      if (!res) return null;
+      const size = this.mapDef ? this.mapDef.size : 300;
+      p.x = Math.max(1.5, Math.min(size - 1.5, res.x));
+      p.y = res.y;
+      p.z = Math.max(1.5, Math.min(size - 1.5, res.z));
+      return res;
+    },
+
+    teleportPlayer(obj) {
+      const p = obj && obj.pos ? obj.pos : obj;
+      if (p) physics.teleportPlayer(p);
+    },
+
     /**
-     * 胶囊体移动（玩家/AI 共用）。obj 可以是 {pos:Vector3} 或 Vector3。
+     * 胶囊体移动（AI/兜底）。obj 可以是 {pos:Vector3} 或 Vector3。
      * 只处理水平位移；y 仅在台阶抬升时改写，跳跃/重力仍由旧逻辑管理。
      */
     moveActor(obj, dx, dz) {

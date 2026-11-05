@@ -71,6 +71,7 @@ VIS/COL/NAV/ANCHOR 节点 + extras。house COL 保留真实门洞/窗洞，不�
 - **地形**：100×100 网格程序化缓坡（suburb 1.7m / port 1.1m / desert 2.0m），道路、建筑、据点、出生区自动压平；远景为 24 座圆顶丘陵。
 - **道路**：主/次街道 + 人行道 + 路缘 + 中心黄线 + 中央广场；三张图道路网络各不相同。
 - **建筑**：不再重复 house.glb；新增程序化 cottage/townhouse/shop/apartment/villa/warehouse/shed/tower/ruin，墙体留 1.4×2.45m 门洞，室内楼板留楼梯井，楼梯用 sensor + heightAt 实现可上二层。
+- **玩家手感**：玩家改用 Rapier `KinematicCharacterController`（与 sandbox 同一套，自动贴墙/台阶/落地），AI 保留低成本射线移动；不再用自定义 castShape + heightAt 推玩家。
 - **街景**：64 棵树、34 丛灌木、20 块岩石、沿路车辆、路灯、沙袋/集装箱/木箱。
 - **预览**：[suburb](preview-suburb.jpg) · [port](preview-port.jpg) · [desert](preview-desert.jpg)
 - **俯视**：[suburb](map-suburb-plan.png) · [port](map-port-plan.png) · [desert](map-desert-plan.png)
