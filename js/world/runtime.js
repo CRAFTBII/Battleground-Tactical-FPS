@@ -6,6 +6,7 @@
 import { createPhysics } from './physics.js';
 import { createNav } from './nav.js';
 import { BUILDING_DIMS, createMapRegistry } from './maps.js';
+import { createBuildingFactory, PROC_DIMS } from './buildings.js';
 
 export function createWorldRuntime(RAPIER) {
   const THREE = window.THREE;
@@ -36,6 +37,10 @@ export function createWorldRuntime(RAPIER) {
     _group: null,
     _envLights: null,
     _footprints: [],
+    _flatRects: [],
+    _trees: [],
+    _proc: null,
+    _terrainH: null,
     _matCache: {},
 
     /* ---------- 生命周期 ---------- */
@@ -71,8 +76,11 @@ export function createWorldRuntime(RAPIER) {
       this.capturePoints = [];
       this.capMeshes = [];
       this.spawns = {};
+      this._trees = [];
 
       this._applyEnv(def.env || {});
+      this._proc = createBuildingFactory(THREE, physics, def.id);
+      this._flatRects = this._collectFlatRects(def);
       const group = new THREE.Group();
       group.name = 'map:' + def.id;
       scene.add(group);
@@ -81,13 +89,19 @@ export function createWorldRuntime(RAPIER) {
 
       const t0 = (window.performance && performance.now) ? performance.now() : Date.now();
       physics.reset();
-      // 地面（物理）：一个厚板，允许边界外一点余量
+      // 地面（物理）：一个厚板，允许边界外一点余量；地形 trimesh 叠在它上面
       physics.addCuboid(def.size / 2, 0.5, def.size / 2, def.size / 2, -0.5, def.size / 2);
 
       this._buildGround(def);
+      this._buildTerrain(def);
+      this._buildHorizon(def);
       this._buildRoads(def);
       this._buildProps(def.props || []);
       this._buildBuildings(def.buildings || []);
+      this._buildTrees(def);
+      this._buildNature(def);
+      this._buildCars(def);
+      this._buildLamps(def);
       this._buildBoundary(def.size);
       physics.finalize();
 
@@ -138,6 +152,10 @@ export function createWorldRuntime(RAPIER) {
       this.capMeshes = [];
       this.spawns = {};
       this._footprints = [];
+      this._flatRects = [];
+      this._trees = [];
+      this._proc = null;
+      this._terrainH = null;
       this.mapId = null;
       this.mapDef = null;
       this.minimapStatic = null;
@@ -197,37 +215,216 @@ export function createWorldRuntime(RAPIER) {
     /* ---------- 地图内容 ---------- */
     _buildGround(def) {
       const env = def.env || {};
+      // v4.1：旧实现把地面放在世界原点，但地图范围是 0..size → 东/南侧会露出天空。
+      // 这里用远超地图的底板并居中到 size/2，保证任何视角都不会看到“地表缺失”。
       const g = new THREE.Mesh(
-        new THREE.PlaneGeometry(def.size + 160, def.size + 160),
-        new THREE.MeshLambertMaterial({ color: env.ground !== undefined ? env.ground : 0x4a6b3c })
+        new THREE.PlaneGeometry(def.size + 1400, def.size + 1400),
+        new THREE.MeshLambertMaterial({
+          color: env.ground !== undefined ? env.ground : 0x4a6b3c,
+          side: THREE.DoubleSide
+        })
       );
       g.rotation.x = -Math.PI / 2;
+      g.position.set(def.size / 2, -0.09, def.size / 2);
       g.receiveShadow = true;
       g.name = 'ground';
       this._group.add(g);
     },
 
+    /* 建筑/道路/据点/出生区之外保持平地；其余区域生成缓坡 */
+    _collectFlatRects(def) {
+      const rects = [];
+      const add = (x, z, w, d, pad) => {
+        rects.push({ x0: x - w / 2 - pad, x1: x + w / 2 + pad, z0: z - d / 2 - pad, z1: z + d / 2 + pad });
+      };
+      for (const r of (def.roads || [])) add(r.x, r.z, r.w, r.d, 3.0);
+      for (const p of (def.buildings || [])) {
+        const dims = p.key ? BUILDING_DIMS[p.key] : PROC_DIMS[p.type];
+        if (!dims) continue;
+        const c = Math.abs(Math.cos(p.ry || 0)), s = Math.abs(Math.sin(p.ry || 0));
+        add(p.x, p.z, c * dims.w + s * dims.d, s * dims.w + c * dims.d, 3.0);
+      }
+      for (const p of (def.props || [])) {
+        const c = Math.abs(Math.cos(p.ry || 0)), s = Math.abs(Math.sin(p.ry || 0));
+        add(p.x, p.z, c * p.w + s * p.d, s * p.w + c * p.d, 1.5);
+      }
+      for (const cp of (def.capturePoints || [])) add(cp.x, cp.z, (cp.r || 6) * 2, (cp.r || 6) * 2, 6);
+      for (const list of Object.values(def.spawns || {})) {
+        for (const sp of list) add(sp.x, sp.z, 20, 20, 6);
+      }
+      return rects;
+    },
+
+    _buildTerrain(def) {
+      const S = def.size;
+      const env = def.env || {};
+      const N = 100;
+      const step = S / N;
+      const flat = this._flatRects;
+      const amp = env.terrainAmp !== undefined ? env.terrainAmp : 1.35;
+      const noise = (x, z) =>
+        Math.sin(x * 0.033 + 1.7) * Math.cos(z * 0.041 - 0.6) +
+        0.55 * Math.sin((x + z) * 0.021 + 2.1) +
+        0.3 * Math.cos((x - z) * 0.053);
+
+      const h = (x, z) => {
+        let dmin = Infinity;
+        for (let i = 0; i < flat.length; i++) {
+          const r = flat[i];
+          const dx = Math.max(r.x0 - x, 0, x - r.x1);
+          const dz = Math.max(r.z0 - z, 0, z - r.z1);
+          const d = Math.sqrt(dx * dx + dz * dz);
+          if (d < dmin) dmin = d;
+        }
+        const k = Math.max(0, Math.min(1, (dmin - 1.2) / 11));
+        const smooth = k * k * (3 - 2 * k);
+        const edge = Math.min(x, z, S - x, S - z);
+        const ef = Math.max(0, Math.min(1, (edge - 4) / 10));
+        const n = 0.5 + 0.5 * noise(x, z);
+        return amp * n * smooth * ef;
+      };
+      this._terrainH = h;
+
+      const V = N + 1;
+      const pos = new Float32Array(V * V * 3);
+      const col = new Float32Array(V * V * 3);
+      const cBase = new THREE.Color(env.ground !== undefined ? env.ground : 0x4a6b3c);
+      const cHigh = new THREE.Color(env.ground2 !== undefined ? env.ground2 : 0x6f7d4b);
+      const tmp = new THREE.Color();
+      for (let iz = 0; iz < V; iz++) {
+        const z = iz * step;
+        for (let ix = 0; ix < V; ix++) {
+          const x = ix * step;
+          const y = h(x, z);
+          const i = (iz * V + ix) * 3;
+          pos[i] = x; pos[i + 1] = y; pos[i + 2] = z;
+          const k = Math.max(0, Math.min(1, y / Math.max(0.001, amp)));
+          tmp.copy(cBase).lerp(cHigh, 0.18 + k * 0.45);
+          const v = 0.92 + 0.08 * ((Math.sin(x * 0.9 + z * 1.3) + 1) * 0.5);
+          col[i] = tmp.r * v; col[i + 1] = tmp.g * v; col[i + 2] = tmp.b * v;
+        }
+      }
+      const idx = new Uint32Array(N * N * 6);
+      let o = 0;
+      for (let iz = 0; iz < N; iz++) {
+        for (let ix = 0; ix < N; ix++) {
+          const a = iz * V + ix, b = a + 1, c = a + V, d = c + 1;
+          idx[o++] = a; idx[o++] = c; idx[o++] = b;
+          idx[o++] = b; idx[o++] = c; idx[o++] = d;
+        }
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+      geo.setIndex(Array.from(idx));
+      geo.computeVertexNormals();
+      geo.computeBoundingSphere();
+      const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }));
+      mesh.name = 'terrain';
+      mesh.receiveShadow = true;
+      this._group.add(mesh);
+      physics.addTrimesh(pos, idx);
+      this._terrainMesh = mesh;
+    },
+
+    _buildHorizon(def) {
+      const S = def.size;
+      const env = def.env || {};
+      const fog = new THREE.Color(env.fog !== undefined ? env.fog : 0x8fb4cc);
+      const base = new THREE.Color(env.ground2 !== undefined ? env.ground2 : 0x6f7d4b);
+      const center = S / 2;
+      const geo = new THREE.SphereGeometry(1, 10, 7);
+      for (let i = 0; i < 24; i++) {
+        const a = i / 24 * Math.PI * 2 + (i % 4) * 0.05;
+        const r = S * (1.02 + (i % 5) * 0.14);
+        const hgt = 22 + (i * 37 % 46);
+        const rad = 75 + (i * 53 % 80);
+        const c = base.clone().lerp(fog, 0.42 + (i % 4) * 0.07);
+        const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: c }));
+        m.scale.set(rad, hgt * 0.72, rad * (0.75 + (i % 3) * 0.12));
+        m.position.set(center + Math.cos(a) * r, hgt * 0.04, center + Math.sin(a) * r);
+        m.rotation.y = a;
+        this._group.add(m);
+      }
+    },
+
     _buildRoads(def) {
       const list = def.roads || [];
+      const walkMat = new THREE.MeshLambertMaterial({ color: 0x9b998f });
+      const curbMat = new THREE.MeshLambertMaterial({ color: 0x3d4144 });
       for (const r of list) {
+        const horizontal = r.w >= r.d;
+        const plaza = Math.min(r.w, r.d) >= 30;
         const m = new THREE.Mesh(
           new THREE.PlaneGeometry(r.w, r.d),
           new THREE.MeshLambertMaterial({ color: r.color !== undefined ? r.color : 0x5b5f62 })
         );
         m.rotation.x = -Math.PI / 2;
-        m.position.set(r.x, 0.018, r.z);
+        m.position.set(r.x, plaza ? 0.028 : 0.038, r.z);
         m.receiveShadow = true;
         this._group.add(m);
+        if (plaza) {
+          // 广场边框
+          const ring = new THREE.Mesh(
+            new THREE.RingGeometry(Math.min(r.w, r.d) / 2 - 0.6, Math.min(r.w, r.d) / 2, 4, 1),
+            new THREE.MeshBasicMaterial({ color: 0xb9b3a4, side: THREE.DoubleSide })
+          );
+          ring.rotation.x = -Math.PI / 2;
+          ring.rotation.z = Math.PI / 4;
+          ring.position.set(r.x, 0.05, r.z);
+          this._group.add(ring);
+          continue;
+        }
+        // 人行道/路缘
+        if (horizontal) {
+          for (const sz of [-1, 1]) {
+            const z = r.z + sz * (r.d / 2 + 1.0);
+            const sw = new THREE.Mesh(new THREE.BoxGeometry(r.w, 0.14, 2.0), walkMat);
+            sw.position.set(r.x, 0.07, z);
+            sw.receiveShadow = true;
+            this._group.add(sw);
+            const curb = new THREE.Mesh(new THREE.BoxGeometry(r.w, 0.18, 0.16), curbMat);
+            curb.position.set(r.x, 0.09, r.z + sz * (r.d / 2 + 0.08));
+            this._group.add(curb);
+          }
+          // 中心线
+          const line = new THREE.Mesh(
+            new THREE.PlaneGeometry(Math.max(4, r.w - 6), 0.18),
+            new THREE.MeshBasicMaterial({ color: 0xd9c56a })
+          );
+          line.rotation.x = -Math.PI / 2;
+          line.position.set(r.x, 0.052, r.z);
+          this._group.add(line);
+        } else {
+          for (const sx of [-1, 1]) {
+            const x = r.x + sx * (r.w / 2 + 1.0);
+            const sw = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.14, r.d), walkMat);
+            sw.position.set(x, 0.07, r.z);
+            sw.receiveShadow = true;
+            this._group.add(sw);
+            const curb = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.18, r.d), curbMat);
+            curb.position.set(r.x + sx * (r.w / 2 + 0.08), 0.09, r.z);
+            this._group.add(curb);
+          }
+          const line = new THREE.Mesh(
+            new THREE.PlaneGeometry(0.18, Math.max(4, r.d - 6)),
+            new THREE.MeshBasicMaterial({ color: 0xd9c56a })
+          );
+          line.rotation.x = -Math.PI / 2;
+          line.position.set(r.x, 0.052, r.z);
+          this._group.add(line);
+        }
       }
     },
 
     _buildProps(props) {
       for (const p of props) {
+        const gy = this._terrainH ? this._terrainH(p.x, p.z) : 0;
         const box = new THREE.Mesh(
           new THREE.BoxGeometry(p.w, p.h, p.d),
           new THREE.MeshLambertMaterial({ color: p.color !== undefined ? p.color : 0x6b5a3e })
         );
-        box.position.set(p.x, p.h / 2, p.z);
+        box.position.set(p.x, gy + p.h / 2, p.z);
         box.rotation.y = p.ry || 0;
         box.castShadow = true;
         box.receiveShadow = true;
@@ -236,7 +433,7 @@ export function createWorldRuntime(RAPIER) {
 
         const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), p.ry || 0);
         const desc = RAPIER.ColliderDesc.cuboid(p.w / 2, p.h / 2, p.d / 2)
-          .setTranslation(p.x, p.h / 2, p.z)
+          .setTranslation(p.x, gy + p.h / 2, p.z)
           .setRotation({ x: q.x, y: q.y, z: q.z, w: q.w });
         physics.addCuboidDesc(desc);
 
@@ -245,14 +442,208 @@ export function createWorldRuntime(RAPIER) {
         const hz = s * p.w / 2 + c * p.d / 2;
         this._footprints.push({ x0: p.x - hx, x1: p.x + hx, z0: p.z - hz, z1: p.z + hz });
         this.colliders.push({
-          min: new THREE.Vector3(p.x - hx, 0, p.z - hz),
-          max: new THREE.Vector3(p.x + hx, p.h, p.z + hz)
+          min: new THREE.Vector3(p.x - hx, gy, p.z - hz),
+          max: new THREE.Vector3(p.x + hx, gy + p.h, p.z + hz)
         });
+      }
+    },
+
+    _buildTrees(def) {
+      const S = def.size;
+      const env = def.env || {};
+      const seed = (def.id === 'suburb' ? 7 : def.id === 'port' ? 19 : 31);
+      const rnd = (() => { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; })();
+      const trunkMat = new THREE.MeshLambertMaterial({ color: 0x5a4630 });
+      const leafA = new THREE.MeshLambertMaterial({ color: env.ground2 !== undefined ? env.ground2 : 0x4f6b3d });
+      const leafB = new THREE.MeshLambertMaterial({ color: def.id === 'desert' ? 0x7a7a48 : 0x3d5a35 });
+      const inRoad = (x, z) => (def.roads || []).some(r => x > r.x - r.w / 2 - 2 && x < r.x + r.w / 2 + 2 && z > r.z - r.d / 2 - 2 && z < r.z + r.d / 2 + 2);
+      const inFoot = (x, z) => this._footprints.some(f => x > f.x0 - 1.2 && x < f.x1 + 1.2 && z > f.z0 - 1.2 && z < f.z1 + 1.2);
+      const inCap = (x, z) => (def.capturePoints || []).some(c => Math.hypot(x - c.x, z - c.z) < (c.r || 6) + 5);
+      const inSpawn = (x, z) => Object.values(def.spawns || {}).some(list => list.some(s => Math.hypot(x - s.x, z - s.z) < 12));
+      let made = 0;
+      for (let i = 0; i < 760 && made < 64; i++) {
+        const x = 8 + rnd() * (S - 16);
+        const z = 8 + rnd() * (S - 16);
+        if (inRoad(x, z) || inFoot(x, z) || inCap(x, z) || inSpawn(x, z)) continue;
+        if (this._trees.some(t => Math.hypot(t.x - x, t.z - z) < 3.2)) continue;
+        const y = this._terrainH ? this._terrainH(x, z) : 0;
+        const sc = 0.9 + rnd() * 0.9;
+        const g = new THREE.Group();
+        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.16 * sc, 0.24 * sc, 2.3 * sc, 6), trunkMat);
+        trunk.position.y = 1.15 * sc;
+        const c1 = new THREE.Mesh(new THREE.ConeGeometry(1.35 * sc, 2.4 * sc, 7), leafA);
+        c1.position.y = 2.9 * sc;
+        const c2 = new THREE.Mesh(new THREE.ConeGeometry(1.0 * sc, 1.9 * sc, 7), leafB);
+        c2.position.y = 4.0 * sc;
+        trunk.castShadow = c1.castShadow = c2.castShadow = true;
+        trunk.receiveShadow = c1.receiveShadow = c2.receiveShadow = true;
+        g.add(trunk, c1, c2);
+        g.position.set(x, y, z);
+        g.rotation.y = rnd() * Math.PI;
+        this._group.add(g);
+        physics.addCylinderCollider(1.2 * sc, 0.24 * sc, x, y + 1.2 * sc, z);
+        this._footprints.push({ x0: x - 0.36, x1: x + 0.36, z0: z - 0.36, z1: z + 0.36 });
+        this._trees.push({ x, z, y, scale: sc });
+        made++;
+      }
+    },
+
+    _buildNature(def) {
+      const S = def.size;
+      const env = def.env || {};
+      const isDesert = def.id === 'desert';
+      const rnd = (() => { let a = (isDesert ? 101 : 57); return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; })();
+      const bushMat = new THREE.MeshLambertMaterial({ color: isDesert ? 0x8a8a52 : 0x466b3a });
+      const bush2Mat = new THREE.MeshLambertMaterial({ color: isDesert ? 0x9a945c : 0x567a45 });
+      const rockMat = new THREE.MeshLambertMaterial({ color: isDesert ? 0x9a8866 : 0x7a7d78 });
+      const inRoad = (x, z) => (def.roads || []).some(r => x > r.x - r.w / 2 - 1 && x < r.x + r.w / 2 + 1 && z > r.z - r.d / 2 - 1 && z < r.z + r.d / 2 + 1);
+      const inFoot = (x, z) => this._footprints.some(f => x > f.x0 - 0.8 && x < f.x1 + 0.8 && z > f.z0 - 0.8 && z < f.z1 + 0.8);
+      const inCap = (x, z) => (def.capturePoints || []).some(c => Math.hypot(x - c.x, z - c.z) < (c.r || 6) + 3);
+      const inSpawn = (x, z) => Object.values(def.spawns || {}).some(list => list.some(s => Math.hypot(x - s.x, z - s.z) < 10));
+      let bushes = 0, rocks = 0;
+      for (let i = 0; i < 420 && (bushes < 34 || rocks < 20); i++) {
+        const x = 8 + rnd() * (S - 16);
+        const z = 8 + rnd() * (S - 16);
+        if (inRoad(x, z) || inFoot(x, z) || inCap(x, z) || inSpawn(x, z)) continue;
+        const y = this._terrainH ? this._terrainH(x, z) : 0;
+        const wantRock = rocks < 20 && (bushes >= 34 || rnd() < 0.36);
+        if (wantRock) {
+          const sc = 0.45 + rnd() * 0.9;
+          const r = new THREE.Mesh(new THREE.DodecahedronGeometry(sc, 0), rockMat);
+          r.position.set(x, y + sc * 0.45, z);
+          r.rotation.set(rnd() * 0.5, rnd() * 3, rnd() * 0.5);
+          r.scale.y = 0.62;
+          r.castShadow = true; r.receiveShadow = true;
+          this._group.add(r);
+          physics.addBoxCollider(sc * 1.4, sc * 0.8, sc * 1.4, x, y + sc * 0.35, z, 0);
+          this._footprints.push({ x0: x - sc * 0.7, x1: x + sc * 0.7, z0: z - sc * 0.7, z1: z + sc * 0.7 });
+          rocks++;
+        } else if (bushes < 34) {
+          const sc = 0.55 + rnd() * 0.65;
+          const g = new THREE.Group();
+          const b1 = new THREE.Mesh(new THREE.SphereGeometry(sc, 6, 5), bushMat);
+          b1.position.y = sc * 0.55; b1.scale.y = 0.72;
+          const b2 = new THREE.Mesh(new THREE.SphereGeometry(sc * 0.7, 6, 5), bush2Mat);
+          b2.position.set(sc * 0.45, sc * 0.4, -sc * 0.2); b2.scale.y = 0.7;
+          b1.castShadow = b2.castShadow = true;
+          g.add(b1, b2);
+          g.position.set(x, y, z);
+          g.rotation.y = rnd() * 3;
+          this._group.add(g);
+          bushes++;
+        }
+      }
+    },
+
+    _buildCars(def) {
+      const palette = def.id === 'port'
+        ? [0x5a6a72, 0x7a4a3e, 0x3f5a68, 0x8a8a7a, 0x4a4a52]
+        : def.id === 'desert'
+          ? [0x9a7a4a, 0x7a5a3a, 0x6a6a5a, 0x8a4a3a]
+          : [0x6a7a8a, 0x8a4a3a, 0xd0c8b8, 0x4a5a4a, 0x5a4a3a];
+      const wheelMat = new THREE.MeshLambertMaterial({ color: 0x202226 });
+      const glassMat = new THREE.MeshLambertMaterial({ color: 0x8fb0c0 });
+      const rnd = (() => { let a = (def.id === 'port' ? 77 : def.id === 'desert' ? 91 : 43); return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; })();
+      let made = 0;
+      for (const r of (def.roads || [])) {
+        if (Math.min(r.w, r.d) >= 30) continue;
+        const horizontal = r.w >= r.d;
+        const len = horizontal ? r.w : r.d;
+        if (len < 45) continue;
+        const count = Math.min(3, Math.floor(len / 55));
+        for (let i = 0; i < count; i++) {
+          const t = (i + 0.5) / count;
+          const side = (i % 2 ? 1 : -1);
+          const x = horizontal ? r.x - r.w / 2 + r.w * t : r.x + side * (r.w / 2 - 1.6);
+          const z = horizontal ? r.z + side * (r.d / 2 - 1.6) : r.z - r.d / 2 + r.d * t;
+          if (this._footprints.some(f => x > f.x0 - 0.6 && x < f.x1 + 0.6 && z > f.z0 - 0.6 && z < f.z1 + 0.6)) continue;
+          if ((def.capturePoints || []).some(c => Math.hypot(x - c.x, z - c.z) < (c.r || 6) + 2)) continue;
+          const y = this._terrainH ? this._terrainH(x, z) : 0;
+          const g = new THREE.Group();
+          const color = palette[(made + i) % palette.length];
+          const bodyMat = new THREE.MeshLambertMaterial({ color });
+          const body = new THREE.Mesh(new THREE.BoxGeometry(4.1, 0.62, 1.85), bodyMat);
+          body.position.y = 0.62;
+          const cab = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.52, 1.7), bodyMat);
+          cab.position.set(-0.15, 1.15, 0);
+          const glass = new THREE.Mesh(new THREE.BoxGeometry(1.62, 0.34, 1.72), glassMat);
+          glass.position.set(-0.15, 1.22, 0);
+          body.castShadow = cab.castShadow = glass.castShadow = true;
+          g.add(body, cab, glass);
+          for (const wx of [-1.25, 1.25]) {
+            for (const wz of [-0.86, 0.86]) {
+              const w = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.24, 8), wheelMat);
+              w.rotation.x = Math.PI / 2;
+              w.position.set(wx, 0.34, wz);
+              g.add(w);
+            }
+          }
+          g.position.set(x, y, z);
+          g.rotation.y = horizontal ? 0 : Math.PI / 2;
+          this._group.add(g);
+          physics.addBoxCollider(4.3, 1.35, 2.0, x, y + 0.68, z, horizontal ? 0 : Math.PI / 2);
+          this._footprints.push(horizontal
+            ? { x0: x - 2.2, x1: x + 2.2, z0: z - 1.1, z1: z + 1.1 }
+            : { x0: x - 1.1, x1: x + 1.1, z0: z - 2.2, z1: z + 2.2 });
+          this.colliders.push({
+            min: new THREE.Vector3(x - 2.2, y, z - 1.1),
+            max: new THREE.Vector3(x + 2.2, y + 1.4, z + 1.1)
+          });
+          made++;
+        }
+      }
+    },
+
+    _buildLamps(def) {
+      const S = def.size;
+      const poleMat = new THREE.MeshLambertMaterial({ color: 0x3a3f44 });
+      const lampMat = new THREE.MeshBasicMaterial({ color: 0xffe2a0 });
+      let made = 0;
+      const blocked = (x, z) => this._footprints.some(f => x > f.x0 - 0.8 && x < f.x1 + 0.8 && z > f.z0 - 0.8 && z < f.z1 + 0.8);
+      for (const r of (def.roads || [])) {
+        if (Math.min(r.w, r.d) >= 30) continue;
+        const horizontal = r.w >= r.d;
+        const len = horizontal ? r.w : r.d;
+        if (len < 50) continue;
+        const count = Math.min(4, Math.floor(len / 42));
+        for (let i = 0; i < count; i++) {
+          const t = (i + 0.7) / count;
+          const x = horizontal ? r.x - r.w / 2 + r.w * t : r.x + r.w / 2 + 2.4;
+          const z = horizontal ? r.z + r.d / 2 + 2.4 : r.z - r.d / 2 + r.d * t;
+          if (x < 3 || z < 3 || x > S - 3 || z > S - 3) continue;
+          if (blocked(x, z)) continue;
+          const y = this._terrainH ? this._terrainH(x, z) : 0;
+          const g = new THREE.Group();
+          const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 4.8, 6), poleMat);
+          pole.position.y = 2.4;
+          const arm = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.1, 0.1), poleMat);
+          arm.position.set(0.45, 4.75, 0);
+          const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.22, 0.32), lampMat);
+          lamp.position.set(0.95, 4.68, 0);
+          pole.castShadow = true;
+          g.add(pole, arm, lamp);
+          g.position.set(x, y, z);
+          g.rotation.y = horizontal ? 0 : Math.PI / 2;
+          this._group.add(g);
+          physics.addCylinderCollider(2.4, 0.14, x, y + 2.4, z);
+          this._footprints.push({ x0: x - 0.25, x1: x + 0.25, z0: z - 0.25, z1: z + 0.25 });
+          if (++made >= 18) return;
+        }
       }
     },
 
     _buildBuildings(list) {
       for (const p of list) {
+        if (p.type) {
+          const res = this._proc.build(p.type, p.x, p.z, p.ry || 0, (p.x * 131 + p.z * 17) | 0);
+          this._group.add(res.group);
+          this._footprints.push(res.footprint);
+          this.colliders.push({
+            min: new THREE.Vector3(res.footprint.x0, 0, res.footprint.z0),
+            max: new THREE.Vector3(res.footprint.x1, res.height, res.footprint.z1)
+          });
+          continue;
+        }
         const glb = (window.AssetLoader && AssetLoader.building) ? AssetLoader.building(p.key) : null;
         if (!glb) {
           console.warn('[World] 缺少建筑资产 ' + p.key + '，使用占位盒');
@@ -354,7 +745,8 @@ export function createWorldRuntime(RAPIER) {
       const neutral = (window.CFG && CFG.teamColor) ? CFG.teamColor('neutral').hex : 0x707880;
       for (const cp of list) {
         const g = new THREE.Group();
-        g.position.set(cp.x, 0, cp.z);
+        const gy = this._terrainH ? this._terrainH(cp.x, cp.z) : 0;
+        g.position.set(cp.x, gy, cp.z);
         const ring = new THREE.Mesh(
           new THREE.RingGeometry(Math.max(1, cp.r - 0.35), cp.r, 48),
           new THREE.MeshBasicMaterial({ color: neutral, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false })
@@ -410,6 +802,7 @@ export function createWorldRuntime(RAPIER) {
       }
       // 建筑 footprint（使用 COL 实际包围盒，旋转也正确）
       for (const f of this._footprints) {
+        if ((f.x1 - f.x0) < 1.5 && (f.z1 - f.z0) < 1.5) continue; // 树/灯柱不画成建筑
         const x = toPx(f.x0), z = toPx(f.z0);
         const w = Math.max(1.5, toPx(f.x1 - f.x0)), d = Math.max(1.5, toPx(f.z1 - f.z0));
         g.fillStyle = 'rgba(24,30,36,0.78)';
@@ -417,6 +810,13 @@ export function createWorldRuntime(RAPIER) {
         g.strokeStyle = 'rgba(210,225,240,0.28)';
         g.lineWidth = 1;
         g.strokeRect(x + 0.5, z + 0.5, Math.max(0, w - 1), Math.max(0, d - 1));
+      }
+      // 树
+      g.fillStyle = 'rgba(38,74,40,0.8)';
+      for (const t of this._trees) {
+        g.beginPath();
+        g.arc(toPx(t.x), toPx(t.z), 1.2, 0, 7);
+        g.fill();
       }
       // 边界
       g.strokeStyle = 'rgba(240,244,248,0.28)';

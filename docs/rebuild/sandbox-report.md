@@ -63,7 +63,19 @@ VIS/COL/NAV/ANCHOR 节点 + extras。house COL 保留真实门洞/窗洞，不�
 | 性能 | 2 队 20 人、headless Chrome 实测 60fps（AI 碰撞从 capsule cast 改为射线后从 ~20fps 提升） |
 | 击杀 | 玩家击倒→处决/击杀，比分 +1，killfeed 正常 |
 
-## 6. 结论
+## 6. 视觉重建（v4.2）
+
+针对“地形平坦 / 地表缺失 / 全是同一栋别墅 / 没有道路”的反馈：
+
+- **地表缺失根因**：旧底板放在世界原点（0,0），地图范围是 0..300 → 东/南侧 70m 没有地面。已改为居中 (size/2, size/2) 的超大底板。
+- **地形**：100×100 网格程序化缓坡（suburb 1.7m / port 1.1m / desert 2.0m），道路、建筑、据点、出生区自动压平；远景为 24 座圆顶丘陵。
+- **道路**：主/次街道 + 人行道 + 路缘 + 中心黄线 + 中央广场；三张图道路网络各不相同。
+- **建筑**：不再重复 house.glb；新增程序化 cottage/townhouse/shop/apartment/villa/warehouse/shed/tower/ruin，墙体留 1.4×2.45m 门洞，室内楼板留楼梯井，楼梯用 sensor + heightAt 实现可上二层。
+- **街景**：64 棵树、34 丛灌木、20 块岩石、沿路车辆、路灯、沙袋/集装箱/木箱。
+- **预览**：[suburb](preview-suburb.jpg) · [port](preview-port.jpg) · [desert](preview-desert.jpg)
+- **俯视**：[suburb](map-suburb-plan.png) · [port](map-port-plan.png) · [desert](map-desert-plan.png)
+
+## 7. 结论
 
 - 主入口已从“v4 重建中”变为**可玩单机训练版**：三图、据点、20 人 AI、碰撞/弹道/击杀/小地图全部接通。
 - WorldCompat 保留旧 `World` / `MapRegistry` / `findPath` / `gridLineClear` 接口，Game/AI/Combat 仅改移动与弹道两处。

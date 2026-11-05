@@ -39,10 +39,14 @@ tools/buildings/            # Blender 导出和 GLB 校验
 js/world/index.js           # ESM 入口：Rapier 初始化 + 暴露 window.World / MapRegistry
 js/world/runtime.js         # WorldCompat：场景/建筑/据点/出生/旧 API
 js/world/physics.js         # Rapier 静态 trimesh、射线、玩家胶囊 sweep、AI 射线移动
+js/world/buildings.js       # 程序化建筑（1~4 层、门洞、楼梯、屋顶、合并 draw call）
 js/world/nav.js             # 2m 网格 A*（旧 findPath / gridLineClear）
 js/world/maps.js            # 三张地图数据（suburb / port / desert）
 ```
-`js/world/{core,assets,collision,navigation,spawn,map,debug}/README.md` 保留为后续拆分说明；当前可玩实现集中在上面 5 个文件。
+`js/world/{core,assets,collision,navigation,spawn,map,debug}/README.md` 保留为后续拆分说明；当前可玩实现集中在上面 6 个文件。
+
+**视觉预览**：[暮色小镇](preview-suburb.jpg) · [街景](preview-suburb-street.jpg) · [灰港](preview-port.jpg) · [沙岭](preview-desert.jpg)
+**俯视规划**：[suburb](map-suburb-plan.png) · [port](map-port-plan.png) · [desert](map-desert-plan.png)
 
 ## 坐标与尺度
 Three.js 右手系，Y-up，1 world unit = 1m；建筑局部原点是 footprint 中心的地面点。默认 scale=(1,1,1)，禁止隐藏的全局资产倍率。模型目标尺寸由设计契约单独决定，不能把当前 GLB 的缩水尺寸当作标准。

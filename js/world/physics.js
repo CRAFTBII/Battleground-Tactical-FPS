@@ -34,6 +34,25 @@ export function createPhysics(RAPIER) {
     cuboidCount++;
   }
 
+  /** 带 Y 轴旋转的盒体碰撞（程序化建筑墙体/楼板/楼梯用）。 */
+  function addBoxCollider(w, h, d, x, y, z, ry, sensor) {
+    const half = (ry || 0) / 2;
+    const desc = RAPIER.ColliderDesc
+      .cuboid(Math.max(0.02, w / 2), Math.max(0.02, h / 2), Math.max(0.02, d / 2))
+      .setTranslation(x, y, z)
+      .setRotation({ x: 0, y: Math.sin(half), z: 0, w: Math.cos(half) });
+    if (sensor) desc.setSensor(true);
+    world.createCollider(desc, staticBody);
+    cuboidCount++;
+  }
+
+  function addCylinderCollider(halfHeight, radius, x, y, z) {
+    const desc = RAPIER.ColliderDesc.cylinder(Math.max(0.05, halfHeight), Math.max(0.05, radius))
+      .setTranslation(x, y, z);
+    world.createCollider(desc, staticBody);
+    cuboidCount++;
+  }
+
   function addTrimesh(positions, indices) {
     if (!positions || !indices || indices.length < 3) return;
     const desc = RAPIER.ColliderDesc.trimesh(positions, indices);
@@ -86,7 +105,7 @@ export function createPhysics(RAPIER) {
     if (!hit) return false;
     const y = hit.point.y;
     // 允许地坪/薄楼板/矮台阶；拒绝墙体顶部/屋顶（footprint 另外会拦）
-    return y > -1.2 && y < 1.6;
+    return y > -1.2 && y < 2.6;
   }
 
   function capsule(radius, halfHeight) {
@@ -109,7 +128,8 @@ export function createPhysics(RAPIER) {
       shape,
       0,    // targetDistance
       1,    // maxToi（位移用 0..1 参数化）
-      true  // stopAtPenetration
+      true, // stopAtPenetration
+      RAPIER.QueryFilterFlags.EXCLUDE_SENSORS // 楼梯是 sensor：高度由 heightAt 提供，胶囊不被台阶卡住
     );
     return hit || null;
   }
@@ -207,7 +227,7 @@ export function createPhysics(RAPIER) {
   }
 
   return {
-    reset, finalize, addCuboid, addCuboidDesc, addTrimesh,
+    reset, finalize, addCuboid, addCuboidDesc, addBoxCollider, addCylinderCollider, addTrimesh,
     ray, segmentBlocked, heightAt, walkablePoint, moveCapsule, moveRayActor, stats,
     get world() { return world; }
   };
