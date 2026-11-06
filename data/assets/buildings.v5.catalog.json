@@ -103,19 +103,19 @@
         "屋顶狙击位可守，但外消防梯可反制",
         "大厅有接待台低掩体，楼梯口有高掩体"
       ],
-      "replaces": ["apartment", "base"],
+      "replaces": ["base"],
       "requiredNodes": ["VIS", "COL", "NAV", "ANCHOR"],
       "notes": "B 点主建筑；2F 必须有两条上下路径。"
     },
     "apartment": {
       "status": "planned",
       "role": "mid_high_ground",
-      "dims": { "w": 14, "d": 11, "h": 12.6 },
+      "dims": { "w": 14, "d": 11, "h": 14.4 },
       "floors": [
         { "id": "F0", "y": 0, "clear": 3.0 },
         { "id": "F1", "y": 3.6, "clear": 3.0 },
         { "id": "F2", "y": 7.2, "clear": 3.0 },
-        { "id": "F3", "y": 10.8, "clear": 1.8 }
+        { "id": "F3", "y": 10.8, "clear": 3.0 }
       ],
       "entrances": [
         { "id": "main", "type": "door", "clearWidth": 1.4, "clearHeight": 2.4 },
@@ -195,7 +195,7 @@
       "role": "checkpoint",
       "dims": { "w": 5, "d": 4, "h": 3.2 },
       "floors": [{ "id": "F0", "y": 0, "clear": 2.8 }],
-      "entrances": [{ "id": "door", "type": "door", "clearWidth": 1.2, "clearHeight": 2.4 }],
+      "entrances": [{ "id": "door", "type": "door", "clearWidth": 1.4, "clearHeight": 2.4 }],
       "stairs": [],
       "triBudget": 5000,
       "drawCalls": 3,
@@ -209,7 +209,7 @@
       "role": "minor_cover",
       "dims": { "w": 4, "d": 3, "h": 2.8 },
       "floors": [{ "id": "F0", "y": 0, "clear": 2.6 }],
-      "entrances": [{ "id": "door", "type": "door", "clearWidth": 1.2, "clearHeight": 2.2 }],
+      "entrances": [{ "id": "door", "type": "door", "clearWidth": 1.4, "clearHeight": 2.4 }],
       "stairs": [],
       "triBudget": 3500,
       "drawCalls": 2,
