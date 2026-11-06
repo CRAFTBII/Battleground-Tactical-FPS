@@ -10,6 +10,7 @@
 | [building-kit-v5.md](building-kit-v5.md) | 建筑替换方案：模块化套件、预制体、尺寸、LOD/COL/NAV、Blender 流程 |
 | [building-spec-sheet.md](building-spec-sheet.md) | **建筑规格评审表**：14 个预制体的尺寸/层数/入口/楼梯/三角预算 |
 | [terrain-v5.md](terrain-v5.md) | 自然地形方案：海堤/排水渠/土堤 + Perlin 掩膜与高度图交付格式 |
+| [interaction-v5.md](interaction-v5.md) | **门/破窗交互**：当前 v4 垂直切片、v5 撬锁/翻窗/炸药/AI 开门目标 |
 | [fps-references.md](fps-references.md) | CS2 / Valorant / Battlefield / Insurgency / Tarkov / COD 的玩法与建模参考 |
 | [../../data/assets/buildings.v5.catalog.json](../../data/assets/buildings.v5.catalog.json) | v5 建筑预制体清单（planned） |
 | [../../models/buildings/v5/README.md](../../models/buildings/v5/README.md) | 新 GLB 放置与替换步骤 |

@@ -136,3 +136,6 @@ function makeNoise2D(seed) {
     return U.lerp(U.lerp(g(xi, yi), g(xi + 1, yi), u), U.lerp(g(xi, yi + 1), g(xi + 1, yi + 1), u), v);
   };
 }
+
+/* 供 ESM World runtime 访问的全局别名（top-level const 不会自动成为 window 属性） */
+if (typeof window !== 'undefined') window.CFG = CFG;

@@ -864,3 +864,5 @@ Mechanics.zone = {
   _banner(msg, color, dur) { if (Game.player && Game.player.alive && UI.banner) UI.banner(msg, color, dur); },
   _broadcast(e) { if (typeof Net !== 'undefined' && Net.broadcastEvent) Net.broadcastEvent(e); }
 };
+
+if (typeof window !== 'undefined') window.Mechanics = Mechanics;

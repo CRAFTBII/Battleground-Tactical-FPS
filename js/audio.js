@@ -506,3 +506,5 @@ const AudioFX = {
     try { a.load(); } catch (e) { /* 忽略 */ }
   }
 };
+
+if (typeof window !== 'undefined') window.AudioFX = AudioFX;

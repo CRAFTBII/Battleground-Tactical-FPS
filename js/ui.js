@@ -1201,3 +1201,9 @@ const MiniMap = {
     }
   }
 };
+
+if (typeof window !== 'undefined') {
+  window.UI = UI;
+  window.MiniMap = MiniMap;
+  window.Squad = Squad;
+}

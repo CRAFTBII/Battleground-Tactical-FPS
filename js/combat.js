@@ -123,7 +123,7 @@ const FX = {
 };
 
 // 兼容性保障：有些旧代码或外部脚本误用小写 `fx`，在浏览器环境下提供别名
-if (typeof window !== 'undefined' && typeof FX !== 'undefined' && typeof window.fx === 'undefined') window.fx = FX;
+if (typeof window !== 'undefined' && typeof FX !== 'undefined') { window.fx = FX; window.FX = FX; }
 function makeRadialTex() {
   const c = document.createElement('canvas'); c.width = 64; c.height = 64;
   const g = c.getContext('2d');
@@ -895,8 +895,20 @@ const PC = {
               if (xe) {
                 if (Net.connected && !Net.isHost) Net.sendState({ t: 'exec_req', target: xe.id });
                 else Game.execUnit(Game.player, xe);
-              } else if (typeof Mechanics !== 'undefined' && Mechanics.dispatch && Mechanics.dispatch('interact')) {
-                // 机制交互（探照灯断电面板 / 空投箱拾取）已处理
+              } else if (typeof World !== 'undefined' && World.findInteractable) {
+                // 门 / 破窗：优先级高于机制交互与搜刮尸体
+                const io = World.findInteractable(Game.player.pos, this.yaw, 2.6);
+                if (io) World.interact(io);
+                else if (typeof Mechanics !== 'undefined' && Mechanics.dispatch && Mechanics.dispatch('interact')) {
+                  // 机制交互（探照灯断电面板 / 空投箱拾取）已处理
+                } else {
+                  const corpse = Backpack.nearestCorpse();
+                  if (corpse) {
+                    const r = Backpack.lootCorpse(corpse);
+                    UI.toast('搜刮：' + r.msg);
+                    AudioFX.ui();
+                  }
+                }
               } else {
                 const corpse = Backpack.nearestCorpse();
                 if (corpse) {

@@ -107,7 +107,7 @@ export function createBuildingFactory(THREE, physics, mapId) {
   const P = PALETTES[mapId] || PALETTES.suburb;
   const pick = (arr, k) => arr[Math.abs(k) % arr.length];
 
-  function build(type, x, z, ry, seed) {
+  function build(type, x, z, ry, seed, opts) {
     const D = PROC_DIMS[type];
     if (!D) throw new Error('未知程序化建筑类型: ' + type);
     const s = (seed || Math.floor(x * 7 + z * 13)) >>> 0;
@@ -126,6 +126,9 @@ export function createBuildingFactory(THREE, physics, mapId) {
     const slabColor = P.slab;
     const W = D.w, DD = D.d, t = 0.28;
     const floors = D.floors, floorH = D.floorH;
+    const doors = [], breaches = [];
+    const doorMat = new THREE.MeshLambertMaterial({ color: doorColor, side: THREE.DoubleSide });
+    const doorMetalMat = new THREE.MeshLambertMaterial({ color: P.metal });
 
     function collider(w, h, d, lx, ly, lz, rotY, sensor) {
       const wx = x + lx * cos + lz * sin;
@@ -135,6 +138,9 @@ export function createBuildingFactory(THREE, physics, mapId) {
     function solid(w, h, d, lx, ly, lz, color, rx, ryLocal, rz) {
       M.box(w, h, d, lx, ly, lz, color, rx, ryLocal, rz);
       collider(w, h, d, lx, ly, lz, ryLocal || 0);
+    }
+    function worldOf(lx, ly, lz) {
+      return { x: x + lx * cos + lz * sin, y: ly, z: z - lx * sin + lz * cos };
     }
 
     /* ---------- 地基 ---------- */
@@ -148,23 +154,68 @@ export function createBuildingFactory(THREE, physics, mapId) {
     const doorH = type === 'warehouse' ? 4.2 : 2.45;
     const doorAt = type === 'shop' ? -W * 0.18 : (s % 2 ? W * 0.16 : -W * 0.12);
 
-    function wallX(zPos, x0, x1, by, h, color, door) {
+    function wallX(zPos, x0, x1, by, h, color, door, breach) {
       const len = x1 - x0;
       if (len <= 0.01) return;
-      if (!door) {
+      if (!door && !breach) {
         solid(len, h, t, (x0 + x1) / 2, by + h / 2, zPos, color);
         return;
       }
-      const dl = Math.max(x0, door.at - door.w / 2);
-      const dr = Math.min(x1, door.at + door.w / 2);
+      if (door) {
+        const dl = Math.max(x0, door.at - door.w / 2);
+        const dr = Math.min(x1, door.at + door.w / 2);
+        if (dl - x0 > 0.01) solid(dl - x0, h, t, (x0 + dl) / 2, by + h / 2, zPos, color);
+        if (x1 - dr > 0.01) solid(x1 - dr, h, t, (dr + x1) / 2, by + h / 2, zPos, color);
+        const lh = h - door.h;
+        if (lh > 0.02) solid(dr - dl, lh, t, (dl + dr) / 2, by + door.h + lh / 2, zPos, color);
+        // 门框
+        M.box(0.1, door.h + 0.15, t + 0.12, dl, by + door.h / 2, zPos + 0.02, trimColor);
+        M.box(0.1, door.h + 0.15, t + 0.12, dr, by + door.h / 2, zPos + 0.02, trimColor);
+        M.box(dr - dl, 0.12, t + 0.12, (dl + dr) / 2, by + door.h + 0.06, zPos + 0.02, trimColor);
+        // 可交互门扇：pivot 在铰链，关闭时补碰撞；打开后移除碰撞
+        const dw = dr - dl;
+        const pivot = new THREE.Group();
+        pivot.position.set(dl, by, zPos);
+        const leaf = new THREE.Mesh(new THREE.BoxGeometry(Math.max(0.2, dw - 0.04), door.h - 0.06, 0.08), doorMat);
+        leaf.position.set(dw / 2, door.h / 2, 0);
+        leaf.castShadow = false; leaf.receiveShadow = true;
+        pivot.add(leaf);
+        group.add(pivot);
+        const wp = worldOf(dl + dw / 2, by, zPos);
+        const params = { w: dw, h: door.h, d: t, x: wp.x, y: by + door.h / 2, z: wp.z, ry: ry || 0 };
+        const col = physics.addBoxCollider(params.w, params.h, params.d, params.x, params.y, params.z, params.ry, false);
+        doors.push({
+          type: 'door', id: 'door:' + x + ',' + z + ':' + doors.length, prompt: '开门',
+          x: wp.x, z: wp.z, y: by, group: pivot, closedAngle: 0, openAngle: Math.PI / 2,
+          target: 0, state: 'closed', collider: col, params
+        });
+        return;
+      }
+      // 可破窗/破门：真实墙体留 1.4×2.4 洞口，封板 + 独立碰撞；交互后移除
+      const bw = Math.max(1.2, breach.w || 1.4), bh = Math.max(2.2, breach.h || 2.4);
+      const dl = Math.max(x0, breach.at - bw / 2);
+      const dr = Math.min(x1, breach.at + bw / 2);
       if (dl - x0 > 0.01) solid(dl - x0, h, t, (x0 + dl) / 2, by + h / 2, zPos, color);
       if (x1 - dr > 0.01) solid(x1 - dr, h, t, (dr + x1) / 2, by + h / 2, zPos, color);
-      const lh = h - door.h;
-      if (lh > 0.02) solid(dr - dl, lh, t, (dl + dr) / 2, by + door.h + lh / 2, zPos, color);
-      // 门框 + 半开门扇（无碰撞）
-      M.box(0.1, door.h + 0.15, t + 0.12, dl, by + door.h / 2, zPos + 0.02, trimColor);
-      M.box(0.1, door.h + 0.15, t + 0.12, dr, by + door.h / 2, zPos + 0.02, trimColor);
-      M.box(dr - dl, 0.12, t + 0.12, (dl + dr) / 2, by + door.h + 0.06, zPos + 0.02, trimColor);
+      const lh = h - bh;
+      if (lh > 0.02) solid(dr - dl, lh, t, (dl + dr) / 2, by + bh + lh / 2, zPos, color);
+      M.box(0.1, bh + 0.12, t + 0.1, dl, by + bh / 2, zPos, trimColor);
+      M.box(0.1, bh + 0.12, t + 0.1, dr, by + bh / 2, zPos, trimColor);
+      const panel = new THREE.Group();
+      panel.position.set(breach.at, by, zPos);
+      const board = new THREE.Mesh(new THREE.BoxGeometry(Math.max(0.2, bw - 0.05), bh - 0.05, 0.1), doorMat);
+      board.position.set(0, bh / 2, 0);
+      board.castShadow = false; board.receiveShadow = true;
+      panel.add(board);
+      group.add(panel);
+      const wp = worldOf(breach.at, by, zPos);
+      const params = { w: bw, h: bh, d: t, x: wp.x, y: by + bh / 2, z: wp.z, ry: ry || 0 };
+      const col = physics.addBoxCollider(params.w, params.h, params.d, params.x, params.y, params.z, params.ry, false);
+      breaches.push({
+        type: 'breach', id: 'breach:' + x + ',' + z + ':' + breaches.length, prompt: '破窗',
+        x: wp.x, z: wp.z, y: by, panel, state: 'closed', done: false,
+        collider: col, params
+      });
     }
 
     function wallZ(xPos, z0, z1, by, h, color) {
@@ -255,8 +306,12 @@ export function createBuildingFactory(THREE, physics, mapId) {
     const wallH = floorH - 0.14;
     for (let lv = 0; lv < floors; lv++) {
       const by = lv * floorH + 0.14;
+      const BREACH_TYPES = ['warehouse', 'apartment', 'townhouse', 'shop', 'house', 'cottage', 'villa', 'tower'];
+      const breachCfg = (lv === 0 && !(opts && opts.background) && BREACH_TYPES.includes(type))
+        ? { at: W * 0.2, w: 1.4, h: 2.4 }
+        : null;
       wallX(DD / 2 - t / 2, -W / 2, W / 2, by, wallH, wallColor, lv === 0 ? { at: doorAt, w: doorW, h: doorH } : null);
-      wallX(-DD / 2 + t / 2, -W / 2, W / 2, by, wallH, wallColor, null);
+      wallX(-DD / 2 + t / 2, -W / 2, W / 2, by, wallH, wallColor, null, breachCfg);
       wallZ(-W / 2 + t / 2, -DD / 2, DD / 2, by, wallH, wallColor);
       wallZ(W / 2 - t / 2, -DD / 2, DD / 2, by, wallH, wallColor);
 
@@ -267,8 +322,11 @@ export function createBuildingFactory(THREE, physics, mapId) {
         windowZ(-W / 2 + t / 2, -DD * 0.22, winY, 1.0, 1.15);
         windowZ(-W / 2 + t / 2, DD * 0.22, winY, 1.0, 1.15);
         windowZ(W / 2 - t / 2, 0, winY, 1.0, 1.15);
-        windowX(-DD / 2 + t / 2, -W * 0.24, winY, 1.0, 1.1);
-        windowX(-DD / 2 + t / 2, W * 0.24, winY, 1.0, 1.1);
+        // 后墙做破窗时，不再叠两层窗，避免窗框和破口互相穿插
+        if (!breachCfg) {
+          windowX(-DD / 2 + t / 2, -W * 0.24, winY, 1.0, 1.1);
+          windowX(-DD / 2 + t / 2, W * 0.24, winY, 1.0, 1.1);
+        }
       } else {
         windowX(DD / 2 - t / 2, -W * 0.25, winY, 1.1, 1.15);
         windowX(DD / 2 - t / 2, W * 0.25, winY, 1.1, 1.15);
@@ -372,7 +430,9 @@ export function createBuildingFactory(THREE, physics, mapId) {
       group,
       footprint: { x0: x - hx, x1: x + hx, z0: z - hz, z1: z + hz },
       height: roofY + (D.roof === 'hip' ? 2.4 : 0.9),
-      dims: D
+      dims: D,
+      doors,
+      breaches
     };
   }
 

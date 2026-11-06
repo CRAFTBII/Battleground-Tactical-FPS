@@ -155,6 +155,9 @@
 #mgHint{bottom:22%;left:50%;transform:translateX(-50%);font-size:13px;color:var(--green-bright);letter-spacing:2px;
   background:rgba(10,14,20,.75);padding:6px 16px;display:none;font-weight:700;border-left:3px solid var(--green);
   clip-path:polygon(0 0,100% 0,calc(100% - 10px) 100%,0 100%)}
+#interactHint{bottom:27%;left:50%;transform:translateX(-50%);font-size:13px;color:var(--accent2);letter-spacing:2px;
+  background:rgba(20,16,8,.82);padding:6px 16px;display:none;font-weight:700;border-left:3px solid var(--accent);
+  clip-path:polygon(0 0,100% 0,calc(100% - 10px) 100%,0 100%)}
 #execHint{bottom:22%;left:50%;transform:translateX(-50%);font-size:13px;color:var(--danger);letter-spacing:2px;
   background:rgba(30,10,12,.78);padding:6px 16px;display:none;font-weight:700;border-left:3px solid var(--danger);
   clip-path:polygon(0 0,100% 0,calc(100% - 10px) 100%,0 100%)}

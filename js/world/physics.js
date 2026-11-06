@@ -69,8 +69,14 @@ export function createPhysics(RAPIER) {
       .setTranslation(x, y, z)
       .setRotation({ x: 0, y: Math.sin(half), z: 0, w: Math.cos(half) });
     if (sensor) desc.setSensor(true);
-    world.createCollider(desc, staticBody);
+    const col = world.createCollider(desc, staticBody);
     cuboidCount++;
+    return col;
+  }
+
+  function removeCollider(col) {
+    if (!col || !world) return;
+    try { world.removeCollider(col, true); } catch (e) { /* noop */ }
   }
 
   function addCylinderCollider(halfHeight, radius, x, y, z) {
@@ -301,7 +307,7 @@ export function createPhysics(RAPIER) {
   }
 
   return {
-    reset, finalize, addCuboid, addCuboidDesc, addBoxCollider, addCylinderCollider, addTrimesh,
+    reset, finalize, addCuboid, addCuboidDesc, addBoxCollider, removeCollider, addCylinderCollider, addTrimesh,
     ray, segmentBlocked, heightAt, ceilingAt, walkablePoint, moveCapsule, moveRayActor, movePlayer, teleportPlayer, stats,
     get world() { return world; }
   };

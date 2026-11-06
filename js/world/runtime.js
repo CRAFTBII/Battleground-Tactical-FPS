@@ -25,6 +25,7 @@ export function createWorldRuntime(RAPIER) {
     overhead: [],
     anchors: [],
     props: [],
+    interactables: [],    // 可交互门/破窗
     spawns: {},
     capturePoints: [],
     capMeshes: [],
@@ -75,6 +76,7 @@ export function createWorldRuntime(RAPIER) {
       this.colliders = [];
       this.anchors = [];
       this.props = [];
+      this.interactables = [];
       this.capturePoints = [];
       this.capMeshes = [];
       this.spawns = {};
@@ -153,6 +155,7 @@ export function createWorldRuntime(RAPIER) {
       this.capturePoints = [];
       this.capMeshes = [];
       this.spawns = {};
+      this.interactables = [];
       this._footprints = [];
       this._flatRects = [];
       this._trees = [];
@@ -274,7 +277,7 @@ export function createWorldRuntime(RAPIER) {
       let made = 0;
       const tryAdd = (type, x, z, ry) => {
         if (made >= 20) return false;
-        const p = { type, x: Math.round(x * 10) / 10, z: Math.round(z * 10) / 10, ry };
+        const p = { type, x: Math.round(x * 10) / 10, z: Math.round(z * 10) / 10, ry, auto: true };
         const f = footOf(p);
         if (!f || !fits(f)) return false;
         list.push(p); existing.push(f); made++;
@@ -740,13 +743,15 @@ export function createWorldRuntime(RAPIER) {
     _buildBuildings(list) {
       for (const p of list) {
         if (p.type) {
-          const res = this._proc.build(p.type, p.x, p.z, p.ry || 0, (p.x * 131 + p.z * 17) | 0);
+          const res = this._proc.build(p.type, p.x, p.z, p.ry || 0, (p.x * 131 + p.z * 17) | 0, { background: !!p.auto });
           this._group.add(res.group);
           this._footprints.push(res.footprint);
           this.colliders.push({
             min: new THREE.Vector3(res.footprint.x0, 0, res.footprint.z0),
             max: new THREE.Vector3(res.footprint.x1, res.height, res.footprint.z1)
           });
+          for (const d of (res.doors || [])) this.interactables.push(d);
+          for (const b of (res.breaches || [])) this.interactables.push(b);
           continue;
         }
         const glb = (window.AssetLoader && AssetLoader.building) ? AssetLoader.building(p.key) : null;
@@ -946,6 +951,67 @@ export function createWorldRuntime(RAPIER) {
         g.fillText(cp.id, x, z);
       }
       this.minimapStatic = cv;
+    },
+
+    /* ---------- 门 / 破窗交互 ---------- */
+    findInteractable(pos, yaw, range) {
+      if (!pos) return null;
+      const R = range || 2.6;
+      const fx = -Math.sin(yaw || 0), fz = -Math.cos(yaw || 0);
+      let best = null, bestD = R * R;
+      for (const o of this.interactables) {
+        if (!o || o.done) continue;
+        const dx = o.x - pos.x, dz = o.z - pos.z;
+        const d2 = dx * dx + dz * dz;
+        if (d2 > bestD) continue;
+        if (Math.abs((o.y || 0) - pos.y) > 2.4) continue;
+        const d = Math.sqrt(d2) || 0.01;
+        if ((dx / d) * fx + (dz / d) * fz < 0.15) continue;
+        best = o; bestD = d2;
+      }
+      return best;
+    },
+
+    interact(obj) {
+      if (!obj || obj.done) return false;
+      if (obj.type === 'door') {
+        const open = obj.state === 'open';
+        if (open) {
+          // 关门：补回碰撞
+          obj.collider = physics.addBoxCollider(obj.params.w, obj.params.h, obj.params.d,
+            obj.params.x, obj.params.y, obj.params.z, obj.params.ry, false);
+          obj.target = 0; obj.state = 'closed'; obj.prompt = '开门';
+          if (window.UI && UI.toast) UI.toast('门已关闭');
+        } else {
+          physics.removeCollider(obj.collider);
+          obj.collider = null;
+          obj.target = obj.openAngle; obj.state = 'open'; obj.prompt = '关门';
+          if (window.UI && UI.toast) UI.toast('门已打开');
+        }
+        if (window.AudioFX && AudioFX.ui) AudioFX.ui();
+        return true;
+      }
+      if (obj.type === 'breach') {
+        obj.done = true; obj.state = 'breached'; obj.prompt = '';
+        if (obj.panel) obj.panel.visible = false;
+        physics.removeCollider(obj.collider); obj.collider = null;
+        if (window.FX && FX.dirt) FX.dirt(new THREE.Vector3(obj.x, (obj.y || 0) + 1.2, obj.z));
+        if (window.AudioFX) {
+          if (AudioFX.impact) AudioFX.impact(new THREE.Vector3(obj.x, (obj.y || 0) + 1.2, obj.z));
+          else if (AudioFX.ui) AudioFX.ui();
+        }
+        if (window.UI && UI.toast) UI.toast('破窗完成 — 可以穿过');
+        return true;
+      }
+      return false;
+    },
+
+    updateInteractables(dt) {
+      for (const o of this.interactables) {
+        if (o.type !== 'door' || !o.group) continue;
+        const k = Math.min(1, dt * 9);
+        o.group.rotation.y += (o.target - o.group.rotation.y) * k;
+      }
     },
 
     /* ---------- 旧接口 ---------- */

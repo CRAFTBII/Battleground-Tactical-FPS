@@ -86,6 +86,7 @@ const Game = {
     // v2.1：重新开局清理观战 UI
     const sq = document.getElementById('spectateQuit'); if (sq) sq.style.display = 'none';
     const si = document.getElementById('spectateInfo'); if (si) { si.style.display = 'none'; si.textContent = ''; }
+    const ih = document.getElementById('interactHint'); if (ih) ih.style.display = 'none';
     this.buildCoverPts();
   },
   /* ---- 据点初始化与逻辑 ---- */
@@ -629,6 +630,14 @@ const Game = {
       const has = !p.dead && !p.down && typeof this.findExecTargetForPlayer === 'function' && !!this.findExecTargetForPlayer();
       eh.style.display = has ? 'block' : 'none';
     }
+    // 门 / 破窗提示（与处决提示同频 10Hz）
+    const ih = document.getElementById('interactHint');
+    if (ih) {
+      const io = (!p.dead && !p.down && typeof World !== 'undefined' && World.findInteractable)
+        ? World.findInteractable(p.pos, PC.yaw, 2.6) : null;
+      if (io && io.prompt) { ih.textContent = '[E] ' + io.prompt; ih.style.display = 'block'; }
+      else ih.style.display = 'none';
+    }
   },
   /* v2.1 停用（吃鸡制无重生）：respawnAI / respawnPlayer 保留仅为防回归，不再被任何流程调用 */
   respawnAI(u) {
@@ -1068,6 +1077,8 @@ const Game = {
   },
   update(dt) {
     if (this.phase === 'playing') {
+      // 门扇开合动画
+      if (typeof World !== 'undefined' && World.updateInteractables) World.updateInteractables(dt);
       // v2.8 无时间限制：胜负只由吃鸡淘汰决定（删除了 time<=0 → endMatch 结算）
       // 玩家死亡 → 观战模式（v2.1 吃鸡制：无重生，第三人称跟随存活 AI 队友）
       if (this.dead) this.updateSpectate(dt);
@@ -1112,3 +1123,5 @@ function requestPointerLockSafe() {
 }
 
 /* ---------- AI 大脑 ---------- */
+
+if (typeof window !== 'undefined') window.Game = Game;
