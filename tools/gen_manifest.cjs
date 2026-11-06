@@ -38,6 +38,11 @@ function main() {
     const key = file.replace(/\.glb$/i, '');
     if (APPROVED_BUILDINGS.includes(key)) manifest.buildings[key] = 'buildings/' + file;
   }
+  // v5 authored prefab：models/buildings/v5 下所有 GLB 自动收录（通过 validate_glb.py 后再放进来）
+  for (const file of listGlb(path.join(MODELS, 'buildings', 'v5'))) {
+    const key = file.replace(/\.glb$/i, '');
+    manifest.buildings[key] = 'buildings/v5/' + file;
+  }
 
   const out = path.join(MODELS, 'manifest.json');
   fs.writeFileSync(out, JSON.stringify(manifest, null, 2) + '\n');

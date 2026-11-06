@@ -5,6 +5,9 @@
 >
 > **试玩**：`node server.js` → `http://localhost:8080/` → 选图 → 开始单人战役。
 > 独立模型沙盒：`http://localhost:8080/sandbox.html`。
+>
+> **下一阶段（v5）**：不再扩当前 v4 城镇，先做 160m RAID 站点与 authored 建筑。
+> 玩法：[gameplay-v5.md](../design/gameplay-v5.md) · 建筑：[building-kit-v5.md](../design/building-kit-v5.md) · 参考：[fps-references.md](../design/fps-references.md)
 
 ## 已定架构
 1. 保留渲染、角色、枪械、战斗规则、AI 战术逻辑、网络、UI、音效与通用机制。

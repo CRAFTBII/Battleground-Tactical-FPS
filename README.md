@@ -1,10 +1,14 @@
 # 战地突击 · Battleground Tactical FPS
 
-> **当前分支：`rebuild/maps-v4`（重建中，暂不可玩）**。旧地图运行时、旧建筑碰撞导入器和派生建筑 GLB 已从活动目录清理。此工作区用于重新建立建筑资产、MapSpec、物理碰撞和分层导航。
->
-> 稳定可玩版本请切回 `main`。本分支不得合并 main，直到 [v4 验收标准](docs/rebuild/acceptance-criteria.md) P0 全部通过。
+> **当前分支：`rebuild/maps-v4`**。v4 已接通 Rapier + 三张城镇图的单机技术验证；  
+> **v5 正在重做玩法与建筑**：小地图 RAID、目标/撤离、authored 建筑预制体。  
+> 先读 [v5 设计入口](docs/design/README.md)。
 
 ## 从这里开始
+- [v5 玩法设计：RAID 黑港行动](docs/design/gameplay-v5.md)
+- [v5 建筑替换方案](docs/design/building-kit-v5.md)
+- [v5 参考案例](docs/design/fps-references.md)
+- [v5 地图设计板（HTML）](docs/design/raid-site-a-layout.html)
 - [重建文档入口](docs/rebuild/README.md)
 - [架构总览](docs/rebuild/architecture.md)
 - [Blender / GLB 资产契约](docs/rebuild/asset-contract.md)
@@ -22,4 +26,4 @@
 原始输入包位于 `assets/source-buildings/`，仅供 Blender 审计修复，绝不是运行时资源。通过验收的模型再导出至 `models/buildings/` 并登记到 Catalog。
 
 ## 启动说明
-此分支当前入口会明确提示 v4 runtime 尚未实现并停止启动。不要通过恢复旧 `js/world.js` 使分支“看起来能玩”；按实施计划建立 WorldRuntime 和 WorldCompat。
+`node server.js` → `http://localhost:8080/`。当前 v4 技术验证可玩（3 张 300m 城镇 + 20 AI），但**不作为最终玩法**；v5 会缩小为 160m RAID 站点并替换建筑。

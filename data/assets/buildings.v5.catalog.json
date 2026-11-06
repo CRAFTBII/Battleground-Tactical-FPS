@@ -1,0 +1,306 @@
+{
+  "schemaVersion": 1,
+  "units": "m",
+  "status": "planned",
+  "grid": {
+    "cell": 2.0,
+    "wallModule": 4.0,
+    "floorToFloor": 3.6,
+    "clearHeight": 3.0,
+    "doorClearWidth": 1.4,
+    "doorClearHeight": 2.4,
+    "corridorWidth": 1.8,
+    "stairRise": 0.3,
+    "stairRun": 0.3,
+    "stairWidth": 1.2
+  },
+  "actorContract": {
+    "height": 2.0,
+    "maxHeight": 2.2,
+    "eyeHeight": 1.85,
+    "capsuleRadius": 0.35,
+    "stepHeight": 0.45
+  },
+  "palettes": [
+    {
+      "id": "black_harbor",
+      "name": "黑港 · 海风锈蚀",
+      "walls": ["#7b858c", "#8a8074", "#6f7d86", "#9aa2a8", "#7a5f4a"],
+      "trim": "#d4d8d8",
+      "roofs": ["#4a5258", "#3f474d", "#5a646b"],
+      "accent": ["#d08a3e", "#3f8f85", "#a84a3a"]
+    },
+    {
+      "id": "border_village",
+      "name": "边境村 · 灰泥砖瓦",
+      "walls": ["#c9b08a", "#b58a6a", "#d8c8a8", "#9fb0a8", "#a86b52"],
+      "trim": "#efe9dc",
+      "roofs": ["#7a4038", "#5c6064", "#8a4b3b"],
+      "accent": ["#3c6b5a", "#8e3b32", "#c9a227"]
+    },
+    {
+      "id": "desert_pump",
+      "name": "沙漠泵站 · 混凝土",
+      "walls": ["#c9ab7d", "#b8976a", "#d6bc93", "#a8875f", "#b06a4a"],
+      "trim": "#ead8b8",
+      "roofs": ["#8a6b45", "#9c7a50", "#75593c"],
+      "accent": ["#5d6b4a", "#8a5a32", "#6b655a"]
+    }
+  ],
+  "assets": {
+    "warehouse_a": {
+      "status": "planned",
+      "role": "objective_a_intel",
+      "dims": { "w": 20, "d": 14, "h": 8.5 },
+      "floors": [
+        { "id": "F0", "y": 0, "clear": 6.8 },
+        { "id": "ROOF", "y": 8.5, "clear": 0 }
+      ],
+      "entrances": [
+        { "id": "main", "type": "door", "clearWidth": 1.6, "clearHeight": 2.6 },
+        { "id": "side", "type": "door", "clearWidth": 1.4, "clearHeight": 2.4 },
+        { "id": "roller", "type": "roller", "clearWidth": 4.5, "clearHeight": 4.5 },
+        { "id": "window", "type": "breach", "clearWidth": 1.2, "clearHeight": 1.1 }
+      ],
+      "stairs": [{ "type": "catwalk_ladder", "from": "F0", "to": "ROOF", "navLinkId": "warehouse_roof" }],
+      "triBudget": 45000,
+      "drawCalls": 6,
+      "textures": ["trim_2k", "props_1k"],
+      "gameplay": [
+        "办公室在西北角，门口有低掩体",
+        "货架形成两条室内视线，不能一眼看穿",
+        "猫道可上屋顶，屋顶女儿墙可守"
+      ],
+      "replaces": ["warehouse"],
+      "requiredNodes": ["VIS", "COL", "NAV", "ANCHOR"],
+      "notes": "A 点主建筑；必须有 2 个地面入口 + 1 个破窗，禁止单入口。"
+    },
+    "admin_b": {
+      "status": "planned",
+      "role": "objective_b_server",
+      "dims": { "w": 16, "d": 10, "h": 7.2 },
+      "floors": [
+        { "id": "F0", "y": 0, "clear": 3.0 },
+        { "id": "F1", "y": 3.6, "clear": 3.0 },
+        { "id": "ROOF", "y": 7.2, "clear": 0 }
+      ],
+      "entrances": [
+        { "id": "main", "type": "door", "clearWidth": 1.6, "clearHeight": 2.6 },
+        { "id": "side", "type": "door", "clearWidth": 1.4, "clearHeight": 2.4 },
+        { "id": "fire_escape", "type": "stairs", "clearWidth": 1.2, "clearHeight": 2.4 },
+        { "id": "window", "type": "breach", "clearWidth": 1.2, "clearHeight": 1.1 }
+      ],
+      "stairs": [
+        { "type": "main_stair", "from": "F0", "to": "F1", "navLinkId": "admin_main" },
+        { "type": "fire_escape", "from": "F0", "to": "F1", "navLinkId": "admin_fire" },
+        { "type": "roof_ladder", "from": "F1", "to": "ROOF", "navLinkId": "admin_roof" }
+      ],
+      "triBudget": 28000,
+      "drawCalls": 6,
+      "textures": ["trim_2k", "props_1k"],
+      "gameplay": [
+        "2F 服务器房有两个入口，主楼梯不能正对窗口",
+        "屋顶狙击位可守，但外消防梯可反制",
+        "大厅有接待台低掩体，楼梯口有高掩体"
+      ],
+      "replaces": ["apartment", "base"],
+      "requiredNodes": ["VIS", "COL", "NAV", "ANCHOR"],
+      "notes": "B 点主建筑；2F 必须有两条上下路径。"
+    },
+    "apartment": {
+      "status": "planned",
+      "role": "mid_high_ground",
+      "dims": { "w": 14, "d": 11, "h": 12.6 },
+      "floors": [
+        { "id": "F0", "y": 0, "clear": 3.0 },
+        { "id": "F1", "y": 3.6, "clear": 3.0 },
+        { "id": "F2", "y": 7.2, "clear": 3.0 },
+        { "id": "F3", "y": 10.8, "clear": 1.8 }
+      ],
+      "entrances": [
+        { "id": "main", "type": "door", "clearWidth": 1.4, "clearHeight": 2.4 },
+        { "id": "fire_escape", "type": "stairs", "clearWidth": 1.2, "clearHeight": 2.4 }
+      ],
+      "stairs": [
+        { "type": "core_stair", "from": "F0", "to": "F3", "navLinkId": "apartment_core" },
+        { "type": "fire_escape", "from": "F0", "to": "F2", "navLinkId": "apartment_fire" }
+      ],
+      "triBudget": 28000,
+      "drawCalls": 6,
+      "textures": ["trim_2k", "props_1k"],
+      "gameplay": ["阳台可守但暴露", "楼梯核心可听脚步", "屋顶/顶层窗口提供中距离视野"],
+      "replaces": ["apartment"],
+      "requiredNodes": ["VIS", "COL", "NAV", "ANCHOR"],
+      "notes": "4 层可读垂直；每层至少一条退路。"
+    },
+    "house": {
+      "status": "planned",
+      "role": "residential_cover",
+      "dims": { "w": 9, "d": 7, "h": 6.8 },
+      "floors": [
+        { "id": "F0", "y": 0, "clear": 3.0 },
+        { "id": "F1", "y": 3.6, "clear": 3.0 }
+      ],
+      "entrances": [
+        { "id": "main", "type": "door", "clearWidth": 1.4, "clearHeight": 2.4 },
+        { "id": "back", "type": "door", "clearWidth": 1.4, "clearHeight": 2.4 }
+      ],
+      "stairs": [{ "type": "straight", "from": "F0", "to": "F1", "navLinkId": "house_stair" }],
+      "triBudget": 12000,
+      "drawCalls": 5,
+      "textures": ["trim_2k", "props_1k"],
+      "gameplay": ["前后门形成穿屋路线", "客厅/厨房低掩体", "2F 窗口可守但窗口下有掩体反制"],
+      "replaces": ["house"],
+      "requiredNodes": ["VIS", "COL", "NAV", "ANCHOR"]
+    },
+    "townhouse": {
+      "status": "planned",
+      "role": "street_front",
+      "dims": { "w": 7, "d": 8, "h": 7.2 },
+      "floors": [
+        { "id": "F0", "y": 0, "clear": 3.0 },
+        { "id": "F1", "y": 3.6, "clear": 3.0 }
+      ],
+      "entrances": [
+        { "id": "shop", "type": "door", "clearWidth": 1.6, "clearHeight": 2.4 },
+        { "id": "back", "type": "door", "clearWidth": 1.4, "clearHeight": 2.4 }
+      ],
+      "stairs": [{ "type": "straight", "from": "F0", "to": "F1", "navLinkId": "townhouse_stair" }],
+      "triBudget": 14000,
+      "drawCalls": 5,
+      "textures": ["trim_2k", "props_1k"],
+      "gameplay": ["店面玻璃可提供视线但易碎（后续）", "2F 住宅窗口", "后门连接小巷"],
+      "replaces": ["townhouse"],
+      "requiredNodes": ["VIS", "COL", "NAV", "ANCHOR"]
+    },
+    "shop": {
+      "status": "planned",
+      "role": "supply_cover",
+      "dims": { "w": 10, "d": 8, "h": 4.5 },
+      "floors": [{ "id": "F0", "y": 0, "clear": 3.0 }],
+      "entrances": [
+        { "id": "front", "type": "door", "clearWidth": 1.8, "clearHeight": 2.6 },
+        { "id": "back", "type": "door", "clearWidth": 1.4, "clearHeight": 2.4 }
+      ],
+      "stairs": [],
+      "triBudget": 10000,
+      "drawCalls": 4,
+      "textures": ["trim_2k", "props_1k"],
+      "gameplay": ["柜台/货架低掩体", "后仓可藏人", "临街玻璃提供短视线"],
+      "replaces": ["shop"],
+      "requiredNodes": ["VIS", "COL", "NAV", "ANCHOR"]
+    },
+    "guardhouse": {
+      "status": "planned",
+      "role": "checkpoint",
+      "dims": { "w": 5, "d": 4, "h": 3.2 },
+      "floors": [{ "id": "F0", "y": 0, "clear": 2.8 }],
+      "entrances": [{ "id": "door", "type": "door", "clearWidth": 1.2, "clearHeight": 2.4 }],
+      "stairs": [],
+      "triBudget": 5000,
+      "drawCalls": 3,
+      "textures": ["trim_2k"],
+      "gameplay": ["窗口可观察南门", "内部电台可触发警报（后续）", "只有一个门，不能久守"],
+      "replaces": [],
+      "requiredNodes": ["VIS", "COL", "NAV", "ANCHOR"]
+    },
+    "shed": {
+      "status": "planned",
+      "role": "minor_cover",
+      "dims": { "w": 4, "d": 3, "h": 2.8 },
+      "floors": [{ "id": "F0", "y": 0, "clear": 2.6 }],
+      "entrances": [{ "id": "door", "type": "door", "clearWidth": 1.2, "clearHeight": 2.2 }],
+      "stairs": [],
+      "triBudget": 3500,
+      "drawCalls": 2,
+      "textures": ["trim_2k"],
+      "gameplay": ["配电箱/工具", "可穿行的小掩体"],
+      "replaces": ["shed"],
+      "requiredNodes": ["VIS", "COL", "NAV", "ANCHOR"]
+    },
+    "container_stack": {
+      "status": "planned",
+      "role": "yard_cover",
+      "dims": { "w": 12, "d": 3, "h": 2.8 },
+      "floors": [{ "id": "F0", "y": 0, "clear": 2.6 }],
+      "entrances": [{ "id": "end", "type": "open", "clearWidth": 2.4, "clearHeight": 2.4 }],
+      "stairs": [],
+      "triBudget": 2500,
+      "drawCalls": 2,
+      "textures": ["trim_2k"],
+      "gameplay": ["可穿行/可上顶（两层堆叠）", "形成迷宫但不封死路线"],
+      "replaces": ["container"],
+      "requiredNodes": ["VIS", "COL", "NAV"]
+    },
+    "ruin": {
+      "status": "planned",
+      "role": "broken_cover",
+      "dims": { "w": 10, "d": 8, "h": 4.0 },
+      "floors": [{ "id": "F0", "y": 0, "clear": 0 }],
+      "entrances": [{ "id": "gap", "type": "open", "clearWidth": 3.0, "clearHeight": 3.0 }],
+      "stairs": [],
+      "triBudget": 6000,
+      "drawCalls": 3,
+      "textures": ["trim_2k"],
+      "gameplay": ["半墙/瓦砾提供高低差", "可藏人但暴露上方"],
+      "replaces": ["ruin"],
+      "requiredNodes": ["VIS", "COL", "NAV"]
+    },
+    "wall_module": {
+      "status": "planned",
+      "role": "perimeter",
+      "dims": { "w": 4, "d": 0.35, "h": 3.0 },
+      "floors": [],
+      "entrances": [],
+      "stairs": [],
+      "triBudget": 900,
+      "drawCalls": 1,
+      "textures": ["trim_2k"],
+      "gameplay": ["围出战斗边界", "留门/缺口模块"],
+      "replaces": [],
+      "requiredNodes": ["VIS", "COL"]
+    },
+    "catwalk_module": {
+      "status": "planned",
+      "role": "vertical_link",
+      "dims": { "w": 4, "d": 1.5, "h": 0.2 },
+      "floors": [],
+      "entrances": [],
+      "stairs": [],
+      "triBudget": 1200,
+      "drawCalls": 2,
+      "textures": ["trim_2k"],
+      "gameplay": ["连接仓库/行政楼上层", "栏杆可掩体"],
+      "replaces": [],
+      "requiredNodes": ["VIS", "COL", "NAV"]
+    },
+    "dock_crane": {
+      "status": "planned",
+      "role": "landmark",
+      "dims": { "w": 18, "d": 10, "h": 22 },
+      "floors": [],
+      "entrances": [{ "id": "ladder", "type": "ladder", "clearWidth": 0.9, "clearHeight": 2.0 }],
+      "stairs": [{ "type": "ladder", "from": "F0", "to": "TOP", "navLinkId": "crane_ladder" }],
+      "triBudget": 18000,
+      "drawCalls": 3,
+      "textures": ["trim_2k"],
+      "gameplay": ["地标/方向锚点", "高处视野但暴露", "可作为远程狙击位"],
+      "replaces": [],
+      "requiredNodes": ["VIS", "COL", "ANCHOR"]
+    },
+    "extraction_gate": {
+      "status": "planned",
+      "role": "extraction",
+      "dims": { "w": 8, "d": 2, "h": 5 },
+      "floors": [],
+      "entrances": [{ "id": "gate", "type": "open", "clearWidth": 6.0, "clearHeight": 4.5 }],
+      "stairs": [],
+      "triBudget": 2500,
+      "drawCalls": 2,
+      "textures": ["trim_2k"],
+      "gameplay": ["绿色信号灯/闸机", "撤离触发区"],
+      "replaces": [],
+      "requiredNodes": ["VIS", "COL", "ANCHOR"]
+    }
+  }
+}
